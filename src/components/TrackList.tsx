@@ -86,23 +86,38 @@ export default function TrackList() {
             </div>
             <div className="flex items-center space-x-2">
               <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateTrack(track.id, { muted: !track.muted });
+                }}
                 className={`px-2 py-0.5 text-xs rounded ${
-                  track.muted ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400'
+                  track.muted ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                 }`}
+                title="Mute"
               >
                 M
               </button>
               <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateTrack(track.id, { soloed: !track.soloed });
+                }}
                 className={`px-2 py-0.5 text-xs rounded ${
-                  track.soloed ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'
+                  track.soloed ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                 }`}
+                title="Solo"
               >
                 S
               </button>
               <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateTrack(track.id, { armed: !track.armed });
+                }}
                 className={`px-2 py-0.5 text-xs rounded ${
-                  track.armed ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-400'
+                  track.armed ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                 }`}
+                title="Arm for Recording"
               >
                 R
               </button>
