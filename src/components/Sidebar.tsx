@@ -1,15 +1,67 @@
-import { useState } from 'react';
-import { Folder, Grid3X3, Zap, BookOpen } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Folder, Grid3X3, Zap, BookOpen, Upload, AlertCircle, CheckCircle } from 'lucide-react';
+import { useDAW } from '../contexts/DAWContext';
 
 export default function Sidebar() {
   const [activeTab, setActiveTab] = useState<'browser' | 'plugins' | 'templates' | 'ai'>('browser');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addTrack, uploadAudioFile, isUploadingFile, uploadError } = useDAW();
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const handlePluginClick = (plugin: string) => {
-    console.log('Plugin selected:', plugin);
+    addTrack('audio');
   };
 
   const handleTemplateClick = (template: string) => {
-    console.log('Template selected:', template);
+    const trackCounts: Record<string, number> = {
+      'Rock Band': 4,
+      'Electronic Production': 6,
+      'Podcast Mix': 3,
+      'Orchestral': 5,
+      'Hip Hop': 4,
+    };
+    const count = trackCounts[template] || 4;
+    for (let i = 0; i < count; i++) {
+      addTrack('audio');
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadSuccess(false);
+    const result = await uploadAudioFile(file);
+
+    if (result) {
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 2000);
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    setUploadSuccess(false);
+    const result = await uploadAudioFile(file);
+
+    if (result) {
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 2000);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   const handleSmartGainStaging = () => {
@@ -71,9 +123,55 @@ export default function Sidebar() {
 
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'browser' && (
-          <div className="space-y-2">
+          <div className="space-y-4">
             <h3 className="text-sm font-semibold text-white mb-3">File Browser</h3>
-            <div className="text-xs text-gray-400">
+
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center hover:border-gray-500 transition-colors cursor-pointer bg-gray-800/50"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileSelect}
+                accept=".mp3,.wav,.ogg,.aac,.flac,.m4a"
+                className="hidden"
+                disabled={isUploadingFile}
+              />
+
+              <div className="flex flex-col items-center space-y-2">
+                {isUploadingFile ? (
+                  <>
+                    <div className="animate-spin">
+                      <Upload className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <p className="text-xs text-gray-300">Uploading...</p>
+                  </>
+                ) : uploadSuccess ? (
+                  <>
+                    <CheckCircle className="w-6 h-6 text-green-400" />
+                    <p className="text-xs text-green-400">Upload successful!</p>
+                  </>
+                ) : uploadError ? (
+                  <>
+                    <AlertCircle className="w-6 h-6 text-red-400" />
+                    <p className="text-xs text-red-400">{uploadError}</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-6 h-6 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-300 font-medium">Drag or click to upload</p>
+                      <p className="text-xs text-gray-500 mt-0.5">MP3, WAV, OGG, etc.</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-400 space-y-1 pt-2 border-t border-gray-700">
               <div className="p-2 hover:bg-gray-800 rounded cursor-pointer">My Projects</div>
               <div className="p-2 hover:bg-gray-800 rounded cursor-pointer">Audio Files</div>
               <div className="p-2 hover:bg-gray-800 rounded cursor-pointer">Samples</div>
@@ -85,15 +183,16 @@ export default function Sidebar() {
         {activeTab === 'plugins' && (
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-white mb-3">Stock Plugins</h3>
+            <p className="text-xs text-gray-500 mb-3">Click a plugin to add an audio track</p>
             <div className="space-y-1">
               {['Channel EQ', 'Channel Compressor', 'Gate/Expander', 'Saturation', 'Delay', 'Reverb', 'Utility', 'Metering'].map((plugin) => (
-                <div
+                <button
                   key={plugin}
-                  className="p-2 bg-gray-800 rounded text-xs text-white hover:bg-gray-700 cursor-pointer"
+                  className="w-full p-2 bg-gray-800 rounded text-xs text-white hover:bg-gray-700 transition-colors text-left"
                   onClick={() => handlePluginClick(plugin)}
                 >
                   {plugin}
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -102,15 +201,16 @@ export default function Sidebar() {
         {activeTab === 'templates' && (
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-white mb-3">Templates</h3>
+            <p className="text-xs text-gray-500 mb-3">Click to create template tracks</p>
             <div className="space-y-1">
               {['Rock Band', 'Electronic Production', 'Podcast Mix', 'Orchestral', 'Hip Hop'].map((template) => (
-                <div
+                <button
                   key={template}
-                  className="p-2 bg-gray-800 rounded text-xs text-white hover:bg-gray-700 cursor-pointer"
+                  className="w-full p-2 bg-gray-800 rounded text-xs text-white hover:bg-gray-700 transition-colors text-left"
                   onClick={() => handleTemplateClick(template)}
                 >
                   {template}
-                </div>
+                </button>
               ))}
             </div>
           </div>
