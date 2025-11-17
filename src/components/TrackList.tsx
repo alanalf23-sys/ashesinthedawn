@@ -3,7 +3,7 @@ import { useDAW } from '../contexts/DAWContext';
 import { Track } from '../types';
 
 export default function TrackList() {
-  const { tracks, selectedTrack, addTrack, selectTrack, deleteTrack } = useDAW();
+  const { tracks, selectedTrack, addTrack, selectTrack, deleteTrack, updateTrack } = useDAW();
 
   const getTrackIcon = (type: Track['type']) => {
     switch (type) {

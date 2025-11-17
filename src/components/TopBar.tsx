@@ -12,6 +12,7 @@ export default function TopBar() {
     cpuUsage,
     togglePlay,
     toggleRecord,
+    stop,
     setLogicCoreMode,
     toggleVoiceControl,
   } = useDAW();
@@ -45,7 +46,7 @@ export default function TopBar() {
           </button>
           <button
             className="p-2 rounded bg-gray-700 text-gray-300 hover:bg-gray-600"
-            onClick={() => {}}
+            onClick={stop}
           >
             <Square className="w-5 h-5" />
           </button>
@@ -79,13 +80,6 @@ export default function TopBar() {
             onClick={toggleVoiceControl}
             className={`p-2 rounded ${voiceControlActive ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
             title="Voice Control"
-          >
-            <Mic className="w-5 h-5" />
-          </button>
-          <button
-            onClick={toggleVoiceControl}
-            className={`p-2 rounded ${voiceControlActive ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-            title="Toggle Voice Control"
           >
             <Mic className="w-5 h-5" />
           </button>

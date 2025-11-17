@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Track, Project, LogicCoreMode } from '../types';
 import { supabase } from '../lib/supabase';
+import { getAudioEngine } from '../lib/audioEngine';
 
 interface DAWContextType {
   currentProject: Project | null;
@@ -13,6 +14,8 @@ interface DAWContextType {
   logicCoreMode: LogicCoreMode;
   voiceControlActive: boolean;
   cpuUsage: number;
+  isUploadingFile: boolean;
+  uploadError: string | null;
   setCurrentProject: (project: Project | null) => void;
   addTrack: (type: Track['type']) => void;
   selectTrack: (trackId: string) => void;
@@ -20,10 +23,12 @@ interface DAWContextType {
   deleteTrack: (trackId: string) => void;
   togglePlay: () => void;
   toggleRecord: () => void;
+  stop: () => void;
   setLogicCoreMode: (mode: LogicCoreMode) => void;
   toggleVoiceControl: () => void;
   saveProject: () => Promise<void>;
   loadProject: (projectId: string) => Promise<void>;
+  uploadAudioFile: (file: File) => Promise<boolean>;
 }
 
 const DAWContext = createContext<DAWContextType | undefined>(undefined);
@@ -39,6 +44,9 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const [logicCoreMode, setLogicCoreMode] = useState<LogicCoreMode>('ON');
   const [voiceControlActive, setVoiceControlActive] = useState(false);
   const [cpuUsage, setCpuUsage] = useState(12);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const audioEngineRef = useRef(getAudioEngine());
 
   useEffect(() => {
     if (currentProject) {
@@ -54,6 +62,20 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       return () => clearInterval(interval);
     }
   }, [isPlaying]);
+
+  // Sync track volume changes with audio engine
+  useEffect(() => {
+    tracks.forEach(track => {
+      audioEngineRef.current.setTrackVolume(track.id, track.volume);
+    });
+  }, [tracks]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      audioEngineRef.current.dispose();
+    };
+  }, []);
 
   const addTrack = (type: Track['type']) => {
     const newTrack: Track = {
@@ -92,15 +114,91 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const togglePlay = () => {
     setIsPlaying(prev => !prev);
     if (isRecording) setIsRecording(false);
+    
+    if (!isPlaying) {
+      // Starting playback
+      audioEngineRef.current.initialize().catch(err => console.error('Audio init failed:', err));
+    } else {
+      // Stopping playback
+      audioEngineRef.current.stopAllAudio();
+    }
   };
 
   const toggleRecord = () => {
     setIsRecording(prev => !prev);
     if (!isPlaying) setIsPlaying(true);
+    
+    if (!isRecording) {
+      // Starting recording
+      audioEngineRef.current.startRecording().catch(err => console.error('Recording failed:', err));
+    } else {
+      // Stopping recording
+      audioEngineRef.current.stopRecording();
+    }
+  };
+
+  const stop = () => {
+    setIsPlaying(false);
+    setIsRecording(false);
+    setCurrentTime(0);
+    audioEngineRef.current.stopAllAudio();
   };
 
   const toggleVoiceControl = () => {
     setVoiceControlActive(prev => !prev);
+  };
+
+  const uploadAudioFile = async (file: File): Promise<boolean> => {
+    setIsUploadingFile(true);
+    setUploadError(null);
+
+    try {
+      // Validate file type
+      const validTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/flac', 'audio/mp4'];
+      if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|ogg|aac|flac|m4a)$/i)) {
+        setUploadError('Invalid audio file format');
+        setIsUploadingFile(false);
+        return false;
+      }
+
+      // Validate file size (100MB max)
+      if (file.size > 100 * 1024 * 1024) {
+        setUploadError('File size exceeds 100MB limit');
+        setIsUploadingFile(false);
+        return false;
+      }
+
+      const newTrack: Track = {
+        id: `track-${Date.now()}`,
+        name: file.name.replace(/\.[^/.]+$/, ''),
+        type: 'audio',
+        color: '#3b82f6',
+        muted: false,
+        soloed: false,
+        armed: false,
+        volume: 0,
+        pan: 0,
+        inserts: [],
+        sends: [],
+        routing: 'Master',
+      };
+
+      // Load audio into engine
+      const audioLoaded = await audioEngineRef.current.loadAudioFile(newTrack.id, file);
+      if (!audioLoaded) {
+        setUploadError('Failed to decode audio file');
+        setIsUploadingFile(false);
+        return false;
+      }
+
+      setTracks(prev => [...prev, newTrack]);
+      setIsUploadingFile(false);
+      return true;
+    } catch (error) {
+      setUploadError('Failed to upload file');
+      setIsUploadingFile(false);
+      return false;
+    }
   };
 
   const saveProject = async () => {
@@ -175,6 +273,8 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         logicCoreMode,
         voiceControlActive,
         cpuUsage,
+        isUploadingFile,
+        uploadError,
         setCurrentProject,
         addTrack,
         selectTrack,
@@ -182,10 +282,12 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         deleteTrack,
         togglePlay,
         toggleRecord,
+        stop,
         setLogicCoreMode,
         toggleVoiceControl,
         saveProject,
         loadProject,
+        uploadAudioFile,
       }}
     >
       {children}
