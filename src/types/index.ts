@@ -8,7 +8,8 @@ export interface Track {
   muted: boolean;
   soloed: boolean;
   armed: boolean;
-  volume: number;
+  inputGain: number; // Pre-fader input level (separate from volume)
+  volume: number; // Fader level (post-pan)
   pan: number;
   stereoWidth: number;
   phaseFlip: boolean;

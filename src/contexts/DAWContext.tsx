@@ -66,6 +66,7 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
           muted: false,
           soloed: false,
           armed: false,
+          inputGain: 0,
           volume: 0,
           pan: 0,
           stereoWidth: 100,
@@ -110,27 +111,123 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const addTrack = (type: Track['type']) => {
+  // Branching function: Get sequential track number for a given type
+  const getTrackNumberForType = (type: Track['type']): number => {
+    const tracksOfType = tracks.filter(t => t.type === type);
+    return tracksOfType.length + 1;
+  };
+
+  // Branching function: Get random color from palette
+  const getRandomTrackColor = (): string => {
     const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    
-    const newTrack: Track = {
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
+  // Branching function: Create base track properties
+  const createBaseTrack = (type: Track['type']): Partial<Track> => ({
+    muted: false,
+    soloed: false,
+    armed: false,
+    inputGain: 0,
+    volume: 0,
+    pan: 0,
+    stereoWidth: 100,
+    phaseFlip: false,
+    inserts: [],
+    sends: [],
+    routing: 'Master',
+    automationMode: 'off',
+  });
+
+  // Branching function: Create audio track
+  const createAudioTrack = (): Track => {
+    const trackNum = getTrackNumberForType('audio');
+    return {
       id: `track-${Date.now()}`,
-      name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${tracks.length + 1}`,
-      type,
-      color: randomColor,
-      muted: false,
-      soloed: false,
-      armed: false,
-      volume: 0,
-      pan: 0,
-      stereoWidth: 100,
-      phaseFlip: false,
-      inserts: [],
-      sends: [],
-      routing: 'Master',
-      automationMode: 'off',
+      name: `Audio ${trackNum}`,
+      type: 'audio',
+      color: getRandomTrackColor(),
+      ...createBaseTrack('audio'),
     };
+  };
+
+  // Branching function: Create instrument track
+  const createInstrumentTrack = (): Track => {
+    const trackNum = getTrackNumberForType('instrument');
+    return {
+      id: `track-${Date.now()}`,
+      name: `Instrument ${trackNum}`,
+      type: 'instrument',
+      color: getRandomTrackColor(),
+      ...createBaseTrack('instrument'),
+    };
+  };
+
+  // Branching function: Create MIDI track
+  const createMidiTrack = (): Track => {
+    const trackNum = getTrackNumberForType('midi');
+    return {
+      id: `track-${Date.now()}`,
+      name: `MIDI ${trackNum}`,
+      type: 'midi',
+      color: getRandomTrackColor(),
+      ...createBaseTrack('midi'),
+    };
+  };
+
+  // Branching function: Create aux track
+  const createAuxTrack = (): Track => {
+    const trackNum = getTrackNumberForType('aux');
+    return {
+      id: `track-${Date.now()}`,
+      name: `Aux ${trackNum}`,
+      type: 'aux',
+      color: getRandomTrackColor(),
+      ...createBaseTrack('aux'),
+    };
+  };
+
+  // Branching function: Create VCA track
+  const createVcaTrack = (): Track => {
+    const trackNum = getTrackNumberForType('vca');
+    return {
+      id: `track-${Date.now()}`,
+      name: `VCA ${trackNum}`,
+      type: 'vca',
+      color: getRandomTrackColor(),
+      ...createBaseTrack('vca'),
+    };
+  };
+
+  // Main branching router: Add track based on type
+  const addTrack = (type: Track['type']) => {
+    let newTrack: Track;
+
+    switch (type) {
+      case 'audio':
+        newTrack = createAudioTrack();
+        break;
+      case 'instrument':
+        newTrack = createInstrumentTrack();
+        break;
+      case 'midi':
+        newTrack = createMidiTrack();
+        break;
+      case 'aux':
+        newTrack = createAuxTrack();
+        break;
+      case 'vca':
+        newTrack = createVcaTrack();
+        break;
+      case 'master':
+        // Master track is managed separately, should not be added here
+        console.warn('Master track should not be added via addTrack()');
+        return;
+      default:
+        // Fallback to audio track
+        newTrack = createAudioTrack();
+    }
+
     setTracks(prev => [...prev, newTrack]);
   };
 
