@@ -10,6 +10,11 @@ export interface Track {
   armed: boolean;
   volume: number;
   pan: number;
+  stereoWidth: number;
+  phaseFlip: boolean;
+  parentTrackId?: string;
+  childTrackIds?: string[];
+  automationMode?: 'off' | 'read' | 'write' | 'touch' | 'latch';
   inserts: Plugin[];
   sends: Send[];
   routing: string;

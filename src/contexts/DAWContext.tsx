@@ -29,6 +29,9 @@ interface DAWContextType {
   saveProject: () => Promise<void>;
   loadProject: (projectId: string) => Promise<void>;
   uploadAudioFile: (file: File) => Promise<boolean>;
+  getWaveformData: (trackId: string) => number[];
+  getAudioDuration: (trackId: string) => number;
+  seek: (timeSeconds: number) => void;
 }
 
 const DAWContext = createContext<DAWContextType | undefined>(undefined);
@@ -50,7 +53,32 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (currentProject) {
-      setTracks(currentProject.tracks || []);
+      // Ensure master track exists
+      const hasMasterTrack = currentProject.tracks?.some(t => t.type === 'master');
+      let tracksToSet = currentProject.tracks || [];
+      
+      if (!hasMasterTrack) {
+        const masterTrack: Track = {
+          id: 'master-main',
+          name: 'Master',
+          type: 'master',
+          color: '#6366f1',
+          muted: false,
+          soloed: false,
+          armed: false,
+          volume: 0,
+          pan: 0,
+          stereoWidth: 100,
+          phaseFlip: false,
+          inserts: [],
+          sends: [],
+          routing: 'Master',
+          automationMode: 'off',
+        };
+        tracksToSet = [...tracksToSet, masterTrack];
+      }
+      
+      setTracks(tracksToSet);
     }
   }, [currentProject]);
 
@@ -63,12 +91,17 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isPlaying]);
 
-  // Sync track volume changes with audio engine
+  // Sync track volume and pan changes with audio engine during playback
   useEffect(() => {
-    tracks.forEach(track => {
-      audioEngineRef.current.setTrackVolume(track.id, track.volume);
-    });
-  }, [tracks]);
+    if (isPlaying) {
+      tracks.forEach(track => {
+        audioEngineRef.current.setTrackVolume(track.id, track.volume);
+        audioEngineRef.current.setTrackPan(track.id, track.pan);
+        audioEngineRef.current.setStereoWidth(track.id, track.stereoWidth || 100);
+        audioEngineRef.current.setPhaseFlip(track.id, track.phaseFlip || false);
+      });
+    }
+  }, [tracks, isPlaying]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -78,19 +111,25 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addTrack = (type: Track['type']) => {
+    const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    
     const newTrack: Track = {
       id: `track-${Date.now()}`,
       name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${tracks.length + 1}`,
       type,
-      color: '#3b82f6',
+      color: randomColor,
       muted: false,
       soloed: false,
       armed: false,
       volume: 0,
       pan: 0,
+      stereoWidth: 100,
+      phaseFlip: false,
       inserts: [],
       sends: [],
       routing: 'Master',
+      automationMode: 'off',
     };
     setTracks(prev => [...prev, newTrack]);
   };
@@ -112,16 +151,24 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   };
 
   const togglePlay = () => {
-    setIsPlaying(prev => !prev);
-    if (isRecording) setIsRecording(false);
-    
     if (!isPlaying) {
       // Starting playback
-      audioEngineRef.current.initialize().catch(err => console.error('Audio init failed:', err));
+      audioEngineRef.current.initialize().then(() => {
+        // Play all non-muted tracks
+        tracks.forEach(track => {
+          if (!track.muted && track.type === 'audio') {
+            audioEngineRef.current.playAudio(track.id, currentTime, track.volume, track.pan);
+          }
+        });
+        setIsPlaying(true);
+      }).catch(err => console.error('Audio init failed:', err));
     } else {
       // Stopping playback
       audioEngineRef.current.stopAllAudio();
+      setIsPlaying(false);
     }
+    
+    if (isRecording) setIsRecording(false);
   };
 
   const toggleRecord = () => {
@@ -142,6 +189,27 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     setIsRecording(false);
     setCurrentTime(0);
     audioEngineRef.current.stopAllAudio();
+  };
+
+  const seek = (timeSeconds: number) => {
+    setCurrentTime(timeSeconds);
+    if (isPlaying) {
+      // If playing, stop and restart from new position
+      audioEngineRef.current.stopAllAudio();
+      tracks.forEach(track => {
+        if (!track.muted && track.type === 'audio') {
+          audioEngineRef.current.playAudio(track.id, timeSeconds, track.volume, track.pan);
+        }
+      });
+    }
+  };
+
+  const getWaveformData = (trackId: string): number[] => {
+    return audioEngineRef.current.getWaveformData(trackId);
+  };
+
+  const getAudioDuration = (trackId: string): number => {
+    return audioEngineRef.current.getAudioDuration(trackId);
   };
 
   const toggleVoiceControl = () => {
@@ -168,11 +236,14 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
+      const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
       const newTrack: Track = {
         id: `track-${Date.now()}`,
         name: file.name.replace(/\.[^/.]+$/, ''),
         type: 'audio',
-        color: '#3b82f6',
+        color: randomColor,
         muted: false,
         soloed: false,
         armed: false,
@@ -288,6 +359,9 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         saveProject,
         loadProject,
         uploadAudioFile,
+        getWaveformData,
+        getAudioDuration,
+        seek,
       }}
     >
       {children}

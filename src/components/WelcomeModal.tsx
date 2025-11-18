@@ -9,16 +9,20 @@ interface WelcomeModalProps {
 
 export default function WelcomeModal({ onClose }: WelcomeModalProps) {
   const [projectName, setProjectName] = useState('Untitled Project');
+  const [sampleRate, setSampleRate] = useState(48000);
+  const [bitDepth, setBitDepth] = useState(24);
+  const [bpm, setBpm] = useState(120);
+  const [timeSignature, setTimeSignature] = useState('4/4');
   const { setCurrentProject } = useDAW();
 
   const createNewProject = () => {
     const newProject: Project = {
       id: `project-${Date.now()}`,
       name: projectName,
-      sampleRate: 48000,
-      bitDepth: 24,
-      bpm: 120,
-      timeSignature: '4/4',
+      sampleRate,
+      bitDepth,
+      bpm,
+      timeSignature,
       tracks: [],
       buses: [],
       createdAt: new Date().toISOString(),
@@ -85,18 +89,26 @@ export default function WelcomeModal({ onClose }: WelcomeModalProps) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Sample Rate</label>
-                  <select className="w-full bg-gray-900 text-white px-3 py-2 rounded border border-gray-600">
-                    <option>44100 Hz</option>
-                    <option selected>48000 Hz</option>
-                    <option>96000 Hz</option>
+                  <select 
+                    value={sampleRate}
+                    onChange={(e) => setSampleRate(Number(e.target.value))}
+                    className="w-full bg-gray-900 text-white px-3 py-2 rounded border border-gray-600"
+                  >
+                    <option value={44100}>44100 Hz</option>
+                    <option value={48000}>48000 Hz</option>
+                    <option value={96000}>96000 Hz</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Bit Depth</label>
-                  <select className="w-full bg-gray-900 text-white px-3 py-2 rounded border border-gray-600">
-                    <option>16 bit</option>
-                    <option selected>24 bit</option>
-                    <option>32 bit</option>
+                  <select 
+                    value={bitDepth}
+                    onChange={(e) => setBitDepth(Number(e.target.value))}
+                    className="w-full bg-gray-900 text-white px-3 py-2 rounded border border-gray-600"
+                  >
+                    <option value={16}>16 bit</option>
+                    <option value={24}>24 bit</option>
+                    <option value={32}>32 bit</option>
                   </select>
                 </div>
               </div>
@@ -105,13 +117,18 @@ export default function WelcomeModal({ onClose }: WelcomeModalProps) {
                   <label className="block text-sm text-gray-400 mb-1">BPM</label>
                   <input
                     type="number"
-                    defaultValue="120"
+                    value={bpm}
+                    onChange={(e) => setBpm(Number(e.target.value))}
                     className="w-full bg-gray-900 text-white px-3 py-2 rounded border border-gray-600"
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Time Signature</label>
-                  <select className="w-full bg-gray-900 text-white px-3 py-2 rounded border border-gray-600">
+                  <select 
+                    value={timeSignature}
+                    onChange={(e) => setTimeSignature(e.target.value)}
+                    className="w-full bg-gray-900 text-white px-3 py-2 rounded border border-gray-600"
+                  >
                     <option>4/4</option>
                     <option>3/4</option>
                     <option>6/8</option>

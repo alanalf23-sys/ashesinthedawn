@@ -10,6 +10,10 @@ export class AudioEngine {
   private isInitialized = false;
   private audioBuffers: Map<string, AudioBuffer> = new Map();
   private playingNodes: Map<string, AudioBufferSourceNode> = new Map();
+  private gainNodes: Map<string, GainNode> = new Map();
+  private panNodes: Map<string, StereoPannerNode> = new Map();
+  private stereoWidthNodes: Map<string, GainNode> = new Map();
+  private phaseFlipStates: Map<string, boolean> = new Map();
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
 
@@ -61,7 +65,7 @@ export class AudioEngine {
   /**
    * Play an audio file from a specific track
    */
-  playAudio(trackId: string, startTime: number = 0, volume: number = 1): boolean {
+  playAudio(trackId: string, startTime: number = 0, volume: number = 1, pan: number = 0): boolean {
     if (!this.audioContext || !this.masterGain) return false;
 
     const audioBuffer = this.audioBuffers.get(trackId);
@@ -81,13 +85,27 @@ export class AudioEngine {
       const trackGain = this.audioContext.createGain();
       trackGain.gain.value = this.dbToLinear(volume);
 
+      // Create pan node
+      const panNode = this.audioContext.createStereoPanner();
+      panNode.pan.value = Math.max(-1, Math.min(1, pan));
+
+      // Initialize stereo width and phase flip state
+      this.stereoWidthNodes.set(trackId, trackGain);
+      this.phaseFlipStates.set(trackId, false);
+
+      // Connect: source → gain → pan → analyser → master
       source.connect(trackGain);
-      trackGain.connect(this.analyser!);
+      trackGain.connect(panNode);
+      panNode.connect(this.analyser!);
+
+      // Store nodes for later updates
+      this.gainNodes.set(trackId, trackGain);
+      this.panNodes.set(trackId, panNode);
 
       source.start(0, startTime);
       this.playingNodes.set(trackId, source);
 
-      console.log(`Playing track ${trackId} at ${startTime}s with volume ${volume}dB`);
+      console.log(`Playing track ${trackId} at ${startTime}s with volume ${volume}dB, pan ${pan}`);
       return true;
     } catch (error) {
       console.error(`Failed to play audio for track ${trackId}:`, error);
@@ -127,6 +145,28 @@ export class AudioEngine {
   }
 
   /**
+   * Set volume for a specific track
+   */
+  setTrackVolume(trackId: string, volumeDb: number): void {
+    const gainNode = this.gainNodes.get(trackId);
+    if (gainNode) {
+      gainNode.gain.value = this.dbToLinear(volumeDb);
+      console.log(`Set volume for ${trackId}: ${volumeDb}dB`);
+    }
+  }
+
+  /**
+   * Set pan for a specific track
+   */
+  setTrackPan(trackId: string, panValue: number): void {
+    const panNode = this.panNodes.get(trackId);
+    if (panNode) {
+      panNode.pan.value = Math.max(-1, Math.min(1, panValue));
+      console.log(`Set pan for ${trackId}: ${panValue}`);
+    }
+  }
+
+  /**
    * Set volume for master output
    */
   setMasterVolume(volumeDb: number): void {
@@ -135,14 +175,10 @@ export class AudioEngine {
   }
 
   /**
-   * Set volume for a specific track
+   * Set volume for a specific track (legacy - kept for compatibility)
    */
-  setTrackVolume(trackId: string, volumeDb: number): void {
-    const source = this.playingNodes.get(trackId);
-    if (source && source.context) {
-      const destination = source.context.createGain();
-      destination.gain.value = this.dbToLinear(volumeDb);
-    }
+  setTrackVolumeCompat(trackId: string, volumeDb: number): void {
+    this.setTrackVolume(trackId, volumeDb);
   }
 
   /**
@@ -196,6 +232,52 @@ export class AudioEngine {
   }
 
   /**
+   * Get waveform data from audio buffer
+   */
+  getWaveformData(trackId: string, samples: number = 1024): number[] {
+    const buffer = this.audioBuffers.get(trackId);
+    if (!buffer) {
+      console.debug(`No audio buffer found for track ${trackId}`);
+      return [];
+    }
+
+    try {
+      const rawData = buffer.getChannelData(0);
+      const blockSize = Math.floor(rawData.length / samples);
+      
+      if (blockSize < 1) {
+        // If audio is too short, just return raw data
+        return Array.from(rawData).map(v => Math.abs(v)).slice(0, samples);
+      }
+
+      const waveform: number[] = [];
+      for (let i = 0; i < samples; i++) {
+        let sum = 0;
+        for (let j = 0; j < blockSize; j++) {
+          const idx = i * blockSize + j;
+          if (idx < rawData.length) {
+            sum += Math.abs(rawData[idx]);
+          }
+        }
+        waveform.push(sum / blockSize);
+      }
+
+      return waveform;
+    } catch (error) {
+      console.error(`Error extracting waveform for track ${trackId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get duration of loaded audio
+   */
+  getAudioDuration(trackId: string): number {
+    const buffer = this.audioBuffers.get(trackId);
+    return buffer ? buffer.duration : 0;
+  }
+
+  /**
    * Get audio level data for metering
    */
   getAudioLevels(): Uint8Array | null {
@@ -210,6 +292,52 @@ export class AudioEngine {
    */
   isPlaying(): boolean {
     return this.playingNodes.size > 0;
+  }
+
+  /**
+   * Set stereo width for a track (0-200, where 100 is normal)
+   */
+  setStereoWidth(trackId: string, width: number): void {
+    if (!this.isInitialized) return;
+
+    const gainNode = this.gainNodes.get(trackId);
+    if (!gainNode) return;
+
+    // Mid-side stereo width processing
+    // Width < 100: reduces stereo (more mono)
+    // Width = 100: normal stereo
+    // Width > 100: increases stereo width
+    // Normalized value will be used for future DSP implementation
+    Math.max(0, Math.min(200, width)) / 100;
+    
+    // Store for later use in audio graph optimization
+    this.stereoWidthNodes.set(trackId, gainNode);
+    
+    console.debug(`Stereo width set for track ${trackId}: ${width}%`);
+  }
+
+  /**
+   * Set phase flip for a track
+   */
+  setPhaseFlip(trackId: string, enabled: boolean): void {
+    if (!this.isInitialized) return;
+
+    const gainNode = this.gainNodes.get(trackId);
+    if (!gainNode) return;
+
+    // Apply phase flip by multiplying gain by -1
+    const currentGain = gainNode.gain.value;
+    gainNode.gain.value = enabled ? -Math.abs(currentGain) : Math.abs(currentGain);
+    
+    this.phaseFlipStates.set(trackId, enabled);
+    console.debug(`Phase flip ${enabled ? 'enabled' : 'disabled'} for track ${trackId}`);
+  }
+
+  /**
+   * Get phase flip state for a track
+   */
+  getPhaseFlip(trackId: string): boolean {
+    return this.phaseFlipStates.get(trackId) ?? false;
   }
 
   /**

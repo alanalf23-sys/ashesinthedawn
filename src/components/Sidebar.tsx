@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
-import { Folder, Grid3X3, Zap, BookOpen, Upload, AlertCircle, CheckCircle } from 'lucide-react';
+import { Folder, Grid3X3, Zap, BookOpen, Upload, AlertCircle, CheckCircle, FolderOpen, Music, Disc3, Waves } from 'lucide-react';
 import { useDAW } from '../contexts/DAWContext';
 
 export default function Sidebar() {
   const [activeTab, setActiveTab] = useState<'browser' | 'plugins' | 'templates' | 'ai'>('browser');
+  const [selectedBrowserTab, setSelectedBrowserTab] = useState<'projects' | 'audio' | 'samples' | 'loops'>('projects');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { addTrack, uploadAudioFile, isUploadingFile, uploadError } = useDAW();
+  const { addTrack, uploadAudioFile, isUploadingFile, uploadError, currentProject } = useDAW();
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const handlePluginClick = (plugin: string) => {
@@ -126,57 +127,141 @@ export default function Sidebar() {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-white mb-3">File Browser</h3>
 
-            <div
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              className="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center hover:border-gray-500 transition-colors cursor-pointer bg-gray-800/50"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileSelect}
-                accept=".mp3,.wav,.ogg,.aac,.flac,.m4a"
-                className="hidden"
-                disabled={isUploadingFile}
-              />
+            {/* Project Browser Tabs */}
+            <div className="flex gap-1 border-b border-gray-700">
+              <button
+                onClick={() => setSelectedBrowserTab('projects')}
+                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium border-b-2 transition-colors ${
+                  selectedBrowserTab === 'projects'
+                    ? 'text-blue-400 border-blue-500'
+                    : 'text-gray-400 border-transparent hover:text-gray-300'
+                }`}
+              >
+                <FolderOpen className="w-3 h-3" />
+                Projects
+              </button>
+              <button
+                onClick={() => setSelectedBrowserTab('audio')}
+                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium border-b-2 transition-colors ${
+                  selectedBrowserTab === 'audio'
+                    ? 'text-blue-400 border-blue-500'
+                    : 'text-gray-400 border-transparent hover:text-gray-300'
+                }`}
+              >
+                <Music className="w-3 h-3" />
+                Audio Files
+              </button>
+              <button
+                onClick={() => setSelectedBrowserTab('samples')}
+                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium border-b-2 transition-colors ${
+                  selectedBrowserTab === 'samples'
+                    ? 'text-blue-400 border-blue-500'
+                    : 'text-gray-400 border-transparent hover:text-gray-300'
+                }`}
+              >
+                <Disc3 className="w-3 h-3" />
+                Samples
+              </button>
+              <button
+                onClick={() => setSelectedBrowserTab('loops')}
+                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium border-b-2 transition-colors ${
+                  selectedBrowserTab === 'loops'
+                    ? 'text-blue-400 border-blue-500'
+                    : 'text-gray-400 border-transparent hover:text-gray-300'
+                }`}
+              >
+                <Waves className="w-3 h-3" />
+                Loops
+              </button>
+            </div>
 
-              <div className="flex flex-col items-center space-y-2">
-                {isUploadingFile ? (
-                  <>
-                    <div className="animate-spin">
-                      <Upload className="w-6 h-6 text-blue-400" />
+            {/* Projects Tab */}
+            {selectedBrowserTab === 'projects' && (
+              <div className="space-y-2">
+                {currentProject ? (
+                  <div className="p-3 bg-gray-800 rounded border border-gray-700">
+                    <div className="flex items-center gap-2 mb-1">
+                      <FolderOpen className="w-4 h-4 text-blue-400" />
+                      <span className="text-sm font-medium text-white truncate">{currentProject.name}</span>
                     </div>
-                    <p className="text-xs text-gray-300">Uploading...</p>
-                  </>
-                ) : uploadSuccess ? (
-                  <>
-                    <CheckCircle className="w-6 h-6 text-green-400" />
-                    <p className="text-xs text-green-400">Upload successful!</p>
-                  </>
-                ) : uploadError ? (
-                  <>
-                    <AlertCircle className="w-6 h-6 text-red-400" />
-                    <p className="text-xs text-red-400">{uploadError}</p>
-                  </>
+                    <div className="text-xs text-gray-400 space-y-0.5 ml-6">
+                      <div>SR: {currentProject.sampleRate}Hz</div>
+                      <div>BD: {currentProject.bitDepth}-bit</div>
+                      <div>BPM: {currentProject.bpm}</div>
+                      <div>Sig: {currentProject.timeSignature}</div>
+                    </div>
+                  </div>
                 ) : (
-                  <>
-                    <Upload className="w-6 h-6 text-gray-400" />
-                    <div>
-                      <p className="text-xs text-gray-300 font-medium">Drag or click to upload</p>
-                      <p className="text-xs text-gray-500 mt-0.5">MP3, WAV, OGG, etc.</p>
-                    </div>
-                  </>
+                  <div className="text-xs text-gray-500 py-8 text-center">
+                    No project open
+                  </div>
                 )}
               </div>
-            </div>
+            )}
 
-            <div className="text-xs text-gray-400 space-y-1 pt-2 border-t border-gray-700">
-              <div className="p-2 hover:bg-gray-800 rounded cursor-pointer">My Projects</div>
-              <div className="p-2 hover:bg-gray-800 rounded cursor-pointer">Audio Files</div>
-              <div className="p-2 hover:bg-gray-800 rounded cursor-pointer">Samples</div>
-              <div className="p-2 hover:bg-gray-800 rounded cursor-pointer">Loops</div>
-            </div>
+            {/* Audio Files Tab */}
+            {selectedBrowserTab === 'audio' && (
+              <div className="space-y-2">
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  className="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center hover:border-gray-500 transition-colors cursor-pointer bg-gray-800/50"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    accept=".mp3,.wav,.ogg,.aac,.flac,.m4a"
+                    className="hidden"
+                    disabled={isUploadingFile}
+                  />
+
+                  <div className="flex flex-col items-center space-y-2">
+                    {isUploadingFile ? (
+                      <>
+                        <div className="animate-spin">
+                          <Upload className="w-6 h-6 text-blue-400" />
+                        </div>
+                        <p className="text-xs text-gray-300">Uploading...</p>
+                      </>
+                    ) : uploadSuccess ? (
+                      <>
+                        <CheckCircle className="w-6 h-6 text-green-400" />
+                        <p className="text-xs text-green-400">Upload successful!</p>
+                      </>
+                    ) : uploadError ? (
+                      <>
+                        <AlertCircle className="w-6 h-6 text-red-400" />
+                        <p className="text-xs text-red-400">{uploadError}</p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-6 h-6 text-gray-400" />
+                        <div>
+                          <p className="text-xs text-gray-300 font-medium">Drag or click to upload</p>
+                          <p className="text-xs text-gray-500 mt-0.5">MP3, WAV, OGG, etc.</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Samples Tab */}
+            {selectedBrowserTab === 'samples' && (
+              <div className="text-xs text-gray-500 text-center py-8">
+                No samples available
+              </div>
+            )}
+
+            {/* Loops Tab */}
+            {selectedBrowserTab === 'loops' && (
+              <div className="text-xs text-gray-500 text-center py-8">
+                No loops available
+              </div>
+            )}
           </div>
         )}
 
