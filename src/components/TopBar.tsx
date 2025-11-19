@@ -1,4 +1,4 @@
-import { Play, Pause, Square, Circle, Mic, Activity, Cpu, HardDrive } from 'lucide-react';
+import { Play, Pause, Square, Circle, Settings, Search } from 'lucide-react';
 import { useDAW } from '../contexts/DAWContext';
 
 export default function TopBar() {
@@ -7,94 +7,67 @@ export default function TopBar() {
     isPlaying,
     isRecording,
     currentTime,
-    logicCoreMode,
-    voiceControlActive,
     cpuUsage,
     togglePlay,
     toggleRecord,
     stop,
-    setLogicCoreMode,
-    toggleVoiceControl,
   } = useDAW();
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     const ms = Math.floor((seconds % 1) * 100);
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${ms.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
   };
 
   return (
-    <div className="h-16 bg-gradient-to-r from-daw-dark-900 via-daw-dark-800 to-daw-dark-900 border-b border-daw-dark-600 flex items-center justify-between px-4">
-      <div className="flex items-center space-x-6">
-        <div className="flex items-center space-x-2">
-          <Activity className="w-6 h-6 text-daw-blue-400" />
-          <span className="text-xl font-bold text-daw-dark-100">CoreLogic Studio</span>
-        </div>
-        {currentProject && (
-          <span className="text-sm text-daw-dark-400">{currentProject.name}</span>
-        )}
-      </div>
-
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2 bg-daw-dark-800 rounded-lg px-4 py-2 border border-daw-dark-600">
+    <div className="h-12 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 gap-4 text-xs">
+      {/* Left: Project name and controls */}
+      <div className="flex items-center gap-4">
+        <span className="font-semibold text-gray-100">{currentProject?.name || 'Untitled'}</span>
+        
+        {/* Transport Controls */}
+        <div className="flex items-center gap-2 bg-gray-900 rounded px-2 py-1">
           <button
             onClick={togglePlay}
-            className={`p-2 rounded transition-all ${isPlaying ? 'btn-primary' : 'btn-secondary'}`}
+            className={`p-1.5 rounded transition ${isPlaying ? 'bg-blue-600 text-white' : 'hover:bg-gray-700 text-gray-400'}`}
+            title="Play/Pause"
           >
-            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </button>
           <button
-            className="btn-secondary p-2 rounded"
             onClick={stop}
+            className="p-1.5 rounded hover:bg-gray-700 text-gray-400 transition"
+            title="Stop"
           >
-            <Square className="w-5 h-5" />
+            <Square className="w-4 h-4" />
           </button>
           <button
             onClick={toggleRecord}
-            className={`p-2 rounded transition-all ${isRecording ? 'btn-danger animate-pulse' : 'btn-secondary'}`}
+            className={`p-1.5 rounded transition ${isRecording ? 'bg-red-600 text-white' : 'hover:bg-gray-700 text-gray-400'}`}
+            title="Record"
           >
-            <Circle className="w-5 h-5" />
+            <Circle className="w-4 h-4" />
           </button>
         </div>
+      </div>
 
-        <div className="text-daw-dark-100 font-mono text-lg bg-daw-dark-800 px-4 py-2 rounded-lg border border-daw-dark-600">
+      {/* Center: Time display */}
+      <div className="flex-1 flex justify-center">
+        <div className="text-center font-mono text-gray-300 bg-gray-900 px-6 py-1 rounded min-w-32">
           {formatTime(currentTime)}
         </div>
+      </div>
 
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <span className="text-daw-xs text-daw-dark-400">LogicCore:</span>
-            <select
-              value={logicCoreMode}
-              onChange={(e) => setLogicCoreMode(e.target.value as 'ON' | 'SILENT' | 'OFF')}
-              className="input-daw text-xs"
-            >
-              <option value="ON">ON</option>
-              <option value="SILENT">SILENT</option>
-              <option value="OFF">OFF</option>
-            </select>
-          </div>
-
-          <button
-            onClick={toggleVoiceControl}
-            className={`p-2 rounded transition-all ${voiceControlActive ? 'bg-green-600 text-white shadow-md' : 'btn-secondary'}`}
-            title="Voice Control"
-          >
-            <Mic className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex items-center space-x-3 bg-daw-dark-800 rounded-lg px-4 py-2 border border-daw-dark-600">
-          <div className="flex items-center space-x-2">
-            <Cpu className="w-4 h-4 text-daw-dark-400" />
-            <span className="text-daw-xs text-daw-dark-300">{cpuUsage}%</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <HardDrive className="w-4 h-4 text-daw-dark-400" />
-            <span className="text-daw-xs text-daw-dark-300">2.4GB</span>
-          </div>
-        </div>
+      {/* Right: Status and settings */}
+      <div className="flex items-center gap-4">
+        <span className="text-gray-400">CPU: <span className="text-gray-300 font-semibold">{cpuUsage}%</span></span>
+        <button className="p-1.5 rounded hover:bg-gray-700 text-gray-400 transition" title="Search">
+          <Search className="w-4 h-4" />
+        </button>
+        <button className="p-1.5 rounded hover:bg-gray-700 text-gray-400 transition" title="Settings">
+          <Settings className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

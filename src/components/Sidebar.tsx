@@ -9,7 +9,7 @@ export default function Sidebar() {
   const { addTrack, uploadAudioFile, isUploadingFile, uploadError, currentProject } = useDAW();
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  const handlePluginClick = (plugin: string) => {
+  const handlePluginClick = () => {
     addTrack('audio');
   };
 
@@ -274,7 +274,7 @@ export default function Sidebar() {
                 <button
                   key={plugin}
                   className="w-full p-2 bg-gray-800 rounded text-xs text-white hover:bg-gray-700 transition-colors text-left"
-                  onClick={() => handlePluginClick(plugin)}
+                  onClick={() => handlePluginClick()}
                 >
                   {plugin}
                 </button>

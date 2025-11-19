@@ -44,12 +44,12 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [zoom, setZoom] = useState(1);
   const [logicCoreMode, setLogicCoreMode] = useState<LogicCoreMode>('ON');
   const [voiceControlActive, setVoiceControlActive] = useState(false);
-  const [cpuUsage, setCpuUsage] = useState(12);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const zoom = 1;
+  const cpuUsage = 12;
   const audioEngineRef = useRef(getAudioEngine());
 
   useEffect(() => {
@@ -128,22 +128,6 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
-  // Branching function: Create base track properties
-  const createBaseTrack = (type: Track['type']): Partial<Track> => ({
-    muted: false,
-    soloed: false,
-    armed: false,
-    inputGain: 0,
-    volume: 0,
-    pan: 0,
-    stereoWidth: 100,
-    phaseFlip: false,
-    inserts: [],
-    sends: [],
-    routing: 'Master',
-    automationMode: 'off',
-  });
-
   // Branching function: Create audio track
   const createAudioTrack = (): Track => {
     const trackNum = getTrackNumberForType('audio');
@@ -152,8 +136,19 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       name: `Audio ${trackNum}`,
       type: 'audio',
       color: getRandomTrackColor(),
-      ...createBaseTrack('audio'),
-    };
+      muted: false,
+      soloed: false,
+      armed: false,
+      inputGain: 0,
+      volume: 0,
+      pan: 0,
+      stereoWidth: 100,
+      phaseFlip: false,
+      inserts: [],
+      sends: [],
+      routing: 'Master',
+      automationMode: 'off',
+    } as Track;
   };
 
   // Branching function: Create instrument track
@@ -164,8 +159,19 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       name: `Instrument ${trackNum}`,
       type: 'instrument',
       color: getRandomTrackColor(),
-      ...createBaseTrack('instrument'),
-    };
+      muted: false,
+      soloed: false,
+      armed: false,
+      inputGain: 0,
+      volume: 0,
+      pan: 0,
+      stereoWidth: 100,
+      phaseFlip: false,
+      inserts: [],
+      sends: [],
+      routing: 'Master',
+      automationMode: 'off',
+    } as Track;
   };
 
   // Branching function: Create MIDI track
@@ -176,8 +182,19 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       name: `MIDI ${trackNum}`,
       type: 'midi',
       color: getRandomTrackColor(),
-      ...createBaseTrack('midi'),
-    };
+      muted: false,
+      soloed: false,
+      armed: false,
+      inputGain: 0,
+      volume: 0,
+      pan: 0,
+      stereoWidth: 100,
+      phaseFlip: false,
+      inserts: [],
+      sends: [],
+      routing: 'Master',
+      automationMode: 'off',
+    } as Track;
   };
 
   // Branching function: Create aux track
@@ -188,8 +205,19 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       name: `Aux ${trackNum}`,
       type: 'aux',
       color: getRandomTrackColor(),
-      ...createBaseTrack('aux'),
-    };
+      muted: false,
+      soloed: false,
+      armed: false,
+      inputGain: 0,
+      volume: 0,
+      pan: 0,
+      stereoWidth: 100,
+      phaseFlip: false,
+      inserts: [],
+      sends: [],
+      routing: 'Master',
+      automationMode: 'off',
+    } as Track;
   };
 
   // Branching function: Create VCA track
@@ -200,8 +228,19 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       name: `VCA ${trackNum}`,
       type: 'vca',
       color: getRandomTrackColor(),
-      ...createBaseTrack('vca'),
-    };
+      muted: false,
+      soloed: false,
+      armed: false,
+      inputGain: 0,
+      volume: 0,
+      pan: 0,
+      stereoWidth: 100,
+      phaseFlip: false,
+      inserts: [],
+      sends: [],
+      routing: 'Master',
+      automationMode: 'off',
+    } as Track;
   };
 
   // Main branching router: Add track based on type
@@ -266,54 +305,87 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     if (!isPlaying) {
       // Starting playback
       audioEngineRef.current.initialize().then(() => {
-        // Play all non-muted tracks
+        // Play all non-muted audio and instrument tracks from current time
         tracks.forEach(track => {
-          if (!track.muted && track.type === 'audio') {
+          if (!track.muted && (track.type === 'audio' || track.type === 'instrument')) {
+            // playAudio expects linear volume (0-1), convert from dB
             audioEngineRef.current.playAudio(track.id, currentTime, track.volume, track.pan);
           }
         });
         setIsPlaying(true);
       }).catch(err => console.error('Audio init failed:', err));
     } else {
-      // Stopping playback
+      // Pausing playback
       audioEngineRef.current.stopAllAudio();
       setIsPlaying(false);
     }
-    
-    if (isRecording) setIsRecording(false);
   };
 
   const toggleRecord = () => {
-    setIsRecording(prev => !prev);
-    if (!isPlaying) setIsPlaying(true);
-    
     if (!isRecording) {
-      // Starting recording
-      audioEngineRef.current.startRecording().catch(err => console.error('Recording failed:', err));
+      // Starting recording - initialize audio engine first
+      audioEngineRef.current.initialize().then(async () => {
+        const success = await audioEngineRef.current.startRecording();
+        if (success) {
+          setIsRecording(true);
+          // Start playback if not already playing
+          if (!isPlaying) {
+            togglePlay();
+          }
+        } else {
+          console.error('Failed to start recording - getUserMedia may have been denied');
+        }
+      }).catch(err => console.error('Audio init failed during record:', err));
     } else {
-      // Stopping recording
-      audioEngineRef.current.stopRecording();
+      // Stopping recording - capture the blob and create a track
+      audioEngineRef.current.stopRecording().then(blob => {
+        if (blob) {
+          // Create a new audio track from the recording
+          const recordedFile = new File([blob], `Recording-${Date.now()}.webm`, { type: 'audio/webm' });
+          uploadAudioFile(recordedFile);
+          console.log('Recording saved and imported as new track');
+        }
+        setIsRecording(false);
+      }).catch(err => console.error('Error stopping recording:', err));
     }
   };
 
   const stop = () => {
-    setIsPlaying(false);
-    setIsRecording(false);
-    setCurrentTime(0);
+    // Stop recording first if active
+    if (isRecording) {
+      audioEngineRef.current.stopRecording().then(blob => {
+        if (blob) {
+          // Auto-save recording as new track
+          const recordedFile = new File([blob], `Recording-${Date.now()}.webm`, { type: 'audio/webm' });
+          uploadAudioFile(recordedFile);
+        }
+      }).catch(err => console.error('Error stopping recording:', err));
+      setIsRecording(false);
+    }
+    
+    // Stop all playback
     audioEngineRef.current.stopAllAudio();
+    setIsPlaying(false);
+    
+    // Reset timeline to beginning
+    setCurrentTime(0);
   };
 
   const seek = (timeSeconds: number) => {
     setCurrentTime(timeSeconds);
+    
     if (isPlaying) {
-      // If playing, stop and restart from new position
+      // If playing, stop all audio and restart from new position
       audioEngineRef.current.stopAllAudio();
+      
+      // Resume playback from seek time
       tracks.forEach(track => {
-        if (!track.muted && track.type === 'audio') {
+        if (!track.muted && (track.type === 'audio' || track.type === 'instrument')) {
           audioEngineRef.current.playAudio(track.id, timeSeconds, track.volume, track.pan);
         }
       });
     }
+    // If not playing, just update currentTime - playback will start from this position when play is pressed
   };
 
   const getWaveformData = (trackId: string): number[] => {
@@ -359,8 +431,11 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         muted: false,
         soloed: false,
         armed: false,
+        inputGain: 0,
         volume: 0,
         pan: 0,
+        stereoWidth: 100,
+        phaseFlip: false,
         inserts: [],
         sends: [],
         routing: 'Master',

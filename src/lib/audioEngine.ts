@@ -9,6 +9,7 @@ export class AudioEngine {
   private analyser: AnalyserNode | null = null;
   private isInitialized = false;
   private audioBuffers: Map<string, AudioBuffer> = new Map();
+  private waveformCache: Map<string, number[]> = new Map(); // Cache for waveforms
   private playingNodes: Map<string, AudioBufferSourceNode> = new Map();
   private inputGainNodes: Map<string, GainNode> = new Map(); // Pre-fader input gain
   private gainNodes: Map<string, GainNode> = new Map(); // Fader level
@@ -46,7 +47,7 @@ export class AudioEngine {
   }
 
   /**
-   * Load an audio file and cache it
+   * Load an audio file and cache it with waveform data
    */
   async loadAudioFile(trackId: string, file: File): Promise<boolean> {
     if (!this.audioContext) await this.initialize();
@@ -55,7 +56,12 @@ export class AudioEngine {
       const arrayBuffer = await file.arrayBuffer();
       const audioBuffer = await this.audioContext!.decodeAudioData(arrayBuffer);
       this.audioBuffers.set(trackId, audioBuffer);
-      console.log(`Loaded audio file for track ${trackId}`);
+      
+      // Pre-generate and cache waveform data for faster rendering
+      const waveformData = this.getWaveformData(trackId, 1024);
+      this.waveformCache.set(trackId, waveformData);
+      
+      console.log(`Loaded audio file for track ${trackId} with waveform (${waveformData.length} samples)`);
       return true;
     } catch (error) {
       console.error(`Failed to load audio file for track ${trackId}:`, error);
