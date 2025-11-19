@@ -409,3 +409,38 @@ input[type="range"].slider-vertical::-moz-range-thumb {
   animation: pulse-glow 2s infinite;
 }
 
+/* Window and Resize Cursors */
+.cursor-col-resize {
+  cursor: col-resize !important;
+}
+
+.cursor-row-resize {
+  cursor: row-resize !important;
+}
+
+.cursor-nwse-resize {
+  cursor: nwse-resize !important;
+}
+
+.cursor-move {
+  cursor: move !important;
+}
+
+/* Draggable Window Styles */
+.draggable-window {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(1px);
+}
+
+.draggable-window:hover {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+}
+
+.window-resize-handle {
+  transition: background-color 0.2s ease;
+}
+
+.window-resize-handle:hover {
+  background-color: rgba(59, 130, 246, 0.3);
+}
+
