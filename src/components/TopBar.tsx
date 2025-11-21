@@ -3,7 +3,6 @@ import { useDAW } from '../contexts/DAWContext';
 
 export default function TopBar() {
   const {
-    currentProject,
     isPlaying,
     isRecording,
     currentTime,
