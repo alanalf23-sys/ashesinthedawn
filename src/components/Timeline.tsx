@@ -7,9 +7,11 @@ export default function Timeline() {
   const timelineRef = useRef<HTMLDivElement>(null);
   const waveformsRef = useRef<Record<string, number[]>>({});
   const [, setWaveformUpdateCounter] = useState(0);
+  const [zoom, setZoom] = useState(1.0);
 
   const bars = 32;
-  const pixelsPerBar = 120;
+  const basePixelsPerBar = 120;
+  const pixelsPerBar = basePixelsPerBar * zoom;
   const pixelsPerSecond = pixelsPerBar / 4;
 
   // Color mapping for waveforms - matches track colors
@@ -68,6 +70,24 @@ export default function Timeline() {
     const waveformData = waveformsRef.current[track.id];
     const regionColor = getWaveformColor(trackIndex);
     
+    // Compute min/max peaks for efficient rendering
+    const computePeaks = () => {
+      if (!waveformData || waveformData.length === 0) return null;
+      const blockSize = Math.max(1, Math.floor(waveformData.length / width));
+      const mins: number[] = [];
+      const maxs: number[] = [];
+      
+      for (let i = 0; i < waveformData.length; i += blockSize) {
+        const block = waveformData.slice(i, Math.min(i + blockSize, waveformData.length));
+        if (block.length === 0) continue;
+        mins.push(Math.min(...block));
+        maxs.push(Math.max(...block));
+      }
+      return { mins, maxs };
+    };
+    
+    const peaks = computePeaks();
+    
     return (
       <div
         key={`region-${track.id}`}
@@ -80,24 +100,37 @@ export default function Timeline() {
           borderLeft: `3px solid ${regionColor}`,
         }}
       >
-        {waveformData && (
-          <div className="h-full flex items-center justify-center gap-0.5 px-1">
-            {waveformData.slice(0, Math.min(200, Math.floor(width / 2))).map((sample, i) => {
-              const barWidth = Math.max(1, Math.floor(width / Math.min(200, Math.floor(width / 2)) - 1));
+        {peaks && (
+          <svg 
+            width={Math.max(width, 1)} 
+            height={56} 
+            className="absolute inset-0"
+            style={{ pointerEvents: 'none' }}
+          >
+            <defs>
+              <linearGradient id={`grad-${track.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor={regionColor} stopOpacity="0.8" />
+                <stop offset="100%" stopColor={regionColor} stopOpacity="0.4" />
+              </linearGradient>
+            </defs>
+            {peaks.mins.map((_, x) => {
+              if (x >= Math.min(width, peaks.mins.length)) return null;
+              const minY = 28 - (peaks.mins[x] * 28 * 0.85);
+              const maxY = 28 - (peaks.maxs[x] * 28 * 0.85);
               return (
-                <div
-                  key={i}
-                  className="rounded-sm flex-shrink-0"
-                  style={{
-                    width: `${barWidth}px`,
-                    height: `${Math.max(2, Math.min(56, sample * 56))}px`,
-                    backgroundColor: regionColor,
-                    opacity: 0.6 + sample * 0.4,
-                  }}
+                <line
+                  key={x}
+                  x1={x}
+                  y1={minY}
+                  x2={x}
+                  y2={maxY}
+                  stroke={regionColor}
+                  strokeWidth="1"
+                  opacity={0.6 + peaks.maxs[x] * 0.4}
                 />
               );
             })}
-          </div>
+          </svg>
         )}
       </div>
     );
@@ -143,6 +176,35 @@ export default function Timeline() {
 
   return (
     <div className="flex-1 bg-gray-950 overflow-hidden flex flex-col">
+      {/* Zoom Controls */}
+      <div className="h-8 bg-gray-900 border-b border-gray-700 px-3 flex items-center gap-2">
+        <button
+          onClick={() => setZoom(z => Math.max(0.5, z - 0.2))}
+          className="text-xs px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700"
+          title="Zoom Out"
+        >
+          −
+        </button>
+        <span className="text-xs text-gray-400 w-12">
+          {(zoom * 100).toFixed(0)}%
+        </span>
+        <button
+          onClick={() => setZoom(z => Math.min(3.0, z + 0.2))}
+          className="text-xs px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700"
+          title="Zoom In"
+        >
+          +
+        </button>
+        <div className="flex-1" />
+        <button
+          onClick={() => setZoom(1.0)}
+          className="text-xs px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700"
+          title="Reset Zoom"
+        >
+          Reset
+        </button>
+      </div>
+
       {/* Time Ruler */}
       <div className="h-10 bg-gradient-to-b from-gray-800 to-gray-850 border-b-2 border-gray-700 flex items-center sticky top-0 z-10 overflow-x-auto">
         <div className="flex h-full">
