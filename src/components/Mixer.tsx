@@ -3,6 +3,8 @@ import { Track } from '../types';
 import { Sliders } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import MixerTile from './MixerTile';
+import PluginRack from './PluginRack';
+import MixerOptionsTile from './MixerOptionsTile';
 
 interface DetachedTileState {
   trackId: string;
@@ -11,13 +13,20 @@ interface DetachedTileState {
 }
 
 export default function Mixer() {
-  const { tracks, selectedTrack, updateTrack, deleteTrack, selectTrack } = useDAW();
+  const { tracks, selectedTrack, updateTrack, deleteTrack, selectTrack, addPluginToTrack, removePluginFromTrack, togglePluginEnabled } = useDAW();
   const [stripWidth, setStripWidth] = useState(100);
   const [stripHeight, setStripHeight] = useState(400);
   const [detachedTiles, setDetachedTiles] = useState<DetachedTileState[]>([]);
+  const [detachedOptionsTile, setDetachedOptionsTile] = useState(false);
   const [levels, setLevels] = useState<Record<string, number>>({}); // live RMS values
 
   const animationRef = useRef<number | null>(null);
+
+  // Calculate max/min dimensions based on screen size
+  const maxStripWidth = Math.floor(window.innerWidth * 0.9);
+  const maxStripHeight = Math.floor(window.innerHeight * 0.85);
+  const minStripWidth = 60;
+  const minStripHeight = 200;
 
   // --- Helper Functions ---
   const getMeterColor = (db: number) => {
@@ -98,103 +107,159 @@ export default function Mixer() {
               W:
               <input
                 type="range"
-                min="60"
-                max="200"
+                min={minStripWidth}
+                max={maxStripWidth}
                 value={stripWidth}
                 onChange={(e) => setStripWidth(parseInt(e.target.value))}
                 className="w-20 accent-blue-500 ml-2"
               />
+              <span className="ml-2 text-gray-500">{stripWidth}px</span>
             </label>
             <label>
               H:
               <input
                 type="range"
-                min="200"
-                max="600"
+                min={minStripHeight}
+                max={maxStripHeight}
                 value={stripHeight}
                 onChange={(e) => setStripHeight(parseInt(e.target.value))}
                 className="w-20 accent-blue-500 ml-2"
               />
+              <span className="ml-2 text-gray-500">{stripHeight}px</span>
             </label>
+
+            {/* Options Tile Button */}
+            <button
+              onClick={() => setDetachedOptionsTile(!detachedOptionsTile)}
+              className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition"
+            >
+              Options
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-950">
-          <div className="flex h-full gap-2 p-3 min-w-max">
-            {/* Master Strip */}
-            <div
-              className="flex-shrink-0 select-none"
-              style={{
-                width: `${stripWidth}px`,
-                height: `${stripHeight}px`,
-                border: '2px solid rgb(202, 138, 4)',
-                backgroundColor: 'rgb(30, 24, 15)',
-                borderRadius: '4px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                padding: '4px',
-              }}
-            >
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Mixer Strips */}
+          <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-950">
+            <div className="flex h-full gap-2 p-3 min-w-max">
+              {/* Options Tile */}
+              {!detachedOptionsTile && (
+                <MixerOptionsTile
+                  tracks={tracks}
+                  onUpdateTrack={updateTrack}
+                  onRemovePlugin={removePluginFromTrack}
+                  stripWidth={stripWidth}
+                  stripHeight={stripHeight}
+                  position={{ x: 0, y: 0 }}
+                  onDock={() => setDetachedOptionsTile(true)}
+                  isDetached={false}
+                />
+              )}
+
+              {/* Master Strip */}
               <div
-                className="font-bold text-gray-900 flex items-center justify-center bg-yellow-600 rounded"
-                style={{ height: '40px' }}
+                className="flex-shrink-0 select-none"
+                style={{
+                  width: `${stripWidth}px`,
+                  height: `${stripHeight}px`,
+                  border: '2px solid rgb(202, 138, 4)',
+                  backgroundColor: 'rgb(30, 24, 15)',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  padding: '4px',
+                }}
               >
-                Master
-              </div>
-
-              <div className="flex flex-col items-center justify-end flex-1">
                 <div
-                  className="rounded border-2 border-yellow-700 bg-gray-950 flex flex-col-reverse shadow-inner"
-                  style={{
-                    width: '16px',
-                    height: '100%',
-                  }}
+                  className="font-bold text-gray-900 flex items-center justify-center bg-yellow-600 rounded"
+                  style={{ height: '40px' }}
                 >
-                  <div
-                    style={{
-                      height: `${masterLevel * 100}%`,
-                      backgroundColor: getMeterColor(linearToDb(masterLevel)),
-                      transition: 'height 0.1s linear',
-                    }}
-                  />
+                  Master
                 </div>
-                <div className="text-yellow-400 font-mono text-xs mt-2">
-                  {linearToDb(masterLevel).toFixed(1)} dB
-                </div>
-              </div>
-            </div>
 
-            {/* Track Tiles */}
-            {tracks.length === 0 ? (
-              <div className="flex items-center justify-center w-full text-gray-500 text-sm">
-                No tracks. Add some to see the mixer.
+                <div className="flex flex-col items-center justify-end flex-1">
+                  <div
+                    className="rounded border-2 border-yellow-700 bg-gray-950 flex flex-col-reverse shadow-inner"
+                    style={{
+                      width: '16px',
+                      height: '100%',
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: `${masterLevel * 100}%`,
+                        backgroundColor: getMeterColor(linearToDb(masterLevel)),
+                        transition: 'height 0.1s linear',
+                      }}
+                    />
+                  </div>
+                  <div className="text-yellow-400 font-mono text-xs mt-2">
+                    {linearToDb(masterLevel).toFixed(1)} dB
+                  </div>
+                </div>
               </div>
-            ) : (
-              tracks
-                .filter(t => t.type !== 'master')
-                .map((track) => (
-                  <MixerTile
-                    key={track.id}
-                    track={track}
-                    isSelected={selectedTrack?.id === track.id}
-                    onSelect={selectTrack}
-                    onDelete={deleteTrack}
-                    onUpdate={updateTrack}
-                    levels={levels}
-                    stripWidth={stripWidth}
-                    stripHeight={stripHeight}
-                    isDetached={false}
-                    onDetach={() => handleDetachTile(track.id)}
-                  />
-                ))
-            )}
+
+              {/* Track Tiles */}
+              {tracks.length === 0 ? (
+                <div className="flex items-center justify-center w-full text-gray-500 text-sm">
+                  No tracks. Add some to see the mixer.
+                </div>
+              ) : (
+                tracks
+                  .filter(t => t.type !== 'master')
+                  .map((track) => (
+                    <MixerTile
+                      key={track.id}
+                      track={track}
+                      isSelected={selectedTrack?.id === track.id}
+                      onSelect={selectTrack}
+                      onDelete={deleteTrack}
+                      onUpdate={updateTrack}
+                      levels={levels}
+                      stripWidth={stripWidth}
+                      stripHeight={stripHeight}
+                      isDetached={false}
+                      onDetach={() => handleDetachTile(track.id)}
+                    />
+                  ))
+              )}
+            </div>
           </div>
+
+          {/* Plugin Rack for Selected Track */}
+          {selectedTrack && selectedTrack.type !== 'master' && (
+            <div className="h-32 border-t border-gray-700 bg-gray-800 p-4 overflow-y-auto">
+              <PluginRack
+                plugins={selectedTrack.inserts}
+                onAddPlugin={(plugin) => addPluginToTrack(selectedTrack.id, plugin)}
+                onRemovePlugin={(pluginId) => removePluginFromTrack(selectedTrack.id, pluginId)}
+                onTogglePlugin={(pluginId, enabled) => togglePluginEnabled(selectedTrack.id, pluginId, enabled)}
+                trackId={selectedTrack.id}
+              />
+            </div>
+          )}
         </div>
       </div>
 
       {/* Detached Floating Tiles */}
       <div className="fixed inset-0 pointer-events-none">
+        {/* Detached Options Tile */}
+        {detachedOptionsTile && (
+          <div className="pointer-events-auto">
+            <MixerOptionsTile
+              tracks={tracks}
+              onUpdateTrack={updateTrack}
+              onRemovePlugin={removePluginFromTrack}
+              stripWidth={stripWidth}
+              stripHeight={stripHeight}
+              position={{ x: 400, y: 150 }}
+              onDock={() => setDetachedOptionsTile(false)}
+              isDetached={true}
+            />
+          </div>
+        )}
+
         {detachedTiles.map((tile) => {
           const track = tracks.find(t => t.id === tile.trackId);
           if (!track) return null;

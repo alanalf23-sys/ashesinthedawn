@@ -3,7 +3,8 @@
 ## Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+ (for React UI)
+- Python 3.10+ (for DSP backend)
 - npm or yarn package manager
 - Git
 
@@ -14,8 +15,16 @@
 git clone <repository-url>
 cd ashesinthedawn
 
-# Install dependencies
+# Install Node dependencies
 npm install
+
+# Set up Python environment
+python -m venv venv
+venv\Scripts\activate  # On Windows
+source venv/bin/activate  # On macOS/Linux
+
+# Install Python dependencies (DSP)
+pip install numpy scipy
 
 # Set up environment variables
 # Create .env file with:
@@ -31,7 +40,10 @@ npm run dev
 
 # Open browser to: http://localhost:5173
 
-# Type checking
+# Run DSP tests (Python backend)
+python -m pytest test_phase2_*.py -v
+
+# Type checking (TypeScript)
 npm run typecheck
 
 # Linting
@@ -50,7 +62,7 @@ npm run preview
 
 ```
 ashesinthedawn/
-├── src/
+├── src/                            # React/TypeScript UI
 │   ├── components/
 │   │   ├── TopBar.tsx              # Transport & system monitoring
 │   │   ├── TrackList.tsx           # Track management interface
@@ -68,11 +80,35 @@ ashesinthedawn/
 │   ├── main.tsx                    # Entry point
 │   ├── index.css                   # Global styles
 │   └── vite-env.d.ts              # Vite environment types
+│
+├── daw_core/                       # Python DSP Backend (Phase 2)
+│   ├── fx/
+│   │   ├── __init__.py            # FX module exports
+│   │   ├── eq_and_dynamics.py     # EQ & compressor effects
+│   │   ├── dynamics_part2.py      # Gate, expander, noise gate
+│   │   ├── saturation.py          # Saturation & distortion
+│   │   ├── delays.py              # Delay effects
+│   │   └── reverb.py              # Reverb engine (Freeverb)
+│   ├── automation/
+│   │   └── __init__.py            # Automation framework
+│   └── metering/
+│       └── __init__.py            # Metering & analysis tools
+│
 ├── supabase/
 │   └── migrations/
 │       └── 20251114213600_create_corelogic_schema.sql
+│
+├── Test Files (Python)
+│   ├── test_phase2_effects.py     # EQ tests
+│   ├── test_phase2_2_dynamics.py  # Dynamics tests
+│   ├── test_phase2_4_saturation.py  # Saturation tests
+│   ├── test_phase2_5_delays.py    # Delay tests
+│   ├── test_phase2_6_reverb.py    # Reverb tests
+│   ├── test_phase2_7_automation.py  # Automation tests
+│   └── test_phase2_8_metering.py  # Metering tests
+│
 ├── index.html                      # HTML entry point
-├── package.json                    # Project metadata & dependencies
+├── package.json                    # Node dependencies & scripts
 ├── vite.config.ts                 # Vite configuration
 ├── tsconfig.json                  # TypeScript configuration
 ├── tailwind.config.js             # Tailwind CSS configuration
@@ -80,9 +116,57 @@ ashesinthedawn/
 ├── eslint.config.js               # ESLint configuration
 ├── README.md                      # Project overview
 ├── ARCHITECTURE.md                # Component documentation
+├── PHASE_2_COMPLETE_SUMMARY.md    # Phase 2 achievements
 └── Changelog.ipynb                # Version history
 
 ```
+
+---
+
+## DSP Backend - Phase 2 Architecture
+
+### Effects Library (daw_core/fx/)
+
+**19 Professional Audio Effects**:
+
+| Effect | Type | File | Status |
+|--------|------|------|--------|
+| EQ3Band | EQ | eq_and_dynamics.py | ✅ |
+| HighLowPass | EQ | eq_and_dynamics.py | ✅ |
+| Compressor | Dynamics | eq_and_dynamics.py | ✅ |
+| Limiter | Dynamics | dynamics_part2.py | ✅ |
+| Expander | Dynamics | dynamics_part2.py | ✅ |
+| Gate | Dynamics | dynamics_part2.py | ✅ |
+| NoiseGate | Dynamics | dynamics_part2.py | ✅ |
+| Saturation | Saturation | saturation.py | ✅ |
+| HardClip | Saturation | saturation.py | ✅ |
+| Distortion | Saturation | saturation.py | ✅ |
+| WaveShaper | Saturation | saturation.py | ✅ |
+| SimpleDelay | Delay | delays.py | ✅ |
+| PingPongDelay | Delay | delays.py | ✅ |
+| MultiTapDelay | Delay | delays.py | ✅ |
+| StereoDelay | Delay | delays.py | ✅ |
+| Reverb | Reverb | reverb.py | ✅ |
+| HallReverb | Reverb | reverb.py | ✅ |
+| PlateReverb | Reverb | reverb.py | ✅ |
+| RoomReverb | Reverb | reverb.py | ✅ |
+
+### Automation Framework (daw_core/automation/)
+
+**5 Core Classes**:
+- `AutomationCurve`: Linear/Exponential/Step/Smooth interpolation
+- `LFO`: 5 waveforms (Sine/Triangle/Square/Sawtooth/Random)
+- `Envelope`: ADSR generation
+- `AutomatedParameter`: Real-time modulation control
+- `ParameterTrack`: Multi-parameter management
+
+### Metering Tools (daw_core/metering/)
+
+**4 Professional Tools**:
+- `LevelMeter`: Peak/RMS detection with clipping
+- `SpectrumAnalyzer`: FFT-based frequency analysis
+- `VUMeter`: Logarithmic metering simulation
+- `Correlometer`: Stereo correlation measurement
 
 ---
 

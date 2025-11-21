@@ -72,15 +72,22 @@ export default function MixerTile({
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      const maxWidth = window.innerWidth * 0.95;
+      const maxHeight = window.innerHeight * 0.9;
+      const minWidth = 60;
+      const minHeight = 200;
+
       if (isDragging && isDetached) {
+        const newX = Math.max(0, Math.min(e.clientX - dragStart.x, window.innerWidth - 100));
+        const newY = Math.max(0, Math.min(e.clientY - dragStart.y, window.innerHeight - 100));
         setPosition({
-          x: e.clientX - dragStart.x,
-          y: e.clientY - dragStart.y,
+          x: newX,
+          y: newY,
         });
       }
       if (isResizing && isDetached) {
-        const newWidth = Math.max(60, resizeStart.width + (e.clientX - resizeStart.x));
-        const newHeight = Math.max(200, resizeStart.height + (e.clientY - resizeStart.y));
+        const newWidth = Math.max(minWidth, Math.min(resizeStart.width + (e.clientX - resizeStart.x), maxWidth));
+        const newHeight = Math.max(minHeight, Math.min(resizeStart.height + (e.clientY - resizeStart.y), maxHeight));
         setSize({ width: newWidth, height: newHeight });
       }
     };
@@ -108,7 +115,6 @@ export default function MixerTile({
 
   const headerHeight = Math.max(currentHeight * 0.12, 24);
   const faderSectionMinHeight = Math.max(currentHeight * 0.35, 80);
-  const buttonHeight = Math.max(currentHeight * 0.06, 18);
   const meterWidth = Math.max(currentWidth * 0.15, 6);
 
   // Docked tile styling
@@ -152,7 +158,7 @@ export default function MixerTile({
           </button>
         </Tooltip>
 
-        {/* Track Header */}
+        {/* Track Header with Controls */}
         <div
           style={{
             height: `${headerHeight}px`,
@@ -160,13 +166,73 @@ export default function MixerTile({
             borderRadius: '3px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'space-between',
             fontSize: `${Math.max(currentWidth * 0.12, 9)}px`,
             flexShrink: 0,
+            paddingLeft: '4px',
+            paddingRight: '4px',
+            gap: '2px',
           }}
-          className="font-bold text-gray-900 truncate px-1 overflow-hidden"
+          className="font-bold text-gray-900 overflow-hidden"
         >
-          {track.name}
+          {/* Track Name */}
+          <div className="truncate flex-1">
+            {track.name}
+          </div>
+
+          {/* Inline Control Buttons */}
+          <div className="flex gap-0.5 flex-shrink-0">
+            {/* Mute Button */}
+            <Tooltip content={track.muted ? 'Unmute' : 'Mute'} position="bottom">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdate(track.id, { muted: !track.muted });
+                }}
+                className={`px-1 rounded text-xs font-bold transition ${
+                  track.muted
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-900/50 text-gray-900 hover:bg-gray-900/70'
+                }`}
+              >
+                M
+              </button>
+            </Tooltip>
+
+            {/* Solo Button */}
+            <Tooltip content={track.soloed ? 'Unsolo' : 'Solo'} position="bottom">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdate(track.id, { soloed: !track.soloed });
+                }}
+                className={`px-1 rounded text-xs font-bold transition ${
+                  track.soloed
+                    ? 'bg-yellow-500 text-gray-900'
+                    : 'bg-gray-900/50 text-gray-900 hover:bg-gray-900/70'
+                }`}
+              >
+                S
+              </button>
+            </Tooltip>
+
+            {/* Record Arm Button */}
+            <Tooltip content={track.armed ? 'Disarm' : 'Arm for recording'} position="bottom">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdate(track.id, { armed: !track.armed });
+                }}
+                className={`px-1 rounded text-xs font-bold transition ${
+                  track.armed
+                    ? 'bg-red-700 text-white'
+                    : 'bg-gray-900/50 text-gray-900 hover:bg-gray-900/70'
+                }`}
+              >
+                R
+              </button>
+            </Tooltip>
+          </div>
         </div>
 
         {/* METER + FADER */}
@@ -204,52 +270,7 @@ export default function MixerTile({
           </Tooltip>
         </div>
 
-        {/* Controls */}
-        <div className="flex gap-1 justify-center flex-wrap">
-          {/* Mute */}
-          <Tooltip content={track.muted ? 'Unmute track' : 'Mute track'} position="top">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onUpdate(track.id, { muted: !track.muted });
-              }}
-              className={`rounded font-semibold transition flex-1 ${
-                track.muted
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-              style={{
-                fontSize: `${Math.max(stripWidth * 0.1, 9)}px`,
-                padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
-              }}
-            >
-              M
-            </button>
-          </Tooltip>
-
-          {/* Solo */}
-          <Tooltip content={track.soloed ? 'Unsolo track' : 'Solo track'} position="top">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onUpdate(track.id, { soloed: !track.soloed });
-              }}
-              className={`rounded font-semibold transition flex-1 ${
-                track.soloed
-                  ? 'bg-yellow-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-              style={{
-                fontSize: `${Math.max(stripWidth * 0.1, 9)}px`,
-                padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
-              }}
-            >
-              S
-            </button>
-          </Tooltip>
-        </div>
-
-        {/* Delete */}
+        {/* Delete Button */}
         <Tooltip content="Delete track" position="top">
           <button
             onClick={(e) => {
@@ -311,7 +332,7 @@ export default function MixerTile({
         </Tooltip>
       </div>
 
-      {/* Track Header */}
+      {/* Track Header with Controls */}
       <div
         style={{
           height: `${headerHeight}px`,
@@ -319,13 +340,74 @@ export default function MixerTile({
           borderRadius: '2px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'space-between',
           fontSize: `${Math.max(size.width * 0.12, 9)}px`,
           flexShrink: 0,
+          paddingLeft: '4px',
+          paddingRight: '4px',
+          gap: '2px',
+          marginTop: '4px',
         }}
-        className="font-bold text-gray-900 truncate px-1 overflow-hidden mt-1"
+        className="font-bold text-gray-900 overflow-hidden"
       >
-        {track.name}
+        {/* Track Name */}
+        <div className="truncate flex-1">
+          {track.name}
+        </div>
+
+        {/* Inline Control Buttons */}
+        <div className="flex gap-0.5 flex-shrink-0">
+          {/* Mute Button */}
+          <Tooltip content={track.muted ? 'Unmute' : 'Mute'} position="bottom">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdate(track.id, { muted: !track.muted });
+              }}
+              className={`px-1 rounded text-xs font-bold transition ${
+                track.muted
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-900/50 text-gray-900 hover:bg-gray-900/70'
+              }`}
+            >
+              M
+            </button>
+          </Tooltip>
+
+          {/* Solo Button */}
+          <Tooltip content={track.soloed ? 'Unsolo' : 'Solo'} position="bottom">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdate(track.id, { soloed: !track.soloed });
+              }}
+              className={`px-1 rounded text-xs font-bold transition ${
+                track.soloed
+                  ? 'bg-yellow-500 text-gray-900'
+                  : 'bg-gray-900/50 text-gray-900 hover:bg-gray-900/70'
+              }`}
+            >
+              S
+            </button>
+          </Tooltip>
+
+          {/* Record Arm Button */}
+          <Tooltip content={track.armed ? 'Disarm' : 'Arm for recording'} position="bottom">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdate(track.id, { armed: !track.armed });
+              }}
+              className={`px-1 rounded text-xs font-bold transition ${
+                track.armed
+                  ? 'bg-red-700 text-white'
+                  : 'bg-gray-900/50 text-gray-900 hover:bg-gray-900/70'
+              }`}
+            >
+              R
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       {/* METER + FADER */}
@@ -360,51 +442,6 @@ export default function MixerTile({
           >
             {db.toFixed(1)} dB
           </div>
-        </Tooltip>
-      </div>
-
-      {/* Controls */}
-      <div className="flex gap-1 justify-center flex-wrap">
-        {/* Mute */}
-        <Tooltip content={track.muted ? 'Unmute track' : 'Mute track'} position="top">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onUpdate(track.id, { muted: !track.muted });
-            }}
-            className={`rounded font-semibold transition flex-1 ${
-              track.muted
-                ? 'bg-red-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-            style={{
-              fontSize: `${Math.max(size.width * 0.1, 9)}px`,
-              padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
-            }}
-          >
-            M
-          </button>
-        </Tooltip>
-
-        {/* Solo */}
-        <Tooltip content={track.soloed ? 'Unsolo track' : 'Solo track'} position="top">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onUpdate(track.id, { soloed: !track.soloed });
-            }}
-            className={`rounded font-semibold transition flex-1 ${
-              track.soloed
-                ? 'bg-yellow-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-            style={{
-              fontSize: `${Math.max(size.width * 0.1, 9)}px`,
-              padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
-            }}
-          >
-            S
-          </button>
         </Tooltip>
       </div>
 

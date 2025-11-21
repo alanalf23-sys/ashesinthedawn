@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { Track, Project, LogicCoreMode } from '../types';
+import { Track, Project, LogicCoreMode, Plugin } from '../types';
 import { supabase } from '../lib/supabase';
 import { getAudioEngine } from '../lib/audioEngine';
 
@@ -33,6 +33,9 @@ interface DAWContextType {
   getAudioDuration: (trackId: string) => number;
   seek: (timeSeconds: number) => void;
   setTrackInputGain: (trackId: string, gainDb: number) => void;
+  addPluginToTrack: (trackId: string, plugin: Plugin) => void;
+  removePluginFromTrack: (trackId: string, pluginId: string) => void;
+  togglePluginEnabled: (trackId: string, pluginId: string, enabled: boolean) => void;
 }
 
 const DAWContext = createContext<DAWContextType | undefined>(undefined);
@@ -304,6 +307,67 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Add a plugin to a track's insert chain
+  const addPluginToTrack = (trackId: string, plugin: Plugin) => {
+    setTracks(prev =>
+      prev.map(t =>
+        t.id === trackId
+          ? { ...t, inserts: [...t.inserts, plugin] }
+          : t
+      )
+    );
+    // Update selected track if it was modified
+    if (selectedTrack?.id === trackId) {
+      setSelectedTrack(prev => prev ? { ...prev, inserts: [...prev.inserts, plugin] } : null);
+    }
+  };
+
+  // Remove a plugin from a track's insert chain
+  const removePluginFromTrack = (trackId: string, pluginId: string) => {
+    setTracks(prev =>
+      prev.map(t =>
+        t.id === trackId
+          ? { ...t, inserts: t.inserts.filter(p => p.id !== pluginId) }
+          : t
+      )
+    );
+    // Update selected track if it was modified
+    if (selectedTrack?.id === trackId) {
+      setSelectedTrack(prev =>
+        prev ? { ...prev, inserts: prev.inserts.filter(p => p.id !== pluginId) } : null
+      );
+    }
+  };
+
+  // Toggle plugin enabled/disabled
+  const togglePluginEnabled = (trackId: string, pluginId: string, enabled: boolean) => {
+    setTracks(prev =>
+      prev.map(t =>
+        t.id === trackId
+          ? {
+              ...t,
+              inserts: t.inserts.map(p =>
+                p.id === pluginId ? { ...p, enabled } : p
+              ),
+            }
+          : t
+      )
+    );
+    // Update selected track if it was modified
+    if (selectedTrack?.id === trackId) {
+      setSelectedTrack(prev =>
+        prev
+          ? {
+              ...prev,
+              inserts: prev.inserts.map(p =>
+                p.id === pluginId ? { ...p, enabled } : p
+              ),
+            }
+          : null
+      );
+    }
+  };
+
   const togglePlay = () => {
     if (!isPlaying) {
       // Starting playback
@@ -554,6 +618,9 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         getAudioDuration,
         seek,
         setTrackInputGain,
+        addPluginToTrack,
+        removePluginFromTrack,
+        togglePluginEnabled,
       }}
     >
       {children}

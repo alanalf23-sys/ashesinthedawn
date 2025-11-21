@@ -1,4 +1,125 @@
-# CoreLogic Studio - Component Documentation
+# CoreLogic Studio - Complete Architecture
+
+## Part 1: DSP Backend Architecture (Phase 2 Complete)
+
+### Audio Effects Library
+
+**Location**: `daw_core/fx/`
+
+#### Effects Organization
+```
+EQ Effects (2):
+  ├─ EQ3Band (3-band parametric with SciPy biquad)
+  └─ HighLowPass (Butterworth high/low-pass filters)
+
+Dynamic Processors (5):
+  ├─ Compressor (VCA with soft knee)
+  ├─ Limiter (hard limiting with lookahead)
+  ├─ Expander (inverse compressor)
+  ├─ Gate (binary gating)
+  └─ NoiseGate (smart hysteresis gating)
+
+Saturation & Distortion (4):
+  ├─ Saturation (smooth tanh soft clipping)
+  ├─ HardClip (digital hard limiting)
+  ├─ Distortion (soft/hard/fuzz modes)
+  └─ WaveShaper (sine/square/cubic/tanh curves)
+
+Delay Effects (4):
+  ├─ SimpleDelay (single-tap with feedback)
+  ├─ PingPongDelay (stereo bouncing)
+  ├─ MultiTapDelay (1-8 independent taps)
+  └─ StereoDelay (independent L/R delays)
+
+Reverb Engine (4):
+  ├─ Reverb (Freeverb main engine)
+  ├─ HallReverb (large hall preset)
+  ├─ PlateReverb (plate reverb preset)
+  └─ RoomReverb (small room preset)
+```
+
+#### Effect Processing Pipeline
+```
+Audio Input (Mono or Stereo)
+    ↓
+Parameter Application (Automation-modulated)
+    ↓
+Core DSP Processing
+    ├─ EQ/Filtering
+    ├─ Dynamic Range
+    ├─ Nonlinear Waveshaping
+    ├─ Delay/Reverb
+    └─ Metering
+    ↓
+Clipping Protection (±1.0 bounds)
+    ↓
+Audio Output (same dtype as input)
+```
+
+### Parameter Automation Framework
+
+**Location**: `daw_core/automation/`
+
+#### AutomationCurve
+- **Interpolation Modes**: Linear, Exponential (t²), Step, Smooth (cubic spline)
+- **Lookup**: Binary search O(log n) point retrieval
+- **Points**: Unlimited automation points with time/value/interpolation
+- **Bounds**: Automatic clamping to 0-1 range
+
+#### LFO (Low Frequency Oscillator)
+- **Waveforms**: Sine, Triangle, Square, Sawtooth, Random
+- **Rate**: 0.01-100 Hz
+- **Depth**: 0-1 amplitude scaling
+- **Phase**: Continuous 0-1 tracking
+
+#### Envelope Generator
+- **Stages**: IDLE → ATTACK → DECAY → SUSTAIN → RELEASE → IDLE
+- **Parameters**: Attack/Decay/Sustain/Release times (seconds)
+- **Decay**: Exponential smoothing for natural response
+
+#### AutomatedParameter
+- **Modes**: OFF (static), READ (playback curve), WRITE (record), TOUCH (selective)
+- **Composition**: base_value + (LFO_mod - 0.5) × lfo_intensity + (ENV_mod - 0.5) × env_intensity
+- **Output**: 0-1 normalized range
+
+#### ParameterTrack
+- **Multi-Parameter**: Container for multiple AutomatedParameters
+- **Shared Mode**: Single automation mode across all parameters
+- **Serialization**: Full save/restore support
+
+### Metering & Analysis Suite
+
+**Location**: `daw_core/metering/`
+
+#### LevelMeter
+- **Peak Detection**: 0.5s hold time with decay
+- **RMS Calculation**: Root mean square energy measurement
+- **Clipping**: Automatic detection when signal > 1.0
+- **History**: 1024-sample circular buffer for visualization
+- **Sustained**: Exponential decay tracking (0.995 per-sample)
+
+#### SpectrumAnalyzer
+- **FFT**: Real-time frequency analysis (NumPy rfft)
+- **Windows**: Hann (default), Hamming, Blackman, Rectangular
+- **Smoothing**: Exponential moving average (0.7 factor)
+- **Bands**: Logarithmic frequency scaling for visualization
+- **Resolution**: fft_size / sample_rate (e.g., 21.5 Hz @ 44.1kHz, 2048)
+
+#### VUMeter
+- **Scale**: Logarithmic -40 to +6 dB range
+- **Averaging**: 300ms exponential window
+- **Response**: Smooth needle movement (professional VU simulation)
+- **Output**: 0-1 normalized or dB value
+
+#### Correlometer
+- **Correlation**: Pearson coefficient (-1 to +1)
+- **Mono Detection**: >0.95 correlation threshold
+- **Stereo Detection**: <0.3 correlation threshold
+- **Mid/Side**: Separate level tracking for stereo analysis
+
+---
+
+## Part 2: React UI Architecture
 
 ## Component Overview & Props
 
