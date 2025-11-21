@@ -14,14 +14,12 @@ export default function Waveform({ track, height = 60, width = 400, color = '#3b
   const { getWaveformData, getAudioDuration } = useDAW();
   
   const waveformData = useMemo(() => {
-    const data = getWaveformData(track.id);
-    return data;
-  }, [track.id]);
+    return getWaveformData(track.id);
+  }, [track.id, getWaveformData]);
 
   const duration = useMemo(() => {
-    const dur = getAudioDuration(track.id);
-    return dur;
-  }, [track.id]);
+    return getAudioDuration(track.id);
+  }, [track.id, getAudioDuration]);
 
   useEffect(() => {
     if (!canvasRef.current || waveformData.length === 0) return;

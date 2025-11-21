@@ -56,7 +56,9 @@ export function clamp(value: number, min: number, max: number): number {
  * Create a simple test tone (sine wave)
  */
 export function generateTestTone(frequency: number = 440, duration: number = 1, sampleRate: number = 44100): AudioBuffer {
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+  const audioContext = new AudioContextClass();
   const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
   const data = buffer.getChannelData(0);
 
@@ -92,6 +94,7 @@ export function calculateLUFS(audioData: Uint8Array): number {
  * Check if audio context is available
  */
 export function isAudioContextAvailable(): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return !!(window.AudioContext || (window as any).webkitAudioContext);
 }
 
@@ -100,8 +103,9 @@ export function isAudioContextAvailable(): boolean {
  */
 export function getAudioContext(): AudioContext | null {
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    return new AudioContext();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext as typeof AudioContext;
+    return new AudioContextClass();
   } catch (error) {
     console.error('AudioContext not supported:', error);
     return null;
@@ -134,9 +138,9 @@ export function analyzeFrequencySpectrum(audioData: Uint8Array): {
   const midBucket = audioData.slice(third, third * 2);
   const trebleBucket = audioData.slice(third * 2);
 
-  const bass = bassBucket.reduce((a, b) => a + b, 0) / bassBucket.length / 255;
-  const mid = midBucket.reduce((a, b) => a + b, 0) / midBucket.length / 255;
-  const treble = trebleBucket.reduce((a, b) => a + b, 0) / trebleBucket.length / 255;
+  const bass = bassBucket.reduce((a: number, b: number) => a + b, 0) / bassBucket.length / 255;
+  const mid = midBucket.reduce((a: number, b: number) => a + b, 0) / midBucket.length / 255;
+  const treble = trebleBucket.reduce((a: number, b: number) => a + b, 0) / trebleBucket.length / 255;
 
   return { bass, mid, treble };
 }

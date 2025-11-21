@@ -1,4 +1,5 @@
 import { useDAW } from '../contexts/DAWContext';
+import { Track } from '../types';
 import { useEffect, useRef, useState } from 'react';
 
 export default function Timeline() {
@@ -58,7 +59,7 @@ export default function Timeline() {
     seek(clickTime);
   };
 
-  const renderAudioRegion = (track: any, trackIndex: number) => {
+  const renderAudioRegion = (track: Track, trackIndex: number) => {
     if (track.type !== 'audio') return null;
     const duration = getAudioDuration(track.id);
     if (duration <= 0) return null;
@@ -102,7 +103,7 @@ export default function Timeline() {
     );
   };
 
-  const renderMIDIRegion = (track: any, trackIndex: number) => {
+  const renderMIDIRegion = (track: Track, trackIndex: number) => {
     if (track.type !== 'midi' && track.type !== 'instrument') return null;
 
     const startTime = Math.random() * 2;

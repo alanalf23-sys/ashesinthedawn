@@ -26,7 +26,9 @@ export class AudioEngine {
     if (this.isInitialized) return;
 
     try {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      this.audioContext = new AudioContextClass();
       
       // Create master gain node
       this.masterGain = this.audioContext.createGain();
@@ -340,7 +342,7 @@ export class AudioEngine {
     // Width = 100: normal stereo
     // Width > 100: increases stereo width
     // Normalized value will be used for future DSP implementation
-    Math.max(0, Math.min(200, width)) / 100;
+    void (Math.max(0, Math.min(200, width)) / 100);
     
     // Store for later use in audio graph optimization
     this.stereoWidthNodes.set(trackId, gainNode);
@@ -384,19 +386,19 @@ export class AudioEngine {
     // Process each plugin in the chain
     for (const pluginType of pluginTypes) {
       switch (pluginType) {
-        case 'eq':
+        case 'eq': {
           // Create simple EQ with 3-band
-          const eq = this.audioContext.createBiquadFilter();
+          const eq = this.audioContext!.createBiquadFilter();
           eq.type = 'lowshelf';
           eq.frequency.value = 200;
           currentNode.connect(eq);
           currentNode = eq;
           console.debug(`EQ plugin inserted for track ${trackId}`);
           break;
-
-        case 'compressor':
+        }
+        case 'compressor': {
           // Create dynamics compressor
-          const compressor = this.audioContext.createDynamicsCompressor();
+          const compressor = this.audioContext!.createDynamicsCompressor();
           compressor.threshold.value = -24;
           compressor.knee.value = 30;
           compressor.ratio.value = 12;
@@ -406,43 +408,44 @@ export class AudioEngine {
           currentNode = compressor;
           console.debug(`Compressor plugin inserted for track ${trackId}`);
           break;
-
-        case 'gate':
+        }
+        case 'gate': {
           // Gate implemented via gain modulation (simplified)
-          const gateGain = this.audioContext.createGain();
+          const gateGain = this.audioContext!.createGain();
           gateGain.gain.value = 1;
           currentNode.connect(gateGain);
           currentNode = gateGain;
           console.debug(`Gate plugin inserted for track ${trackId}`);
           break;
-
-        case 'delay':
+        }
+        case 'delay': {
           // Create delay effect
-          const delayNode = this.audioContext.createDelay(5);
+          const delayNode = this.audioContext!.createDelay(5);
           delayNode.delayTime.value = 0.3;
           currentNode.connect(delayNode);
           currentNode = delayNode;
           console.debug(`Delay plugin inserted for track ${trackId}`);
           break;
-
-        case 'reverb':
+        }
+        case 'reverb': {
           // Reverb implemented with delay + feedback (simplified)
-          const reverbGain = this.audioContext.createGain();
+          const reverbGain = this.audioContext!.createGain();
           reverbGain.gain.value = 0.5;
           currentNode.connect(reverbGain);
           currentNode = reverbGain;
           console.debug(`Reverb plugin inserted for track ${trackId}`);
           break;
-
+        }
         case 'utility':
         case 'meter':
-        default:
+        default: {
           // Utility/meter pass-through
-          const utilityGain = this.audioContext.createGain();
+          const utilityGain = this.audioContext!.createGain();
           utilityGain.gain.value = 1;
           currentNode.connect(utilityGain);
           currentNode = utilityGain;
           console.debug(`Utility/Meter plugin inserted for track ${trackId}`);
+        }
       }
     }
 

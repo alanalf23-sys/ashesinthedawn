@@ -1,4 +1,5 @@
 import { useDAW } from '../contexts/DAWContext';
+import { Track } from '../types';
 import { Trash2, Sliders } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 
@@ -60,10 +61,11 @@ export default function Mixer() {
   // --- Real-Time Level Polling ---
   useEffect(() => {
     const updateLevels = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const engine = (window as any)?.audioEngineRef?.current;
       if (engine && typeof engine.getTrackLevel === 'function') {
         const newLevels: Record<string, number> = {};
-        tracks.forEach(track => {
+        tracks.forEach((track) => {
           const raw = engine.getTrackLevel(track.id);
           const smoothed =
             0.6 * (levels[track.id] || 0) + 0.4 * (raw || 0);
@@ -77,11 +79,11 @@ export default function Mixer() {
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [tracks]);
+  }, [tracks, levels]);
 
   // --- Solo/Mute Logic ---
   const anySolo = tracks.some(t => t.soloed);
-  const isTrackAudible = (t: any) =>
+  const isTrackAudible = (t: Track) =>
     !t.muted && (!anySolo || t.soloed) && t.type !== 'master';
 
   // --- Master Level ---
@@ -93,7 +95,7 @@ export default function Mixer() {
   })();
 
   // --- Channel Strip ---
-  const renderChannelStrip = (track: any) => {
+  const renderChannelStrip = (track: Track) => {
     const isSelected = selectedTrack?.id === track.id;
     const currentWidth = individualWidths[track.id] || stripWidth;
     const meter = levels[track.id] || 0;

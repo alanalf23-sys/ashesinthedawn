@@ -110,9 +110,11 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   }, [tracks, isPlaying]);
 
   // Cleanup on unmount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     return () => {
-      audioEngineRef.current.dispose();
+      const engineRef = audioEngineRef.current;
+      engineRef.dispose();
     };
   }, []);
 
@@ -296,8 +298,9 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     setTracks(prev => prev.map(t => t.id === trackId ? { ...t, inputGain: gainDb } : t));
     try {
       audioEngineRef.current.setTrackInputGain(trackId, gainDb);
-    } catch (err) {
+    } catch (error: unknown) {
       // audio engine might not be initialized yet — that's fine
+      console.debug('setTrackInputGain error:', error);
     }
   };
 
@@ -452,7 +455,8 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       setTracks(prev => [...prev, newTrack]);
       setIsUploadingFile(false);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error('Upload error:', error);
       setUploadError('Failed to upload file');
       setIsUploadingFile(false);
       return false;
@@ -557,6 +561,7 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useDAW() {
   const context = useContext(DAWContext);
   if (!context) {
