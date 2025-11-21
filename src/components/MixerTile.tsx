@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Track } from '../types';
 import { Trash2, Maximize2, Minimize2 } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 interface MixerTileProps {
   track: Track;
@@ -139,16 +140,17 @@ export default function MixerTile({
         />
 
         {/* Detach button overlay */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDetach?.();
-          }}
-          className="absolute top-1 right-1 p-1 rounded bg-blue-600/0 hover:bg-blue-600/80 text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-all z-10"
-          title="Detach tile to floating window"
-        >
-          <Maximize2 className="w-4 h-4" />
-        </button>
+        <Tooltip content="Detach to floating window" position="right">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDetach?.();
+            }}
+            className="absolute top-1 right-1 p-1 rounded bg-blue-600/0 hover:bg-blue-600/80 text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-all z-10"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        </Tooltip>
 
         {/* Track Header */}
         <div
@@ -189,73 +191,81 @@ export default function MixerTile({
           </div>
 
           {/* dB Display */}
-          <div
-            className="font-mono text-xs text-gray-400 text-center"
-            style={{
-              padding: '2px',
-              minHeight: '20px',
-            }}
-          >
-            {db.toFixed(1)} dB
-          </div>
+          <Tooltip content="RMS level in decibels" position="right">
+            <div
+              className="font-mono text-xs text-gray-400 text-center cursor-help"
+              style={{
+                padding: '2px',
+                minHeight: '20px',
+              }}
+            >
+              {db.toFixed(1)} dB
+            </div>
+          </Tooltip>
         </div>
 
         {/* Controls */}
         <div className="flex gap-1 justify-center flex-wrap">
           {/* Mute */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onUpdate(track.id, { muted: !track.muted });
-            }}
-            className={`rounded font-semibold transition flex-1 ${
-              track.muted
-                ? 'bg-red-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-            style={{
-              fontSize: `${Math.max(stripWidth * 0.1, 9)}px`,
-              padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
-            }}
-          >
-            M
-          </button>
+          <Tooltip content={track.muted ? 'Unmute track' : 'Mute track'} position="top">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdate(track.id, { muted: !track.muted });
+              }}
+              className={`rounded font-semibold transition flex-1 ${
+                track.muted
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+              style={{
+                fontSize: `${Math.max(stripWidth * 0.1, 9)}px`,
+                padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
+              }}
+            >
+              M
+            </button>
+          </Tooltip>
 
           {/* Solo */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onUpdate(track.id, { soloed: !track.soloed });
-            }}
-            className={`rounded font-semibold transition flex-1 ${
-              track.soloed
-                ? 'bg-yellow-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-            style={{
-              fontSize: `${Math.max(stripWidth * 0.1, 9)}px`,
-              padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
-            }}
-          >
-            S
-          </button>
+          <Tooltip content={track.soloed ? 'Unsolo track' : 'Solo track'} position="top">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdate(track.id, { soloed: !track.soloed });
+              }}
+              className={`rounded font-semibold transition flex-1 ${
+                track.soloed
+                  ? 'bg-yellow-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+              style={{
+                fontSize: `${Math.max(stripWidth * 0.1, 9)}px`,
+                padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
+              }}
+            >
+              S
+            </button>
+          </Tooltip>
         </div>
 
         {/* Delete */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(track.id);
-          }}
-          className="w-full rounded font-semibold bg-gray-700 text-gray-400 hover:bg-red-900/50 hover:text-red-400 transition flex items-center justify-center gap-1"
-          style={{
-            fontSize: `${Math.max(stripWidth * 0.08, 8)}px`,
-            padding: '4px',
-            flexShrink: 0,
-          }}
-        >
-          <Trash2 style={{ width: 12, height: 12 }} /> Del
-        </button>
+        <Tooltip content="Delete track" position="top">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(track.id);
+            }}
+            className="w-full rounded font-semibold bg-gray-700 text-gray-400 hover:bg-red-900/50 hover:text-red-400 transition flex items-center justify-center gap-1"
+            style={{
+              fontSize: `${Math.max(stripWidth * 0.08, 8)}px`,
+              padding: '4px',
+              flexShrink: 0,
+            }}
+          >
+            <Trash2 style={{ width: 12, height: 12 }} /> Del
+          </button>
+        </Tooltip>
       </div>
     );
   }
@@ -288,16 +298,17 @@ export default function MixerTile({
         className="h-6 bg-gradient-to-r from-gray-800 via-gray-750 to-gray-800 border-b border-gray-600 rounded-t-1 flex items-center justify-between px-3 flex-shrink-0 cursor-move hover:bg-gradient-to-r hover:from-gray-700 hover:via-gray-700 hover:to-gray-700 transition-all"
       >
         <span className="text-xs font-semibold text-gray-100 truncate flex-1">{track.name}</span>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDock?.();
-          }}
-          className="p-0.5 hover:bg-blue-600/30 rounded transition-colors text-gray-400 hover:text-blue-400 ml-2"
-          title="Dock tile back to mixer"
-        >
-          <Minimize2 className="w-3 h-3" />
-        </button>
+        <Tooltip content="Dock back to mixer" position="left">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDock?.();
+            }}
+            className="p-0.5 hover:bg-blue-600/30 rounded transition-colors text-gray-400 hover:text-blue-400 ml-2"
+          >
+            <Minimize2 className="w-3 h-3" />
+          </button>
+        </Tooltip>
       </div>
 
       {/* Track Header */}
@@ -339,80 +350,90 @@ export default function MixerTile({
         </div>
 
         {/* dB Display */}
-        <div
-          className="font-mono text-xs text-gray-400 text-center"
-          style={{
-            padding: '2px',
-            minHeight: '20px',
-          }}
-        >
-          {db.toFixed(1)} dB
-        </div>
+        <Tooltip content="RMS level in decibels" position="right">
+          <div
+            className="font-mono text-xs text-gray-400 text-center cursor-help"
+            style={{
+              padding: '2px',
+              minHeight: '20px',
+            }}
+          >
+            {db.toFixed(1)} dB
+          </div>
+        </Tooltip>
       </div>
 
       {/* Controls */}
       <div className="flex gap-1 justify-center flex-wrap">
         {/* Mute */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onUpdate(track.id, { muted: !track.muted });
-          }}
-          className={`rounded font-semibold transition flex-1 ${
-            track.muted
-              ? 'bg-red-600 text-white'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-          }`}
-          style={{
-            fontSize: `${Math.max(size.width * 0.1, 9)}px`,
-            padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
-          }}
-        >
-          M
-        </button>
+        <Tooltip content={track.muted ? 'Unmute track' : 'Mute track'} position="top">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdate(track.id, { muted: !track.muted });
+            }}
+            className={`rounded font-semibold transition flex-1 ${
+              track.muted
+                ? 'bg-red-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            style={{
+              fontSize: `${Math.max(size.width * 0.1, 9)}px`,
+              padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
+            }}
+          >
+            M
+          </button>
+        </Tooltip>
 
         {/* Solo */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onUpdate(track.id, { soloed: !track.soloed });
-          }}
-          className={`rounded font-semibold transition flex-1 ${
-            track.soloed
-              ? 'bg-yellow-600 text-white'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-          }`}
-          style={{
-            fontSize: `${Math.max(size.width * 0.1, 9)}px`,
-            padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
-          }}
-        >
-          S
-        </button>
+        <Tooltip content={track.soloed ? 'Unsolo track' : 'Solo track'} position="top">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdate(track.id, { soloed: !track.soloed });
+            }}
+            className={`rounded font-semibold transition flex-1 ${
+              track.soloed
+                ? 'bg-yellow-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            style={{
+              fontSize: `${Math.max(size.width * 0.1, 9)}px`,
+              padding: `${Math.max(buttonHeight * 0.2, 2)}px`,
+            }}
+          >
+            S
+          </button>
+        </Tooltip>
       </div>
 
       {/* Delete */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(track.id);
-        }}
-        className="w-full rounded font-semibold bg-gray-700 text-gray-400 hover:bg-red-900/50 hover:text-red-400 transition flex items-center justify-center gap-1"
-        style={{
-          fontSize: `${Math.max(size.width * 0.08, 8)}px`,
-          padding: '4px',
-          flexShrink: 0,
-        }}
-      >
-        <Trash2 style={{ width: 12, height: 12 }} /> Del
-      </button>
+      <Tooltip content="Delete track" position="top">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(track.id);
+          }}
+          className="w-full rounded font-semibold bg-gray-700 text-gray-400 hover:bg-red-900/50 hover:text-red-400 transition flex items-center justify-center gap-1"
+          style={{
+            fontSize: `${Math.max(size.width * 0.08, 8)}px`,
+            padding: '4px',
+            flexShrink: 0,
+          }}
+        >
+          <Trash2 style={{ width: 12, height: 12 }} /> Del
+        </button>
+      </Tooltip>
 
       {/* Resize Handle - Bottom Right Corner */}
-      <div
-        onMouseDown={handleMouseDownResize}
-        className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize bg-gradient-to-tl from-blue-500/40 to-transparent hover:from-blue-500/80 transition-all"
-        style={{ zIndex: 50 }}
-      />
+      <Tooltip content="Drag to resize window" position="left">
+        <div
+          onMouseDown={handleMouseDownResize}
+          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize bg-gradient-to-tl from-blue-500/40 to-transparent hover:from-blue-500/80 transition-all"
+          style={{ zIndex: 50 }}
+        />
+      </Tooltip>
     </div>
   );
 }
