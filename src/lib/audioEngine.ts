@@ -18,6 +18,10 @@ export class AudioEngine {
   private phaseFlipStates: Map<string, boolean> = new Map();
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
+  private playingTracksState: Map<
+    string,
+    { isPlaying: boolean; currentOffset: number }
+  > = new Map();
 
   /**
    * Initialize the Web Audio API context and master nodes
@@ -27,9 +31,10 @@ export class AudioEngine {
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass =
+        window.AudioContext || (window as any).webkitAudioContext;
       this.audioContext = new AudioContextClass();
-      
+
       // Create master gain node
       this.masterGain = this.audioContext.createGain();
       this.masterGain.gain.value = 1;
@@ -41,9 +46,9 @@ export class AudioEngine {
       this.analyser.fftSize = 2048;
 
       this.isInitialized = true;
-      console.log('Audio Engine initialized');
+      console.log("Audio Engine initialized");
     } catch (error) {
-      console.error('Failed to initialize audio context:', error);
+      console.error("Failed to initialize audio context:", error);
       throw error;
     }
   }
@@ -58,12 +63,14 @@ export class AudioEngine {
       const arrayBuffer = await file.arrayBuffer();
       const audioBuffer = await this.audioContext!.decodeAudioData(arrayBuffer);
       this.audioBuffers.set(trackId, audioBuffer);
-      
+
       // Pre-generate and cache waveform data for faster rendering
       const waveformData = this.getWaveformData(trackId, 1024);
       this.waveformCache.set(trackId, waveformData);
-      
-      console.log(`Loaded audio file for track ${trackId} with waveform (${waveformData.length} samples)`);
+
+      console.log(
+        `Loaded audio file for track ${trackId} with waveform (${waveformData.length} samples)`
+      );
       return true;
     } catch (error) {
       console.error(`Failed to load audio file for track ${trackId}:`, error);
@@ -74,7 +81,12 @@ export class AudioEngine {
   /**
    * Play an audio file from a specific track
    */
-  playAudio(trackId: string, startTime: number = 0, volume: number = 1, pan: number = 0): boolean {
+  playAudio(
+    trackId: string,
+    startTime: number = 0,
+    volume: number = 1,
+    pan: number = 0
+  ): boolean {
     if (!this.audioContext || !this.masterGain) return false;
 
     const audioBuffer = this.audioBuffers.get(trackId);
@@ -89,6 +101,7 @@ export class AudioEngine {
 
       const source = this.audioContext.createBufferSource();
       source.buffer = audioBuffer;
+      source.loop = true; // Enable looping
 
       // Create pre-fader input gain node
       const inputGain = this.audioContext.createGain();
@@ -117,10 +130,18 @@ export class AudioEngine {
       this.gainNodes.set(trackId, trackGain);
       this.panNodes.set(trackId, panNode);
 
+      // Track playback state
+      this.playingTracksState.set(trackId, {
+        isPlaying: true,
+        currentOffset: startTime,
+      });
+
       source.start(0, startTime);
       this.playingNodes.set(trackId, source);
 
-      console.log(`Playing track ${trackId} at ${startTime}s with volume ${volume}dB, pan ${pan}`);
+      console.log(
+        `Playing track ${trackId} at ${startTime}s with volume ${volume}dB, pan ${pan}`
+      );
       return true;
     } catch (error) {
       console.error(`Failed to play audio for track ${trackId}:`, error);
@@ -156,7 +177,7 @@ export class AudioEngine {
       }
     });
     this.playingNodes.clear();
-    console.log('Stopped all audio playback');
+    console.log("Stopped all audio playback");
   }
 
   /**
@@ -233,10 +254,10 @@ export class AudioEngine {
       };
 
       this.mediaRecorder.start();
-      console.log('Recording started');
+      console.log("Recording started");
       return true;
     } catch (error) {
-      console.error('Failed to start recording:', error);
+      console.error("Failed to start recording:", error);
       return false;
     }
   }
@@ -249,9 +270,9 @@ export class AudioEngine {
 
     return new Promise((resolve) => {
       this.mediaRecorder!.onstop = () => {
-        const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
+        const blob = new Blob(this.recordedChunks, { type: "audio/webm" });
         this.recordedChunks = [];
-        console.log('Recording stopped');
+        console.log("Recording stopped");
         resolve(blob);
       };
       this.mediaRecorder!.stop();
@@ -269,6 +290,12 @@ export class AudioEngine {
    * Get waveform data from audio buffer
    */
   getWaveformData(trackId: string, samples: number = 1024): number[] {
+    // Check cache first
+    const cached = this.waveformCache.get(trackId);
+    if (cached && cached.length > 0) {
+      return cached;
+    }
+
     const buffer = this.audioBuffers.get(trackId);
     if (!buffer) {
       console.debug(`No audio buffer found for track ${trackId}`);
@@ -278,10 +305,12 @@ export class AudioEngine {
     try {
       const rawData = buffer.getChannelData(0);
       const blockSize = Math.floor(rawData.length / samples);
-      
+
       if (blockSize < 1) {
         // If audio is too short, just return raw data
-        return Array.from(rawData).map(v => Math.abs(v)).slice(0, samples);
+        return Array.from(rawData)
+          .map((v) => Math.abs(v))
+          .slice(0, samples);
       }
 
       const waveform: number[] = [];
@@ -296,6 +325,8 @@ export class AudioEngine {
         waveform.push(sum / blockSize);
       }
 
+      // Cache the computed waveform
+      this.waveformCache.set(trackId, waveform);
       return waveform;
     } catch (error) {
       console.error(`Error extracting waveform for track ${trackId}:`, error);
@@ -343,10 +374,10 @@ export class AudioEngine {
     // Width > 100: increases stereo width
     // Normalized value will be used for future DSP implementation
     void (Math.max(0, Math.min(200, width)) / 100);
-    
+
     // Store for later use in audio graph optimization
     this.stereoWidthNodes.set(trackId, gainNode);
-    
+
     console.debug(`Stereo width set for track ${trackId}: ${width}%`);
   }
 
@@ -361,10 +392,14 @@ export class AudioEngine {
 
     // Apply phase flip by multiplying gain by -1
     const currentGain = gainNode.gain.value;
-    gainNode.gain.value = enabled ? -Math.abs(currentGain) : Math.abs(currentGain);
-    
+    gainNode.gain.value = enabled
+      ? -Math.abs(currentGain)
+      : Math.abs(currentGain);
+
     this.phaseFlipStates.set(trackId, enabled);
-    console.debug(`Phase flip ${enabled ? 'enabled' : 'disabled'} for track ${trackId}`);
+    console.debug(
+      `Phase flip ${enabled ? "enabled" : "disabled"} for track ${trackId}`
+    );
   }
 
   /**
@@ -378,7 +413,11 @@ export class AudioEngine {
    * Process plugin chain for a track
    * Returns the audio node to route through plugin chain
    */
-  processPluginChain(trackId: string, sourceNode: AudioNode, pluginTypes: string[]): AudioNode {
+  processPluginChain(
+    trackId: string,
+    sourceNode: AudioNode,
+    pluginTypes: string[]
+  ): AudioNode {
     if (!this.audioContext || !this.isInitialized) return sourceNode;
 
     let currentNode: AudioNode = sourceNode;
@@ -386,17 +425,17 @@ export class AudioEngine {
     // Process each plugin in the chain
     for (const pluginType of pluginTypes) {
       switch (pluginType) {
-        case 'eq': {
+        case "eq": {
           // Create simple EQ with 3-band
           const eq = this.audioContext!.createBiquadFilter();
-          eq.type = 'lowshelf';
+          eq.type = "lowshelf";
           eq.frequency.value = 200;
           currentNode.connect(eq);
           currentNode = eq;
           console.debug(`EQ plugin inserted for track ${trackId}`);
           break;
         }
-        case 'compressor': {
+        case "compressor": {
           // Create dynamics compressor
           const compressor = this.audioContext!.createDynamicsCompressor();
           compressor.threshold.value = -24;
@@ -409,7 +448,7 @@ export class AudioEngine {
           console.debug(`Compressor plugin inserted for track ${trackId}`);
           break;
         }
-        case 'gate': {
+        case "gate": {
           // Gate implemented via gain modulation (simplified)
           const gateGain = this.audioContext!.createGain();
           gateGain.gain.value = 1;
@@ -418,7 +457,7 @@ export class AudioEngine {
           console.debug(`Gate plugin inserted for track ${trackId}`);
           break;
         }
-        case 'delay': {
+        case "delay": {
           // Create delay effect
           const delayNode = this.audioContext!.createDelay(5);
           delayNode.delayTime.value = 0.3;
@@ -427,7 +466,7 @@ export class AudioEngine {
           console.debug(`Delay plugin inserted for track ${trackId}`);
           break;
         }
-        case 'reverb': {
+        case "reverb": {
           // Reverb implemented with delay + feedback (simplified)
           const reverbGain = this.audioContext!.createGain();
           reverbGain.gain.value = 0.5;
@@ -436,8 +475,8 @@ export class AudioEngine {
           console.debug(`Reverb plugin inserted for track ${trackId}`);
           break;
         }
-        case 'utility':
-        case 'meter':
+        case "utility":
+        case "meter":
         default: {
           // Utility/meter pass-through
           const utilityGain = this.audioContext!.createGain();
@@ -455,10 +494,14 @@ export class AudioEngine {
   /**
    * Verify plugin chain is connected properly
    */
-  verifyPluginChain(trackId: string): { status: string; pluginCount: number; trackId: string } {
+  verifyPluginChain(trackId: string): {
+    status: string;
+    pluginCount: number;
+    trackId: string;
+  } {
     console.log(`Plugin chain verification for track ${trackId}`);
     return {
-      status: 'verified',
+      status: "verified",
       pluginCount: 0,
       trackId,
     };
@@ -481,7 +524,7 @@ export class AudioEngine {
     this.audioBuffers.clear();
     this.playingNodes.clear();
     this.isInitialized = false;
-    console.log('Audio Engine disposed');
+    console.log("Audio Engine disposed");
   }
 }
 

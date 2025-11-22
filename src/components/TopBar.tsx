@@ -12,7 +12,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useDAW } from "../contexts/DAWContext";
-import { useTransportClock, useTransportAPI } from "../hooks/useTransportClock";
+import { useTransportClock } from "../hooks/useTransportClock";
 import { useState } from "react";
 
 export default function TopBar() {
@@ -31,7 +31,7 @@ export default function TopBar() {
 
   // Real-time transport from WebSocket
   const { state: transport, connected, error } = useTransportClock();
-  const api = useTransportAPI();
+  // const api = useTransportAPI(); // Unused for now
 
   const [showViewMenu, setShowViewMenu] = useState(false);
   const [viewOptions, setViewOptions] = useState({

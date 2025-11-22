@@ -150,11 +150,39 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isPlaying) {
       const interval = setInterval(() => {
-        setCurrentTime((prev) => prev + 0.1);
+        setCurrentTime((prev) => {
+          const newTime = prev + 0.1;
+
+          // Check if audio has ended and needs to restart
+          tracks.forEach((track) => {
+            if (
+              !track.muted &&
+              (track.type === "audio" || track.type === "instrument")
+            ) {
+              const duration = audioEngineRef.current.getAudioDuration(
+                track.id
+              );
+              if (duration > 0 && newTime >= duration) {
+                // Audio has ended, restart playback from beginning
+                const startFrom = loopRegion?.enabled
+                  ? loopRegion.startTime
+                  : 0;
+                audioEngineRef.current.playAudio(
+                  track.id,
+                  startFrom,
+                  track.volume,
+                  track.pan
+                );
+              }
+            }
+          });
+
+          return newTime;
+        });
       }, 100);
       return () => clearInterval(interval);
     }
-  }, [isPlaying]);
+  }, [isPlaying, loopRegion, tracks]);
 
   // Sync track volume and pan changes with audio engine during playback
   useEffect(() => {
