@@ -5,14 +5,14 @@ Implements real-time graph scheduling and block-based processing.
 Handles topological sorting to ensure correct DSP order.
 """
 
-from typing import List, Dict, Set
-from .graph import Node, OutputNode
+from typing import List, Dict
+from .graph import Node
 
 
 class AudioEngine:
     """
     Main audio engine that manages the signal graph and processes audio in real-time blocks.
-    
+
     Responsibilities:
     - Maintain graph topology
     - Schedule nodes in correct order (topological sort)
@@ -24,7 +24,7 @@ class AudioEngine:
         self.sample_rate = sample_rate
         self.buffer_size = buffer_size
         self.nodes: List[Node] = []
-        self.graph: Dict[Node, List[Node]] = {}  # Adjacency list
+        self.graph: Dict[Node, List[Node]] = {}
         self.is_running = False
         self.block_count = 0
 
@@ -39,7 +39,6 @@ class AudioEngine:
         if node in self.nodes:
             self.nodes.remove(node)
             del self.graph[node]
-            # Remove connections to this node
             for connected_nodes in self.graph.values():
                 if node in connected_nodes:
                     connected_nodes.remove(node)
@@ -55,13 +54,11 @@ class AudioEngine:
         Kahn's algorithm for topological sorting.
         Returns nodes in the correct processing order.
         """
-        # Calculate in-degree for each node
         in_degree = {node: 0 for node in self.nodes}
         for node in self.nodes:
             for neighbor in self.graph.get(node, []):
                 in_degree[neighbor] += 1
 
-        # Queue of nodes with no incoming edges
         queue = [node for node in self.nodes if in_degree[node] == 0]
         sorted_nodes = []
 
@@ -69,13 +66,11 @@ class AudioEngine:
             node = queue.pop(0)
             sorted_nodes.append(node)
 
-            # Reduce in-degree of neighbors
             for neighbor in self.graph.get(node, []):
                 in_degree[neighbor] -= 1
                 if in_degree[neighbor] == 0:
                     queue.append(neighbor)
 
-        # Check for cycles
         if len(sorted_nodes) != len(self.nodes):
             raise RuntimeError("Graph contains a cycle!")
 
@@ -89,10 +84,8 @@ class AudioEngine:
         if not self.is_running:
             return
 
-        # Get correct processing order
         sorted_nodes = self.topological_sort()
 
-        # Process each node in order
         for node in sorted_nodes:
             node.process()
 

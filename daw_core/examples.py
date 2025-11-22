@@ -9,7 +9,6 @@ Run this to validate the core engine works correctly.
 # Install with: pip install numpy scipy
 
 import sys
-from pathlib import Path
 
 # Try importing, but provide helpful message if dependencies missing
 try:
@@ -212,7 +211,7 @@ def example_4_project_serialization():
     track2 = Track("vocal_2", "New Track")
     track2.from_dict(track_data)
 
-    print(f"\nDeserialized track:")
+    print("\nDeserialized track:")
     print(f"  Name: {track2.name}")
     print(f"  Volume: {track2.volume} dB")
     print(f"  Pan: {track2.pan}")

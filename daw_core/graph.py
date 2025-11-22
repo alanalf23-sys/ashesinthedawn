@@ -32,7 +32,7 @@ class Port:
 class Node:
     """
     Base class for all DSP nodes in the signal graph.
-    
+
     A node:
     - Has N input ports and M output ports
     - Processes audio each block (DSP cycle)

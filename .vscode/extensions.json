@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "github.copilot",
+    "ms-python.python",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "mhutchie.git-graph"
+  ]
+}

@@ -1,8 +1,11 @@
 # CoreLogic Studio - Development Guide
 
+**Last Updated**: November 22, 2025 (23:52 UTC)
+
 ## Quick Start
 
 ### Prerequisites
+
 - Node.js 18+ (for React UI)
 - Python 3.10+ (for DSP backend)
 - npm or yarn package manager
@@ -129,31 +132,32 @@ ashesinthedawn/
 
 **19 Professional Audio Effects**:
 
-| Effect | Type | File | Status |
-|--------|------|------|--------|
-| EQ3Band | EQ | eq_and_dynamics.py | ✅ |
-| HighLowPass | EQ | eq_and_dynamics.py | ✅ |
-| Compressor | Dynamics | eq_and_dynamics.py | ✅ |
-| Limiter | Dynamics | dynamics_part2.py | ✅ |
-| Expander | Dynamics | dynamics_part2.py | ✅ |
-| Gate | Dynamics | dynamics_part2.py | ✅ |
-| NoiseGate | Dynamics | dynamics_part2.py | ✅ |
-| Saturation | Saturation | saturation.py | ✅ |
-| HardClip | Saturation | saturation.py | ✅ |
-| Distortion | Saturation | saturation.py | ✅ |
-| WaveShaper | Saturation | saturation.py | ✅ |
-| SimpleDelay | Delay | delays.py | ✅ |
-| PingPongDelay | Delay | delays.py | ✅ |
-| MultiTapDelay | Delay | delays.py | ✅ |
-| StereoDelay | Delay | delays.py | ✅ |
-| Reverb | Reverb | reverb.py | ✅ |
-| HallReverb | Reverb | reverb.py | ✅ |
-| PlateReverb | Reverb | reverb.py | ✅ |
-| RoomReverb | Reverb | reverb.py | ✅ |
+| Effect        | Type       | File               | Status |
+| ------------- | ---------- | ------------------ | ------ |
+| EQ3Band       | EQ         | eq_and_dynamics.py | ✅     |
+| HighLowPass   | EQ         | eq_and_dynamics.py | ✅     |
+| Compressor    | Dynamics   | eq_and_dynamics.py | ✅     |
+| Limiter       | Dynamics   | dynamics_part2.py  | ✅     |
+| Expander      | Dynamics   | dynamics_part2.py  | ✅     |
+| Gate          | Dynamics   | dynamics_part2.py  | ✅     |
+| NoiseGate     | Dynamics   | dynamics_part2.py  | ✅     |
+| Saturation    | Saturation | saturation.py      | ✅     |
+| HardClip      | Saturation | saturation.py      | ✅     |
+| Distortion    | Saturation | saturation.py      | ✅     |
+| WaveShaper    | Saturation | saturation.py      | ✅     |
+| SimpleDelay   | Delay      | delays.py          | ✅     |
+| PingPongDelay | Delay      | delays.py          | ✅     |
+| MultiTapDelay | Delay      | delays.py          | ✅     |
+| StereoDelay   | Delay      | delays.py          | ✅     |
+| Reverb        | Reverb     | reverb.py          | ✅     |
+| HallReverb    | Reverb     | reverb.py          | ✅     |
+| PlateReverb   | Reverb     | reverb.py          | ✅     |
+| RoomReverb    | Reverb     | reverb.py          | ✅     |
 
 ### Automation Framework (daw_core/automation/)
 
 **5 Core Classes**:
+
 - `AutomationCurve`: Linear/Exponential/Step/Smooth interpolation
 - `LFO`: 5 waveforms (Sine/Triangle/Square/Sawtooth/Random)
 - `Envelope`: ADSR generation
@@ -163,6 +167,7 @@ ashesinthedawn/
 ### Metering Tools (daw_core/metering/)
 
 **4 Professional Tools**:
+
 - `LevelMeter`: Peak/RMS detection with clipping
 - `SpectrumAnalyzer`: FFT-based frequency analysis
 - `VUMeter`: Logarithmic metering simulation
@@ -175,12 +180,13 @@ ashesinthedawn/
 ### Adding a New Feature
 
 1. **Create the component** in `src/components/`
+
    ```typescript
    import { useDAW } from '../contexts/DAWContext';
-   
+
    export default function NewComponent() {
      const { /* needed state */ } = useDAW();
-     
+
      return (
        // Component JSX
      );
@@ -188,6 +194,7 @@ ashesinthedawn/
    ```
 
 2. **Use context hooks** for state management
+
    - Never pass props between components when context is available
    - Use `useDAW()` hook to access all state and functions
 
@@ -209,6 +216,7 @@ ashesinthedawn/
 5. Create setter/updater function if needed
 
 Example:
+
 ```typescript
 // Add state
 const [newState, setNewState] = useState(initialValue);
@@ -242,6 +250,7 @@ value={{
   - Danger: `bg-red-600`
 
 Example:
+
 ```typescript
 <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
   Click me
@@ -256,7 +265,7 @@ The Waveform component uses efficient peak-based rendering:
 
 ```typescript
 // Component usage
-import Waveform from './components/Waveform';
+import Waveform from "./components/Waveform";
 
 <Waveform
   track={track}
@@ -265,16 +274,18 @@ import Waveform from './components/Waveform';
   color="#3b82f6"
   showPlayhead={true}
   currentTime={currentTime}
-/>
+/>;
 ```
 
 **Peak Rendering Algorithm:**
+
 - Computes min/max peaks per block of samples
 - Renders O(width) line segments (1 per pixel)
 - Fast rendering even for large audio files
 - Dynamic opacity based on peak amplitude
 
 **Timeline Zoom:**
+
 - Built-in zoom controls (50%-300%)
 - Zoom button: `+ / - / Reset`
 - Visual percentage display
@@ -285,11 +296,13 @@ import Waveform from './components/Waveform';
 ### Working with DSP Backend
 
 #### Python Requirements
+
 ```bash
 pip install numpy scipy
 ```
 
 #### Running Tests
+
 ```bash
 # All Phase 2 tests
 python -m pytest test_phase2_*.py -v
@@ -302,18 +315,22 @@ python -m pytest test_phase2_*.py --cov=daw_core
 ```
 
 #### PyQt6 Waveform Reference
+
 The standalone `waveform_timeline.py` demonstrates:
+
 - Audio file loading with soundfile
 - Min/max peak computation
 - Custom PyQt6 widget rendering
 - Playback synchronization with sounddevice
 
 Run with:
+
 ```bash
 python waveform_timeline.py
 ```
 
 Requires:
+
 - PyQt6
 - NumPy
 - SoundFile
@@ -324,25 +341,24 @@ Requires:
 ## Common Tasks
 
 ### Accessing DAW State
+
 ```typescript
-const { 
-  currentProject, 
-  tracks, 
-  isPlaying 
-} = useDAW();
+const { currentProject, tracks, isPlaying } = useDAW();
 ```
 
 ### Adding a Track
+
 ```typescript
 const { addTrack } = useDAW();
 
-addTrack('audio');           // Audio track
-addTrack('instrument');      // Instrument track
-addTrack('midi');           // MIDI track
-addTrack('aux');            // Aux/FX return
+addTrack("audio"); // Audio track
+addTrack("instrument"); // Instrument track
+addTrack("midi"); // MIDI track
+addTrack("aux"); // Aux/FX return
 ```
 
 ### Updating Track Properties
+
 ```typescript
 const { updateTrack } = useDAW();
 
@@ -361,6 +377,7 @@ updateTrack(trackId, {
 ```
 
 ### Handling File Uploads
+
 ```typescript
 const { uploadAudioFile, isUploadingFile, uploadError } = useDAW();
 
@@ -376,6 +393,7 @@ const handleDrop = async (e: React.DragEvent) => {
 ```
 
 ### Persisting Projects
+
 ```typescript
 const { saveProject, loadProject } = useDAW();
 
@@ -383,7 +401,7 @@ const { saveProject, loadProject } = useDAW();
 await saveProject();
 
 // Load existing project
-await loadProject('project-123');
+await loadProject("project-123");
 ```
 
 ---
@@ -391,20 +409,23 @@ await loadProject('project-123');
 ## Debugging
 
 ### Enable React DevTools
+
 ```bash
 # React DevTools browser extension recommended
 # Helps inspect component props and state
 ```
 
 ### Console Logging
+
 ```typescript
 // Check state values
 const daw = useDAW();
-console.log('Current tracks:', daw.tracks);
-console.log('Is playing:', daw.isPlaying);
+console.log("Current tracks:", daw.tracks);
+console.log("Is playing:", daw.isPlaying);
 ```
 
 ### Type Errors
+
 ```bash
 # Run type checking
 npm run typecheck
@@ -413,6 +434,7 @@ npm run typecheck
 ```
 
 ### Linting Issues
+
 ```bash
 # Run linter
 npm run lint
@@ -426,22 +448,28 @@ npm run lint -- --fix
 ## Supabase Setup
 
 ### Database Schema
+
 Located in: `supabase/migrations/20251114213600_create_corelogic_schema.sql`
 
 ### Connection
+
 - Client configured in `src/lib/supabase.ts`
 - Uses environment variables for credentials
 - Falls back to demo mode if credentials missing
 
 ### Project Persistence
+
 Projects are stored with:
+
 - Project metadata (name, sample rate, bit depth, BPM)
 - Session data (array of tracks with all properties)
 - User ID (once auth implemented)
 - Timestamps (created_at, updated_at)
 
 ### Environment Variables
+
 Create `.env` or `.env.local`:
+
 ```
 VITE_SUPABASE_URL=https://xxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -452,6 +480,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ## Testing Checklist
 
 ### UI Components
+
 - [ ] All buttons respond to clicks
 - [ ] Forms accept input correctly
 - [ ] Dropdowns show/hide options
@@ -459,6 +488,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - [ ] Styling renders correctly
 
 ### State Management
+
 - [ ] Adding tracks updates list
 - [ ] Deleting tracks removes from view
 - [ ] Mute/Solo state changes
@@ -466,12 +496,14 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - [ ] Transport controls work
 
 ### Data Persistence
+
 - [ ] Projects save to Supabase
 - [ ] Projects load from Supabase
 - [ ] Session data persists
 - [ ] Track properties preserved
 
 ### File Operations
+
 - [ ] File upload accepts valid formats
 - [ ] File upload rejects invalid formats
 - [ ] Upload shows progress
@@ -483,18 +515,21 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ## Next Steps for Development
 
 ### Phase 2 - AI Features
+
 1. Implement LogicCore analysis algorithms
 2. Build gain staging analyzer
 3. Create routing recommendations engine
 4. Add session health checker
 
 ### Phase 3 - Audio & Hardware
+
 1. Integrate Web Audio API for playback
 2. Implement voice command recognition
 3. Add MIDI controller mapping
 4. Support OSC protocol
 
 ### Phase 4 - Polish
+
 1. Implement theme switching
 2. Add undo/redo system
 3. Optimize performance
@@ -516,6 +551,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ## Support
 
 For issues or questions:
+
 1. Check the Changelog for known issues
 2. Review ARCHITECTURE.md for component details
 3. Check component-specific documentation in code comments

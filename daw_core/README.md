@@ -1,10 +1,14 @@
 # CoreLogic Studio - DAW Core Engine
 
+**Status**: Phase 2 Complete (197 tests passing)
+**Last Updated**: November 22, 2025 (23:52 UTC)
+
 ## Overview
 
 **CoreLogic Studio** is building a professional-grade Digital Audio Workstation (DAW) using a **modular, node-based signal graph** architecture inspired by REAPER's design philosophy.
 
 This directory (`daw_core/`) contains the **pure DSP core** — the heart of the engine that:
+
 - ✅ Manages audio signal processing
 - ✅ Routes audio between tracks, effects, and buses
 - ✅ Schedules real-time block processing
@@ -19,11 +23,13 @@ The React/TypeScript UI layer (in `src/`) will communicate with this core via a 
 ### Why Node-Based?
 
 Traditional DAW architectures are **hierarchical**:
+
 ```
 Track → FX Chain → Fader → Master
 ```
 
 This works, but it's rigid. You can't easily:
+
 - Route a track to multiple destinations
 - Create parallel processing chains
 - Implement sidechains or complex modulation
@@ -36,6 +42,7 @@ REAPER solved this with **free routing** and **flexible graph architecture**. Ev
 ```
 
 Each node:
+
 - Has N inputs and M outputs
 - Processes audio in fixed-size blocks (128-1024 samples)
 - Connects to other nodes via ports
@@ -48,6 +55,7 @@ Each node:
 ### Layer 1: Signal Graph (`graph.py`)
 
 **Classes:**
+
 - `Node` — Base class for all DSP components
 - `AudioInput` — Audio source (file, hardware, generated)
 - `FXNode` — Effect processor (EQ, compressor, reverb, etc.)
@@ -55,6 +63,7 @@ Each node:
 - `OutputNode` — Master output stage
 
 **Example:**
+
 ```python
 from daw_core.graph import AudioInput, FXNode, MixerBus
 
@@ -75,9 +84,11 @@ engine.connect(compressor, master)
 ### Layer 2: Engine & Scheduling (`engine.py`)
 
 **Class:**
+
 - `AudioEngine` — Manages the entire signal graph
 
 **Responsibilities:**
+
 - Store nodes and connectivity
 - Perform **topological sort** (Kahn's algorithm) to determine processing order
 - Execute nodes in the correct sequence each block
@@ -85,6 +96,7 @@ engine.connect(compressor, master)
 - Provide real-time control
 
 **Key Methods:**
+
 - `add_node(node)` — Add a node to the graph
 - `connect(src, dst)` — Connect two nodes
 - `process_block()` — Execute one block of audio
@@ -95,6 +107,7 @@ engine.connect(compressor, master)
 ### Layer 3: Track Abstraction (`track.py`)
 
 **Class:**
+
 - `Track` — High-level track interface
 
 A Track is a convenience wrapper around multiple nodes:
@@ -104,6 +117,7 @@ Input → InputGain → FXChain → Fader → Pan → Sends → Output
 ```
 
 **Track Parameters (stored, not audio):**
+
 - `volume` — Fader level (dB)
 - `pan` — Stereo panning (-1.0 to +1.0)
 - `muted` — Mute state
@@ -114,6 +128,7 @@ Input → InputGain → FXChain → Fader → Pan → Sends → Output
 - `input_gain` — Pre-fader input level
 
 **Example:**
+
 ```python
 from daw_core.track import Track
 from daw_core.graph import FXNode
@@ -129,9 +144,11 @@ track.add_insert(compressor) # Insert compression
 ### Layer 4: Routing & Sends (`routing.py`)
 
 **Class:**
+
 - `Router` — Manages connections between tracks and buses
 
 **Features:**
+
 - Track routing (which bus does it output to?)
 - Auxiliary tracks (submixes, reverb, compression)
 - Pre/post-fader sends (parallel processing)
@@ -139,6 +156,7 @@ track.add_insert(compressor) # Insert compression
 - Routing matrix export (for serialization/visualization)
 
 **Example:**
+
 ```python
 from daw_core.routing import Router
 
@@ -192,6 +210,7 @@ MASTER BUS
 ```
 
 **Processing Order (Topological Sort):**
+
 1. Guitar Input
 2. Guitar Compressor
 3. Drums Input
@@ -244,7 +263,9 @@ MASTER BUS
 {
   "name": "My Song",
   "sample_rate": 44100,
-  "tracks": [ /* array of track objects */ ],
+  "tracks": [
+    /* array of track objects */
+  ],
   "routing": {
     "track_1": ["master"],
     "track_2": ["master"],
@@ -268,6 +289,7 @@ python examples.py
 ```
 
 This runs 5 examples:
+
 1. **Simple Graph** — Basic signal routing
 2. **Multi-Track Routing** — Multiple tracks to master
 3. **Sends & Parallel** — Auxiliary track with sends
@@ -283,6 +305,7 @@ The React frontend (`src/`) will communicate with this core via API:
 ### Example: Updating Track Volume
 
 1. **User moves fader in UI**
+
    ```typescript
    // React component
    const handleVolumeChange = (trackId: string, volumeDb: number) => {
@@ -291,6 +314,7 @@ The React frontend (`src/`) will communicate with this core via API:
    ```
 
 2. **API updates Track object**
+
    ```python
    # FastAPI endpoint
    @app.post("/tracks/{track_id}/volume")
@@ -326,18 +350,18 @@ This architecture naturally supports:
 
 ## Development Roadmap
 
-| Phase | Goal | Status |
-|-------|------|--------|
-| 1 | Core node-based engine | ✅ Complete |
-| 2 | Track abstraction layer | ✅ Complete |
-| 3 | Routing & sends system | ✅ Complete |
-| 4 | Basic FX library (EQ, Comp, Gate) | 🔄 Next |
-| 5 | Real-time audio backend (PortAudio) | 🔄 Next |
-| 6 | API bridge (FastAPI/WebSocket) | 🔄 Next |
-| 7 | Project save/load (JSON) | 🔄 Next |
-| 8 | React UI integration | 🔄 Next |
-| 9 | REAPER .RPP parser (optional) | ⏳ Later |
-| 10 | VST wrapper API | ⏳ Later |
+| Phase | Goal                                | Status      |
+| ----- | ----------------------------------- | ----------- |
+| 1     | Core node-based engine              | ✅ Complete |
+| 2     | Track abstraction layer             | ✅ Complete |
+| 3     | Routing & sends system              | ✅ Complete |
+| 4     | Basic FX library (EQ, Comp, Gate)   | 🔄 Next     |
+| 5     | Real-time audio backend (PortAudio) | 🔄 Next     |
+| 6     | API bridge (FastAPI/WebSocket)      | 🔄 Next     |
+| 7     | Project save/load (JSON)            | 🔄 Next     |
+| 8     | React UI integration                | 🔄 Next     |
+| 9     | REAPER .RPP parser (optional)       | ⏳ Later    |
+| 10    | VST wrapper API                     | ⏳ Later    |
 
 ---
 
@@ -360,12 +384,14 @@ daw_core/
 ## References
 
 ### Inspired By
+
 - **REAPER** — Free routing, modular architecture
 - **Ardour** — Open-source DAW philosophy
 - **Max/MSP** — Node-based paradigm
 - **PureData** — Modular signal processing
 
 ### DSP Resources
+
 - "The Audio Programming Book" by Boulanger & Lazzarini
 - JUCE Framework (C++ audio plugin standard)
 - Web Audio API (browser-based audio)
@@ -377,6 +403,7 @@ daw_core/
 This is an educational project. Contributions welcome!
 
 **Current priorities:**
+
 1. Implement basic FX nodes (EQ, Compressor, Gate)
 2. Build real-time audio backend
 3. Create REST API for React integration
@@ -390,5 +417,5 @@ Same as CoreLogic Studio (MIT)
 
 ---
 
-**Last Updated:** November 21, 2025  
+**Last Updated:** November 21, 2025
 **Version:** 0.1.0 (Core Architecture)

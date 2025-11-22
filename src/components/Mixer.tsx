@@ -1,3 +1,7 @@
+import { useDAW } from "../contexts/DAWContext";
+import { Sliders } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import MixerTile from "./MixerTile";
 import { useDAW } from '../contexts/DAWContext';
 import { Track } from '../types';
 import { Sliders } from 'lucide-react';
@@ -12,6 +16,20 @@ interface DetachedTileState {
   size: { width: number; height: number };
 }
 
+export default function Mixer() {
+  const {
+    tracks,
+    selectedTrack,
+    updateTrack,
+    deleteTrack,
+    selectTrack,
+    addTrack,
+    addPluginToTrack,
+    removePluginFromTrack,
+  } = useDAW();
+  const [stripWidth, setStripWidth] = useState(100);
+  const [stripHeight, setStripHeight] = useState(400);
+  const [detachedTiles, setDetachedTiles] = useState<DetachedTileState[]>([]);
 const MixerComponent = () => {
   const { tracks, selectedTrack, updateTrack, deleteTrack, selectTrack, addPluginToTrack, removePluginFromTrack, togglePluginEnabled } = useDAW();
   const [stripWidth] = useState(100);
@@ -20,31 +38,69 @@ const MixerComponent = () => {
   const [detachedOptionsTile, setDetachedOptionsTile] = useState(false);
   const [detachedPluginRacks, setDetachedPluginRacks] = useState<Record<string, boolean>>({});
   const [levels, setLevels] = useState<Record<string, number>>({}); // live RMS values
+  const [masterFader, setMasterFader] = useState(0.7); // Master fader state (0-1)
 
   const animationRef = useRef<number | null>(null);
+  const faderDraggingRef = useRef(false);
+  const faderContainerRef = useRef<HTMLDivElement>(null);
+
+  // --- Global Drag Handler for Master Fader ---
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!faderDraggingRef.current || !faderContainerRef.current) return;
+
+      const rect = faderContainerRef.current.getBoundingClientRect();
+      const newFader = Math.max(
+        0,
+        Math.min(1, 1 - (e.clientY - rect.top) / rect.height)
+      );
+      setMasterFader(newFader);
+    };
+
+    const handleMouseUp = () => {
+      faderDraggingRef.current = false;
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
 
   // Helper Functions ---
   const getMeterColor = (db: number) => {
-    if (db > -3) return 'rgb(255, 0, 0)';
-    if (db > -8) return 'rgb(255, 200, 0)';
-    if (db > -20) return 'rgb(0, 255, 0)';
-    return 'rgb(0, 150, 0)';
+    if (db > -3) return "rgb(255, 0, 0)";
+    if (db > -8) return "rgb(255, 200, 0)";
+    if (db > -20) return "rgb(0, 255, 0)";
+    return "rgb(0, 150, 0)";
   };
 
   const linearToDb = (val: number) =>
     val <= 0.00001 ? -60 : 20 * Math.log10(val);
+
+  // --- Master Fader Volume Control ---
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const engine = (window as any)?.audioEngineRef?.current;
+    if (engine && typeof engine.setMasterVolume === "function") {
+      const masterDb = linearToDb(masterFader);
+      engine.setMasterVolume(masterDb);
+    }
+  }, [masterFader]);
 
   // --- Real-Time Level Polling ---
   useEffect(() => {
     const updateLevels = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const engine = (window as any)?.audioEngineRef?.current;
-      if (engine && typeof engine.getTrackLevel === 'function') {
+      if (engine && typeof engine.getTrackLevel === "function") {
         const newLevels: Record<string, number> = {};
         tracks.forEach((track) => {
           const raw = engine.getTrackLevel(track.id);
-          const smoothed =
-            0.6 * (levels[track.id] || 0) + 0.4 * (raw || 0);
+          const smoothed = 0.6 * (levels[track.id] || 0) + 0.4 * (raw || 0);
           newLevels[track.id] = smoothed;
         });
         setLevels(newLevels);
@@ -57,33 +113,26 @@ const MixerComponent = () => {
     };
   }, [tracks, levels]);
 
-  // --- Solo/Mute Logic ---
-  const anySolo = tracks.some(t => t.soloed);
-  const isTrackAudible = (t: Track) =>
-    !t.muted && (!anySolo || t.soloed) && t.type !== 'master';
-
-  // --- Master Level ---
-  const masterLevel = (() => {
-    const active = tracks.filter(isTrackAudible);
-    if (active.length === 0) return 0;
-    const sum = active.reduce((acc, t) => acc + (levels[t.id] || 0), 0);
-    return sum / active.length;
-  })();
-
   // --- Detach/Dock Handlers ---
   const handleDetachTile = (trackId: string) => {
-    const isAlreadyDetached = detachedTiles.some(t => t.trackId === trackId);
+    const isAlreadyDetached = detachedTiles.some((t) => t.trackId === trackId);
     if (!isAlreadyDetached) {
-      setDetachedTiles(prev => [...prev, {
-        trackId,
-        position: { x: 200 + Math.random() * 100, y: 150 + Math.random() * 100 },
-        size: { width: stripWidth, height: stripHeight },
-      }]);
+      setDetachedTiles((prev) => [
+        ...prev,
+        {
+          trackId,
+          position: {
+            x: 200 + Math.random() * 100,
+            y: 150 + Math.random() * 100,
+          },
+          size: { width: stripWidth, height: stripHeight },
+        },
+      ]);
     }
   };
 
   const handleDockTile = (trackId: string) => {
-    setDetachedTiles(prev => prev.filter(t => t.trackId !== trackId));
+    setDetachedTiles((prev) => prev.filter((t) => t.trackId !== trackId));
   };
 
   // --- Mixer Layout ---
@@ -94,10 +143,35 @@ const MixerComponent = () => {
           <div className="flex items-center gap-3">
             <Sliders className="w-4 h-4 text-gray-400" />
             <span className="text-xs font-semibold text-gray-300">
-              Mixer (Live) {detachedTiles.length > 0 && `• ${detachedTiles.length} floating`}
+              Mixer (Live){" "}
+              {detachedTiles.length > 0 && `• ${detachedTiles.length} floating`}
             </span>
           </div>
           <div className="flex items-center gap-4 text-xs text-gray-400">
+            <label>
+              W:
+              <input
+                type="range"
+                min={minStripWidth}
+                max={maxStripWidth}
+                value={stripWidth}
+                onChange={(e) => setStripWidth(parseInt(e.target.value))}
+                className="w-20 accent-blue-500 ml-2"
+              />
+              <span className="ml-2 text-gray-500">{stripWidth}px</span>
+            </label>
+            <label>
+              H:
+              <input
+                type="range"
+                min={minStripHeight}
+                max={maxStripHeight}
+                value={stripHeight}
+                onChange={(e) => setStripHeight(parseInt(e.target.value))}
+                className="w-20 accent-blue-500 ml-2"
+              />
+              <span className="ml-2 text-gray-500">{stripHeight}px</span>
+            </label>
             {/* Options moved to Options > Mixer Options menu */}
           </div>
         </div>
@@ -105,61 +179,84 @@ const MixerComponent = () => {
         <div className="flex-1 overflow-hidden flex flex-col">
           {/* Mixer Strips */}
           <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-950">
-            <div className="flex h-full gap-2 p-3 min-w-max">
-              {/* Options Tile */}
-              {!detachedOptionsTile && (
-                <MixerOptionsTile
-                  tracks={tracks}
-                  onUpdateTrack={updateTrack}
-                  onRemovePlugin={removePluginFromTrack}
-                  stripWidth={stripWidth}
-                  stripHeight={stripHeight}
-                  position={{ x: 0, y: 0 }}
-                  onDock={() => setDetachedOptionsTile(true)}
-                  isDetached={false}
-                />
-              )}
-
+            <div
+              className="flex h-full gap-2 p-3 min-w-max"
+              onDoubleClick={(e) => {
+                // Only add track if double-clicking on empty space (not on tracks)
+                if (e.target === e.currentTarget) {
+                  addTrack("audio");
+                }
+              }}
+            >
               {/* Master Strip */}
               <div
                 className="flex-shrink-0 select-none"
                 style={{
                   width: `${stripWidth}px`,
                   height: `${stripHeight}px`,
-                  border: '2px solid rgb(202, 138, 4)',
-                  backgroundColor: 'rgb(30, 24, 15)',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  padding: '4px',
+                  border: "2px solid rgb(202, 138, 4)",
+                  backgroundColor: "rgb(30, 24, 15)",
+                  borderRadius: "4px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  padding: "4px",
                 }}
               >
                 <div
                   className="font-bold text-gray-900 flex items-center justify-center bg-yellow-600 rounded"
-                  style={{ height: '40px' }}
+                  style={{ height: "40px" }}
                 >
                   Master
                 </div>
 
-                <div className="flex flex-col items-center justify-end flex-1">
+                <div className="flex flex-col items-center justify-between flex-1 gap-3 py-2">
+                  {/* Master Fader - Interactive with continuous drag */}
+                  <div
+                    ref={faderContainerRef}
+                    className="flex-1 w-full flex items-end justify-center relative select-none"
+                    style={{ userSelect: "none" }}
+                  >
+                    <div
+                      className="rounded bg-gradient-to-b from-yellow-500 to-yellow-700 cursor-grab active:cursor-grabbing hover:shadow-lg transition-shadow"
+                      style={{
+                        width: "12px",
+                        height: `${masterFader * 100}%`,
+                        maxHeight: "140px",
+                        minHeight: "20px",
+                        boxShadow: faderDraggingRef.current
+                          ? "0 0 12px rgba(255, 200, 0, 1)"
+                          : "0 0 6px rgba(255, 200, 0, 0.7)",
+                      }}
+                      onMouseDown={() => {
+                        faderDraggingRef.current = true;
+                      }}
+                    />
+                  </div>
+
+                  {/* Master Level Meter */}
                   <div
                     className="rounded border-2 border-yellow-700 bg-gray-950 flex flex-col-reverse shadow-inner"
                     style={{
-                      width: '16px',
-                      height: '100%',
+                      width: "16px",
+                      height: "40px",
+                      minHeight: "40px",
                     }}
                   >
                     <div
                       style={{
-                        height: `${masterLevel * 100}%`,
-                        backgroundColor: getMeterColor(linearToDb(masterLevel)),
-                        transition: 'height 0.1s linear',
+                        height: `${(levels.master || 0) * 100}%`,
+                        backgroundColor: getMeterColor(
+                          linearToDb(levels.master || 0.001)
+                        ),
+                        transition: "height 0.1s linear",
                       }}
                     />
                   </div>
-                  <div className="text-yellow-400 font-mono text-xs mt-2">
-                    {linearToDb(masterLevel).toFixed(1)} dB
+
+                  {/* dB Display */}
+                  <div className="text-yellow-400 font-mono text-xs">
+                    {linearToDb(masterFader).toFixed(1)} dB
                   </div>
                 </div>
               </div>
@@ -171,7 +268,7 @@ const MixerComponent = () => {
                 </div>
               ) : (
                 tracks
-                  .filter(t => t.type !== 'master')
+                  .filter((t) => t.type !== "master")
                   .map((track) => (
                     <MixerTile
                       key={track.id}
@@ -180,6 +277,8 @@ const MixerComponent = () => {
                       onSelect={selectTrack}
                       onDelete={deleteTrack}
                       onUpdate={updateTrack}
+                      onAddPlugin={addPluginToTrack}
+                      onRemovePlugin={removePluginFromTrack}
                       levels={levels}
                       stripWidth={stripWidth}
                       stripHeight={stripHeight}
@@ -251,7 +350,7 @@ const MixerComponent = () => {
         })}
 
         {detachedTiles.map((tile) => {
-          const track = tracks.find(t => t.id === tile.trackId);
+          const track = tracks.find((t) => t.id === tile.trackId);
           if (!track) return null;
 
           return (
@@ -259,7 +358,7 @@ const MixerComponent = () => {
               key={tile.trackId}
               className="pointer-events-auto"
               style={{
-                position: 'fixed',
+                position: "fixed",
                 left: 0,
                 top: 0,
               }}
@@ -285,6 +384,7 @@ const MixerComponent = () => {
       </div>
     </>
   );
+}
 };
 
 export default memo(MixerComponent);
