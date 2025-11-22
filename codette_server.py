@@ -3,22 +3,69 @@ Codette AI FastAPI Server
 Bridges CoreLogic Studio frontend with Codette Python AI engine
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import sys
 import os
+import importlib.util
 from pathlib import Path
+import asyncio
+
+# Verify dependencies on startup
+def verify_dependencies():
+    """Verify all required dependencies are installed"""
+    missing = []
+    # Only check for the critical ones for the server to function
+    required = ['vaderSentiment', 'fastapi', 'uvicorn']
+    
+    for package in required:
+        try:
+            __import__(package)
+        except ImportError:
+            missing.append(package)
+    
+    if missing:
+        print(f"\n[WARNING] Missing required packages: {', '.join(missing)}")
+        print(f"   Install with: pip install {' '.join(missing)}\n")
+        return False
+    
+    # Try optional packages but don't fail if they're missing
+    optional = ['nltk', 'numpy', 'scipy', 'pymc', 'sympy', 'arviz']
+    optional_missing = []
+    for package in optional:
+        try:
+            __import__(package)
+        except (ImportError, Exception):
+            optional_missing.append(package)
+    
+    if optional_missing:
+        print(f"\n[NOTE] Some optional packages may be missing: {', '.join(optional_missing)}")
+        print(f"   Codette AI may have reduced functionality.\n")
+    
+    return True
+
+# Check dependencies
+verify_dependencies()
 
 # Add Codette to path
 codette_path = Path(__file__).parent / "Codette"
 sys.path.insert(0, str(codette_path))
 
+# Try to import Codette, but provide fallback
+Codette = None
 try:
-    from codette import Codette
-except ImportError:
-    # Fallback if import fails
+    # Try importing from codette.py directly (not the package)
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("codette_module", codette_path / "codette.py")
+    codette_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(codette_module)
+    Codette = codette_module.Codette
+    print("[OK] Codette module imported successfully from codette.py")
+except Exception as e:
+    print(f"[WARNING] Could not import Codette: {e}")
+    print(f"   Codette will work in demo/fallback mode")
     Codette = None
 
 app = FastAPI(title="Codette AI Server", version="1.0.0")
@@ -77,18 +124,46 @@ class ProcessResponse(BaseModel):
 codette = None
 if Codette:
     try:
+        import nltk
+        # Download NLTK data if not already present
+        try:
+            nltk.data.find('tokenizers/punkt')
+        except LookupError:
+            nltk.download('punkt', quiet=True)
+        
         codette = Codette()
+        print("[OK] Codette AI engine initialized")
     except Exception as e:
-        print(f"Warning: Failed to initialize Codette: {e}")
+        print(f"[WARNING] Could not initialize Codette: {e}")
+        print(f"   Backend will operate in demo mode with fallback responses")
+        codette = None
+else:
+    print("[INFO] Codette not available - running in demo/fallback mode")
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "status": "ok",
+        "service": "Codette AI Server",
+        "version": "1.0.0",
+        "docs": "/docs",
+    }
 
 @app.get("/health")
 async def health():
     """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "service": "Codette AI Server",
-        "codette_available": codette is not None,
-    }
+    try:
+        return {
+            "status": "healthy",
+            "service": "Codette AI Server",
+            "codette_available": codette is not None,
+        }
+    except Exception as e:
+        print(f"ERROR in /health: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "error": str(e)}
 
 @app.post("/codette/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
@@ -278,9 +353,55 @@ async def get_status():
 
 if __name__ == "__main__":
     import uvicorn
+    import sys
+    import traceback
+    import subprocess
 
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=int(os.getenv("CODETTE_PORT", "8000")),
-    )
+    port = int(os.getenv("CODETTE_PORT", "8000"))
+    host = os.getenv("CODETTE_HOST", "0.0.0.0")
+
+    print("\n" + "="*70)
+    print("Codette AI FastAPI Server Starting")
+    print("="*70)
+    print(f"Host: {host}")
+    print(f"Port: {port}")
+    print(f"Codette Available: {codette is not None}")
+    
+    if codette:
+        print(f"Perspectives: neuralnets, newtonian, davinci, quantum")
+    else:
+        print("WARNING: Codette not initialized - check Codette/ folder")
+    
+    print(f"\nServer will be available at:")
+    print(f"   http://localhost:{port}")
+    print(f"   http://localhost:{port}/health (health check)")
+    print(f"   http://localhost:{port}/docs (API documentation)")
+    print("\nFrontend Configuration:")
+    print(f"   Add to .env.local: VITE_CODETTE_API_URL=http://localhost:{port}")
+    print(f"\nPress Ctrl+C to stop the server")
+    print("="*70 + "\n")
+
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+    try:
+        # Use subprocess to run uvicorn as a module
+        result = subprocess.run(
+            [
+                sys.executable, "-m", "uvicorn",
+                "__main__:app",
+                "--host", host,
+                "--port", str(port),
+                "--log-level", "critical",
+            ],
+            cwd=Path(__file__).parent,
+        )
+        sys.exit(result.returncode)
+        
+    except KeyboardInterrupt:
+        print("\n\nServer stopped by user")
+        sys.exit(0)
+    except Exception as e:
+        print(f"\nServer error: {e}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)
