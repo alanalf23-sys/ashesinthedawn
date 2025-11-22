@@ -6,16 +6,16 @@ Exposes audio effects, automation, and metering via REST API
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 import numpy as np
 import io
 from scipy.io import wavfile
 
 from .fx.eq_and_dynamics import EQ3Band, HighLowPass, Compressor
-from .fx.dynamics_part2 import Limiter, Expander, Gate, NoiseGate
-from .fx.saturation import Saturation, Distortion, WaveShaper, HardClip
-from .fx.delays import SimpleDelay, PingPongDelay, MultiTapDelay
-from .fx.reverb import Reverb, HallReverb, PlateReverb, RoomReverb
+from .fx.dynamics_part2 import Limiter
+from .fx.saturation import Saturation, Distortion
+from .fx.delays import SimpleDelay
+from .fx.reverb import Reverb
 from .automation import AutomationCurve, LFO, Envelope
 from .metering import LevelMeter, SpectrumAnalyzer, VUMeter, Correlometer
 from .engine import AudioEngine

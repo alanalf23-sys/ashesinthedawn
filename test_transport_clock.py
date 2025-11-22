@@ -188,7 +188,7 @@ async def test_performance():
     async with websockets.connect(uri) as ws:
         for _ in range(30 * 30):  # 30 seconds at 30 Hz
             start = asyncio.get_event_loop().time()
-            state_json = await ws.recv()
+            await ws.recv()  # Receive but don't store
             latency = (asyncio.get_event_loop().time() - start) * 1000
             times.append(latency)
 
@@ -196,7 +196,7 @@ async def test_performance():
                 avg_latency = sum(times[-30:]) / 30
                 print(f"Last 30 updates: Avg latency {avg_latency:.2f}ms")
 
-    print(f"\nPerformance Summary:")
+    print("\nPerformance Summary:")
     print(f"  Total updates: {len(times)}")
     print(f"  Avg latency: {sum(times)/len(times):.2f}ms")
     print(f"  Min latency: {min(times):.2f}ms")

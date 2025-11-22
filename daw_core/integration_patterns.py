@@ -10,14 +10,11 @@ with sounddevice audio streams, including:
 - WebSocket broadcast during audio playback
 """
 
-import sounddevice as sd
-import numpy as np
 import time
 import threading
 import asyncio
 import logging
-from typing import Dict, Optional
-from dataclasses import dataclass, asdict
+from typing import Dict
 
 try:
     from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -29,6 +26,11 @@ try:
     import uvicorn
 except ImportError:
     uvicorn = None
+
+try:
+    import sounddevice as sd
+except ImportError:
+    sd = None
 
 logger = logging.getLogger(__name__)
 
@@ -265,6 +267,11 @@ class IntegratedAudioEngine:
     def start_audio(self):
         """Start audio stream."""
         logger.info("Starting audio stream...")
+
+        if sd is None:
+            logger.error("sounddevice not installed: pip install sounddevice")
+            self.is_running = False
+            return
 
         try:
             self.stream = sd.OutputStream(

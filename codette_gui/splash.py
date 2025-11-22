@@ -76,7 +76,7 @@ class SplashScreen(QWidget):
         # Footer
         self.footer = QLabel("Codette Quantum • © 2025 Phase 3 Build")
         self.footer.setFont(QFont("Consolas", 9))
-        self.footer.setStyleSheet(f"color:#777;")
+        self.footer.setStyleSheet("color:#777;")
         layout.addWidget(self.footer, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # Fade in animation

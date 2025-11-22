@@ -5,7 +5,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QColor, QPalette, QFont
-import sys, random
+import sys
+import random
 
 class AnalogFader(QFrame):
     """High-end analog-style channel strip with warmth and glow"""

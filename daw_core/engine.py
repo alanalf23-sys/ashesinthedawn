@@ -5,14 +5,14 @@ Implements real-time graph scheduling and block-based processing.
 Handles topological sorting to ensure correct DSP order.
 """
 
-from typing import List, Dict, Set
+from typing import List, Dict
 from .graph import Node, OutputNode
 
 
 class AudioEngine:
     """
     Main audio engine that manages the signal graph and processes audio in real-time blocks.
-    
+
     Responsibilities:
     - Maintain graph topology
     - Schedule nodes in correct order (topological sort)

@@ -3,12 +3,14 @@ Codette Quantum DAW GUI v6.0
 Visual-only edition with global themes, branding, and watermark
 """
 
-import sys, math, random
+import sys
+import math
+import random
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QColor, QPainterPath, QPen, QFont, QPalette
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QSlider, QScrollArea, QComboBox, QGraphicsScene, QGraphicsView, QGraphicsDropShadowEffect
+    QFrame, QSlider, QScrollArea, QComboBox, QGraphicsScene, QGraphicsView
 )
 
 # ---------------------------------------------------------

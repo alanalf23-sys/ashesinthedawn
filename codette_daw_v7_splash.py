@@ -6,9 +6,10 @@ Visual-only edition
 - Branding + watermark
 """
 
-import sys, math, random, time
+import sys
+import random
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve
-from PyQt6.QtGui import QColor, QFont, QPalette, QPixmap
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QProgressBar,
 )

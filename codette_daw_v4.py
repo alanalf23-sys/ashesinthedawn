@@ -7,9 +7,11 @@ Visual-only edition
 - Collapsible plugin racks
 """
 
-import sys, math, random
-from PyQt6.QtCore import Qt, QTimer, QSize
-from PyQt6.QtGui import QColor, QPainterPath, QPen, QFont, QLinearGradient, QBrush
+import sys
+import math
+import random
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QColor, QPainterPath, QPen, QFont
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFrame, QSlider, QScrollArea, QGraphicsDropShadowEffect, QGraphicsScene, QGraphicsView

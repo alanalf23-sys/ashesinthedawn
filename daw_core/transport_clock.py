@@ -32,12 +32,11 @@ Usage:
 import time
 import asyncio
 import logging
-from typing import Dict, Optional, List, Callable
+from typing import Dict, Optional, List
 from dataclasses import dataclass, asdict
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import threading
-from datetime import datetime
 
 try:
     import numpy as np

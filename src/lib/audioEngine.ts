@@ -30,9 +30,10 @@ export class AudioEngine {
     if (this.isInitialized) return;
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const AudioContextClass =
-        window.AudioContext || (window as any).webkitAudioContext;
+        window.AudioContext ||
+        ((window as unknown as Record<string, unknown>)
+          .webkitAudioContext as typeof AudioContext);
       this.audioContext = new AudioContextClass();
 
       // Create master gain node

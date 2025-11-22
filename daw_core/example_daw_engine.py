@@ -26,7 +26,7 @@ import threading
 import time
 import logging
 from daw_core.transport_clock import create_transport_app, get_transport_clock
-from daw_core.audio_io import AudioDeviceManager, AudioConfiguration, DSPPerformanceTimer
+from daw_core.audio_io import AudioDeviceManager, DSPPerformanceTimer
 
 try:
     import uvicorn

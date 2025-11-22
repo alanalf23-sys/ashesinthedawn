@@ -1,6 +1,7 @@
 """Main DAW GUI with branding and theme support"""
 
-import math, random
+import math
+import random
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QColor, QPainterPath, QPen, QFont
 from PyQt6.QtWidgets import (
@@ -270,7 +271,7 @@ class CodetteDAWGUI(QWidget):
 
         # Watermark
         self.watermark = QLabel("Codette Quantum • Prototype Visual GUI • Phase 3 Build")
-        self.watermark.setStyleSheet(f"color:#666; font-size:9px; margin:4px; text-align:right;")
+        self.watermark.setStyleSheet("color:#666; font-size:9px; margin:4px; text-align:right;")
         layout.addWidget(self.watermark, alignment=Qt.AlignmentFlag.AlignRight)
 
         self.update_theme(self.theme)
@@ -288,4 +289,4 @@ class CodetteDAWGUI(QWidget):
         self.transport.update_theme(theme)
         for ch in self.channels:
             ch.update_theme(theme)
-        self.watermark.setStyleSheet(f"color:#777; font-size:9px; margin:4px;")
+        self.watermark.setStyleSheet("color:#777; font-size:9px; margin:4px;")
