@@ -15,6 +15,10 @@ function AppContent() {
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
   const { uploadAudioFile, addTrack, selectTrack, tracks } = useDAW();
 
+  // Debug: Verify MenuBar and AIPanel are imported
+  console.log('AppContent rendered with MenuBar:', MenuBar.name, 'imported from components');
+
+
   const handleGlobalDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();

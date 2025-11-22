@@ -102,66 +102,82 @@ export default function TopBar() {
     }
   };
 
+  // Tooltip component for consistent tooltip styling
+  const Tooltip = ({ text, children }: { text: string; children: React.ReactNode }) => (
+    <div className="group relative inline-block">
+      {children}
+      <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-950 text-gray-200 text-xs rounded whitespace-nowrap border border-gray-700 z-50 pointer-events-none shadow-lg">
+        {text}
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-12 bg-gradient-to-r from-gray-800 via-gray-750 to-gray-800 border-b border-gray-600 flex items-center justify-between px-4 gap-4 text-xs shadow-md">
       {/* LEFT SECTION: Previous/Next Track, Stop, Play, Record, Pause */}
       <div className="flex items-center gap-2">
-        {/* Previous/Next Track Buttons */}
-        <button
-          onClick={prevTrack}
-          className="p-1.5 rounded hover:bg-gray-700 text-gray-300 transition"
-          title="Previous Track"
-        >
-          <SkipBack className="w-4 h-4" />
-        </button>
-        <button
-          onClick={nextTrack}
-          className="p-1.5 rounded hover:bg-gray-700 text-gray-300 transition"
-          title="Next Track"
-        >
-          <SkipForward className="w-4 h-4" />
-        </button>
+        {/* Previous/Next Track Buttons with Tooltips */}
+        <Tooltip text="Previous Track (Shift+←)">
+          <button
+            onClick={prevTrack}
+            className="p-1.5 rounded hover:bg-gray-700 text-gray-300 transition"
+          >
+            <SkipBack className="w-4 h-4" />
+          </button>
+        </Tooltip>
+        <Tooltip text="Next Track (Shift+→)">
+          <button
+            onClick={nextTrack}
+            className="p-1.5 rounded hover:bg-gray-700 text-gray-300 transition"
+          >
+            <SkipForward className="w-4 h-4" />
+          </button>
+        </Tooltip>
 
         <div className="w-px h-6 bg-gray-700 mx-1" />
 
         {/* Transport Controls */}
         <div className="flex items-center gap-1 bg-gray-900 rounded-md px-2 py-1 border border-gray-700">
           {/* Stop Button (red square) */}
-          <button
-            onClick={stop}
-            className="p-1.5 rounded hover:bg-red-700/30 text-red-400 transition"
-            title="Stop"
-          >
-            <Square className="w-4 h-4 fill-current" />
-          </button>
+          <Tooltip text="Stop (Esc)">
+            <button
+              onClick={stop}
+              className="p-1.5 rounded hover:bg-red-700/30 text-red-400 transition"
+            >
+              <Square className="w-4 h-4 fill-current" />
+            </button>
+          </Tooltip>
 
           {/* Play Button (green circle) - currently active */}
-          <button
-            onClick={togglePlay}
-            className={`p-1.5 rounded transition ${isPlaying ? 'bg-green-600 text-white shadow-lg' : 'hover:bg-gray-800 text-green-400'}`}
-            title="Play"
-          >
-            <Play className="w-4 h-4 fill-current" />
-          </button>
+          <Tooltip text="Play/Pause (Space)">
+            <button
+              onClick={togglePlay}
+              className={`p-1.5 rounded transition ${isPlaying ? 'bg-green-600 text-white shadow-lg' : 'hover:bg-gray-800 text-green-400'}`}
+            >
+              <Play className="w-4 h-4 fill-current" />
+            </button>
+          </Tooltip>
 
           {/* Record Button */}
-          <button
-            onClick={toggleRecord}
-            className={`p-1.5 rounded transition ${isRecording ? 'bg-red-600 text-white shadow-lg animate-pulse' : 'hover:bg-gray-800 text-gray-300'}`}
-            title="Record"
-          >
-            <Circle className="w-4 h-4 fill-current" />
-          </button>
+          <Tooltip text="Record (Ctrl+R)">
+            <button
+              onClick={toggleRecord}
+              className={`p-1.5 rounded transition ${isRecording ? 'bg-red-600 text-white shadow-lg animate-pulse' : 'hover:bg-gray-800 text-gray-300'}`}
+            >
+              <Circle className="w-4 h-4 fill-current" />
+            </button>
+          </Tooltip>
 
           {/* Pause Button */}
-          <button
-            onClick={isPlaying ? togglePlay : undefined}
-            className={`p-1.5 rounded transition ${isPlaying ? 'hover:bg-gray-800 text-gray-300' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
-            disabled={!isPlaying}
-            title="Pause"
-          >
-            <Pause className="w-4 h-4 fill-current" />
-          </button>
+          <Tooltip text="Pause (Space)">
+            <button
+              onClick={isPlaying ? togglePlay : undefined}
+              className={`p-1.5 rounded transition ${isPlaying ? 'hover:bg-gray-800 text-gray-300' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
+              disabled={!isPlaying}
+            >
+              <Pause className="w-4 h-4 fill-current" />
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -261,20 +277,22 @@ export default function TopBar() {
         />
 
         {/* Settings & Search buttons */}
-        <button 
-          onClick={handleSearch}
-          className="p-1.5 rounded hover:bg-gray-800 text-gray-300 transition" 
-          title="Search"
-        >
-          <Search className="w-4 h-4" />
-        </button>
-        <button 
-          onClick={handleSettings}
-          className="p-1.5 rounded hover:bg-gray-800 text-gray-300 transition" 
-          title="Settings"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
+        <Tooltip text="Search Tracks (Ctrl+F)">
+          <button 
+            onClick={handleSearch}
+            className="p-1.5 rounded hover:bg-gray-800 text-gray-300 transition"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+        </Tooltip>
+        <Tooltip text="Audio Settings">
+          <button 
+            onClick={handleSettings}
+            className="p-1.5 rounded hover:bg-gray-800 text-gray-300 transition"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

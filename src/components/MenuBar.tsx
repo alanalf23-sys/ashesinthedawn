@@ -21,6 +21,7 @@ function Submenu({ items, onClose }: { items: MenuItem[]; label?: string; onClos
     <div
       className="absolute left-0 top-full bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-max mt-0"
       onMouseLeave={() => setOpenSubmenu(null)}
+      onClick={(e) => e.stopPropagation()}
     >
       {items.map((item, index) => (
         <div key={index}>
@@ -30,11 +31,17 @@ function Submenu({ items, onClose }: { items: MenuItem[]; label?: string; onClos
             <div
               className="relative group"
               onMouseEnter={() => item.submenu && item.label && setOpenSubmenu(item.label)}
+              onMouseLeave={() => item.submenu && setOpenSubmenu(null)}
             >
               <button
-                onClick={() => {
-                  item.onClick?.();
-                  onClose();
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (item.onClick && !item.disabled) {
+                    item.onClick();
+                  }
+                  if (!item.submenu) {
+                    onClose();
+                  }
                 }}
                 disabled={item.disabled}
                 className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between whitespace-nowrap transition ${
@@ -55,8 +62,11 @@ function Submenu({ items, onClose }: { items: MenuItem[]; label?: string; onClos
                   {item.submenu.map((subitem, subidx) => (
                     <button
                       key={subidx}
-                      onClick={() => {
-                        subitem.onClick?.();
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (subitem.onClick && !subitem.disabled) {
+                          subitem.onClick();
+                        }
                         onClose();
                       }}
                       disabled={subitem.disabled}
@@ -102,15 +112,7 @@ export default function MenuBar() {
     unmuteAllTracks,
     saveProject,
     openNewProjectModal,
-    // openOpenProjectModal,
-    // openSaveAsModal,
-    // openExportModal,
-    // openPreferencesModal,
-    // openAudioSettingsModal,
-    // openMidiSettingsModal,
-    // openShortcutsModal,
-    // openAboutModal,
-    // openMixerOptionsModal,
+    openSaveAsModal,
     toggleFullscreen,
     toggleMixerVisibility,
     exportAudio,
@@ -122,14 +124,17 @@ export default function MenuBar() {
     createEvent,
     deleteEvent,
     selectedEvent,
+    openAudioSettingsModal,
+    openShortcutsModal,
+    openAboutModal,
   } = useDAW();
 
   const menuSections: MenuSection = {
     File: [
       { label: 'New Project', onClick: () => { openNewProjectModal(); setActiveMenu(null); }, shortcut: 'Ctrl+N' },
-      { label: 'Open Project', onClick: () => { console.log('Open project'); setActiveMenu(null); }, shortcut: 'Ctrl+O' },
+      { label: 'Open Project', onClick: () => { const input = document.createElement('input'); input.type = 'file'; input.accept = '.json,.corelogic,.cls'; input.click(); setActiveMenu(null); }, shortcut: 'Ctrl+O' },
       { label: 'Save', onClick: () => { saveProject(); setActiveMenu(null); }, shortcut: 'Ctrl+S' },
-      { label: 'Save As...', onClick: () => { console.log('Save as'); setActiveMenu(null); }, shortcut: 'Ctrl+Shift+S' },
+      { label: 'Save As...', onClick: () => { openSaveAsModal(); setActiveMenu(null); }, shortcut: 'Ctrl+Shift+S' },
       { divider: true },
       {
         label: 'Export',
@@ -151,7 +156,7 @@ export default function MenuBar() {
       { label: 'Copy', onClick: () => { copy(); setActiveMenu(null); }, shortcut: 'Ctrl+C' },
       { label: 'Paste', onClick: () => { paste(); setActiveMenu(null); }, shortcut: 'Ctrl+V' },
       { divider: true },
-      { label: 'Select All', onClick: () => { console.log('Select all'); setActiveMenu(null); }, shortcut: 'Ctrl+A' },
+      { label: 'Select All', onClick: () => { document.execCommand('selectAll'); setActiveMenu(null); }, shortcut: 'Ctrl+A' },
     ],
     View: [
       { label: 'Zoom In', onClick: () => { zoomIn(); setActiveMenu(null); }, shortcut: 'Ctrl++' },
@@ -202,18 +207,15 @@ export default function MenuBar() {
       { label: 'Delete Event', onClick: () => { if (selectedEvent) deleteEvent(selectedEvent.id); setActiveMenu(null); }, disabled: !selectedEvent },
     ],
     Options: [
-      { label: 'Preferences', onClick: () => { console.log('Preferences'); setActiveMenu(null); }, shortcut: 'Ctrl+,' },
-      { label: 'Audio Settings', onClick: () => { console.log('Audio Settings'); setActiveMenu(null); } },
-      { label: 'MIDI Settings', onClick: () => { console.log('MIDI Settings'); setActiveMenu(null); } },
-      { label: 'Mixer Options', onClick: () => { console.log('Mixer Options'); setActiveMenu(null); } },
+      { label: 'Audio Settings', onClick: () => { openAudioSettingsModal(); setActiveMenu(null); } },
       { divider: true },
-      { label: 'Keyboard Shortcuts', onClick: () => { console.log('Keyboard Shortcuts'); setActiveMenu(null); }, shortcut: 'Ctrl+?' },
+      { label: 'Keyboard Shortcuts', onClick: () => { openShortcutsModal(); setActiveMenu(null); }, shortcut: 'Ctrl+?' },
     ],
     Help: [
       { label: 'Documentation', onClick: () => { window.open('https://github.com/Raiff1982/ashesinthedawn', '_blank'); setActiveMenu(null); } },
       { label: 'Tutorials', onClick: () => { window.open('https://github.com/Raiff1982/ashesinthedawn/wiki', '_blank'); setActiveMenu(null); } },
       { divider: true },
-      { label: 'About CoreLogic Studio', onClick: () => { console.log('About'); setActiveMenu(null); } },
+      { label: 'About CoreLogic Studio', onClick: () => { openAboutModal(); setActiveMenu(null); } },
     ],
   };
 
