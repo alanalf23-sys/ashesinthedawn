@@ -231,13 +231,12 @@
 - EXAMPLE 2: Button Interaction Feedback
 -
 - <button
-- className="bg-gray-700 hover:bg-blue-600 transition-colors duration-150
--              active:scale-95 transition-transform duration-100"
+- className="bg-gray-700 hover:bg-blue-600 active:scale-95 transition-all duration-150"
 - >
 - Play
 - </button>
 -
-- ✓ Color change: 150ms smooth transition
+- ✓ Color change and transform: 150ms smooth transition
 - ✓ Press effect: 100ms scale-down
 - ✓ Two transitions for different properties
 - ✓ Provides immediate user feedback
