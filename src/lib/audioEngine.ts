@@ -472,10 +472,209 @@ export class AudioEngine {
   }
 
   /**
+   * Real-Time Audio I/O Methods (Phase 3)
+   */
+
+  private mediaStream: MediaStream | null = null;
+  private scriptProcessorNode: ScriptProcessorNode | null = null;
+  private inputAnalyser: AnalyserNode | null = null;
+  private isInputActive = false;
+
+  /**
+   * Start real-time audio input
+   */
+  async startAudioInput(
+    deviceId?: string,
+    onAudioData?: (data: Float32Array) => void
+  ): Promise<boolean> {
+    if (!this.audioContext) await this.initialize();
+
+    if (!this.audioContext) {
+      console.error('Audio context not available');
+      return false;
+    }
+
+    try {
+      const constraints: MediaStreamConstraints = {
+        audio: {
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      };
+
+      this.mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      if (!this.mediaStream) {
+        console.error('Failed to get media stream');
+        return false;
+      }
+
+      const source = this.audioContext.createMediaStreamSource(this.mediaStream);
+
+      // Create input analyser for metering
+      this.inputAnalyser = this.audioContext.createAnalyser();
+      this.inputAnalyser.fftSize = 2048;
+      source.connect(this.inputAnalyser);
+
+      // Create ScriptProcessorNode for real-time processing (buffer size: 4096)
+      this.scriptProcessorNode = this.audioContext.createScriptProcessor(4096, 1, 1);
+
+      this.scriptProcessorNode.onaudioprocess = (event) => {
+        if (onAudioData) {
+          const inputData = event.inputBuffer.getChannelData(0);
+          const audioDataCopy = new Float32Array(inputData);
+          onAudioData(audioDataCopy);
+        }
+      };
+
+      this.inputAnalyser.connect(this.scriptProcessorNode);
+      this.scriptProcessorNode.connect(this.audioContext.destination);
+
+      this.isInputActive = true;
+      console.log(`Real-time audio input started${deviceId ? ` (device: ${deviceId})` : ''}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to start audio input:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Stop real-time audio input
+   */
+  stopAudioInput(): void {
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach((track) => track.stop());
+      this.mediaStream = null;
+    }
+
+    if (this.scriptProcessorNode) {
+      this.scriptProcessorNode.disconnect();
+      this.scriptProcessorNode = null;
+    }
+
+    if (this.inputAnalyser) {
+      this.inputAnalyser.disconnect();
+      this.inputAnalyser = null;
+    }
+
+    this.isInputActive = false;
+    console.log('Real-time audio input stopped');
+  }
+
+  /**
+   * Check if audio input is currently active
+   */
+  isAudioInputActive(): boolean {
+    return this.isInputActive;
+  }
+
+  /**
+   * Get input level (0-1)
+   */
+  getInputLevel(): number {
+    if (!this.inputAnalyser) return 0;
+
+    const dataArray = new Uint8Array(this.inputAnalyser.frequencyBinCount);
+    this.inputAnalyser.getByteFrequencyData(dataArray);
+
+    // Calculate average frequency bin value
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+      sum += dataArray[i];
+    }
+
+    const average = sum / dataArray.length;
+    return Math.min(1, average / 255);
+  }
+
+  /**
+   * Get input frequency data for visualization
+   */
+  getInputFrequencyData(): Uint8Array | null {
+    if (!this.inputAnalyser) return null;
+
+    const dataArray = new Uint8Array(this.inputAnalyser.frequencyBinCount);
+    this.inputAnalyser.getByteFrequencyData(dataArray);
+    return dataArray;
+  }
+
+  // Test tone playback
+  private testToneOscillator: OscillatorNode | null = null;
+  private testToneGain: GainNode | null = null;
+
+  /**
+   * Start playing a test tone at the specified frequency
+   * @param frequency Frequency in Hz (20-20000)
+   * @param volume Volume level (0-1)
+   */
+  startTestTone(frequency: number = 440, volume: number = 0.1): boolean {
+    if (!this.audioContext || !this.masterGain) return false;
+
+    try {
+      // Stop any existing test tone
+      this.stopTestTone();
+
+      // Create oscillator for test tone
+      this.testToneOscillator = this.audioContext.createOscillator();
+      this.testToneOscillator.type = 'sine';
+      this.testToneOscillator.frequency.value = Math.max(20, Math.min(20000, frequency));
+
+      // Create gain node for test tone volume
+      this.testToneGain = this.audioContext.createGain();
+      this.testToneGain.gain.value = Math.max(0, Math.min(1, volume));
+
+      // Connect nodes
+      this.testToneOscillator.connect(this.testToneGain);
+      this.testToneGain.connect(this.masterGain);
+
+      // Start the oscillator
+      this.testToneOscillator.start();
+      console.log(`Test tone started: ${frequency}Hz at ${(volume * 100).toFixed(1)}% volume`);
+      return true;
+    } catch (error) {
+      console.error('Failed to start test tone:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Stop the currently playing test tone
+   */
+  stopTestTone(): void {
+    if (this.testToneOscillator) {
+      try {
+        this.testToneOscillator.stop();
+        this.testToneOscillator.disconnect();
+        this.testToneOscillator = null;
+      } catch (error) {
+        console.error('Error stopping test tone:', error);
+      }
+    }
+
+    if (this.testToneGain) {
+      this.testToneGain.disconnect();
+      this.testToneGain = null;
+    }
+
+    console.log('Test tone stopped');
+  }
+
+  /**
+   * Check if test tone is currently playing
+   */
+  isTestTonePlaying(): boolean {
+    return this.testToneOscillator !== null;
+  }
+
+  /**
    * Cleanup and close audio context
    */
   dispose(): void {
     this.stopAllAudio();
+    this.stopAudioInput();
     this.mediaRecorder?.stop();
     this.audioContext?.close();
     this.audioBuffers.clear();

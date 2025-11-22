@@ -66,3 +66,53 @@ export interface Template {
   category: string;
   tracks: Track[];
 }
+
+export interface Clip {
+  id: string;
+  trackId: string;
+  name: string;
+  startTime: number;
+  duration: number;
+  offset: number;
+  audioFileId?: string;
+  color: string;
+  locked: boolean;
+  muted: boolean;
+}
+
+export interface AudioEvent {
+  id: string;
+  trackId: string;
+  type: 'note' | 'automation' | 'marker';
+  time: number;
+  value?: number;
+  note?: {
+    pitch: number;
+    velocity: number;
+    duration: number;
+  };
+  automation?: {
+    parameter: string;
+    value: number;
+  };
+}
+
+// Phase 3: Real-Time Audio I/O Types
+export interface AudioDevice {
+  deviceId: string;
+  label: string;
+  kind: 'audioinput' | 'audiooutput';
+  groupId: string;
+  state: 'connected' | 'disconnected';
+}
+
+export interface AudioIOState {
+  selectedInputDevice: AudioDevice | null;
+  selectedOutputDevice: AudioDevice | null;
+  inputLevel: number; // 0-1
+  latencyMs: number;
+  bufferUnderruns: number;
+  bufferOverruns: number;
+  isAudioIOActive: boolean;
+  audioIOError: string | null;
+}

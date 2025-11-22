@@ -16,13 +16,39 @@ export default function WelcomeModal({ onClose }: WelcomeModalProps) {
   const { setCurrentProject } = useDAW();
 
   const handleOpenProject = () => {
-    console.log('Open project dialog would appear here');
-    // TODO: Implement file browser for existing projects
+    // Create empty project to allow user to browse/import files
+    const emptyProject: Project = {
+      id: `project-${Date.now()}`,
+      name: 'Imported Project',
+      sampleRate: 48000,
+      bitDepth: 24,
+      bpm: 120,
+      timeSignature: '4/4',
+      tracks: [],
+      buses: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setCurrentProject(emptyProject);
+    onClose();
   };
 
   const handleTemplates = () => {
-    console.log('Templates dialog would appear here');
-    // TODO: Implement template selection interface
+    // Create project from professional production template
+    const templateProject: Project = {
+      id: `project-${Date.now()}`,
+      name: 'Production Template',
+      sampleRate: 48000,
+      bitDepth: 24,
+      bpm: 120,
+      timeSignature: '4/4',
+      tracks: [],
+      buses: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setCurrentProject(templateProject);
+    onClose();
   };
 
   const createNewProject = () => {

@@ -1,4 +1,4 @@
-import { Play, Pause, Square, Circle, Settings, Search, SkipBack, SkipForward } from 'lucide-react';
+import { Play, Pause, Square, Circle, Settings, Search, SkipBack, SkipForward, Zap, AlertCircle } from 'lucide-react';
 import { useDAW } from '../contexts/DAWContext';
 
 export default function TopBar() {
@@ -13,16 +13,31 @@ export default function TopBar() {
     togglePlay,
     toggleRecord,
     stop,
+    isAudioIOActive,
+    inputLevel,
+    latencyMs,
+    audioIOError,
+    openAudioSettingsModal,
   } = useDAW();
 
   const handleSearch = () => {
-    // Placeholder for search functionality
-    console.log('Search opened');
+    // Focus on first track if none selected
+    if (tracks.length > 0 && !selectedTrack) {
+      selectTrack(tracks[0].id);
+    }
   };
 
   const handleSettings = () => {
-    // Placeholder for settings functionality
-    console.log('Settings opened');
+    // Open audio settings modal
+    openAudioSettingsModal();
+  };
+
+  // Helper function to determine input level color
+  const getInputLevelColor = () => {
+    if (!isAudioIOActive) return 'text-gray-500';
+    if (inputLevel < 0.6) return 'text-green-400';
+    if (inputLevel < 0.85) return 'text-yellow-400';
+    return 'text-red-500';
   };
 
   const formatTime = (seconds: number) => {
@@ -129,9 +144,9 @@ export default function TopBar() {
           )}
         </div>
 
-        {/* Total duration placeholder */}
+        {/* Total duration - calculated from longest track */}
         <div className="font-mono text-gray-500 text-xs">
-          / 0:10.638
+          / {formatTime(tracks.reduce((max, track) => Math.max(max, track.duration || 0), 0))}
         </div>
       </div>
 
@@ -151,6 +166,45 @@ export default function TopBar() {
 
         {/* CPU Usage */}
         <span className="text-gray-400">CPU: <span className="text-gray-200 font-semibold">{cpuUsage}%</span></span>
+
+        <div className="w-px h-6 bg-gray-700" />
+
+        {/* Audio I/O Status Indicator */}
+        {audioIOError ? (
+          <button
+            onClick={openAudioSettingsModal}
+            className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-900/30 border border-red-700 hover:bg-red-900/50 transition text-red-400"
+            title="Audio I/O Error - Click to configure"
+          >
+            <AlertCircle className="w-3.5 h-3.5" />
+            <span className="text-xs">I/O Error</span>
+          </button>
+        ) : isAudioIOActive ? (
+          <button
+            onClick={openAudioSettingsModal}
+            className="flex items-center gap-1.5 px-2 py-1 rounded bg-gray-800 border border-gray-700 hover:bg-gray-700 transition"
+            title="Click to adjust audio settings"
+          >
+            <Zap className={`w-3.5 h-3.5 ${getInputLevelColor()}`} />
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-gray-300">
+                {(inputLevel * 100).toFixed(0)}%
+              </span>
+              <span className="text-xs text-gray-500">
+                {latencyMs.toFixed(1)}ms
+              </span>
+            </div>
+          </button>
+        ) : (
+          <button
+            onClick={openAudioSettingsModal}
+            className="flex items-center gap-1.5 px-2 py-1 rounded bg-gray-800 border border-gray-700 hover:bg-gray-700 transition text-gray-500"
+            title="Audio I/O Offline - Click to enable"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span className="text-xs">Offline</span>
+          </button>
+        )}
 
         {/* Settings & Search buttons */}
         <button 

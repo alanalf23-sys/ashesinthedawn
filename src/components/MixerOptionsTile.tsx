@@ -164,10 +164,7 @@ export default function MixerOptionsTile({
       >
         <span>Mixer Options</span>
         <button
-          onClick={() => {
-            // Detach logic would be here
-            setCurrentPos({ x: 200, y: 150 });
-          }}
+          onClick={onDock}
           className="p-1 hover:bg-blue-500 rounded transition"
           title="Detach"
         >

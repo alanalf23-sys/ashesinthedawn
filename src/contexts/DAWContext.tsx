@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { Track, Project, LogicCoreMode, Plugin } from '../types';
+import { Track, Project, LogicCoreMode, Plugin, Clip, AudioEvent, AudioDevice, AudioIOState } from '../types';
 import { supabase } from '../lib/supabase';
 import { getAudioEngine } from '../lib/audioEngine';
+import { getAudioDeviceManager } from '../lib/audioDeviceManager';
+import { RealtimeBufferManager } from '../lib/realtimeBufferManager';
+import { AudioIOMetrics } from '../lib/audioIOMetrics';
 
 interface DAWContextType {
   currentProject: Project | null;
@@ -36,7 +39,102 @@ interface DAWContextType {
   addPluginToTrack: (trackId: string, plugin: Plugin) => void;
   removePluginFromTrack: (trackId: string, pluginId: string) => void;
   togglePluginEnabled: (trackId: string, pluginId: string, enabled: boolean) => void;
-}
+  // Edit operations
+  undo: () => void;
+  redo: () => void;
+  cut: () => void;
+  copy: () => void;
+  paste: () => void;
+  // View operations
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetZoom: () => void;
+  // Track operations
+  duplicateTrack: (trackId: string) => void;
+  muteTrack: (trackId: string, muted: boolean) => void;
+  soloTrack: (trackId: string, soloed: boolean) => void;
+  muteAllTracks: () => void;
+  unmuteAllTracks: () => void;
+  // UI state for modals
+  showNewProjectModal: boolean;
+  showOpenProjectModal: boolean;
+  showSaveAsModal: boolean;
+  showExportModal: boolean;
+  showPreferencesModal: boolean;
+  showAudioSettingsModal: boolean;
+  showMidiSettingsModal: boolean;
+  showShortcutsModal: boolean;
+  showAboutModal: boolean;
+  showMixerOptionsModal: boolean;
+  isFullscreen: boolean;
+  showMixer: boolean;
+  // Modal control functions
+  openNewProjectModal: () => void;
+  closeNewProjectModal: () => void;
+  openOpenProjectModal: () => void;
+  closeOpenProjectModal: () => void;
+  openSaveAsModal: () => void;
+  closeSaveAsModal: () => void;
+  openExportModal: () => void;
+  closeExportModal: () => void;
+  openPreferencesModal: () => void;
+  closePreferencesModal: () => void;
+  openAudioSettingsModal: () => void;
+  closeAudioSettingsModal: () => void;
+  openMidiSettingsModal: () => void;
+  closeMidiSettingsModal: () => void;
+  openShortcutsModal: () => void;
+  closeShortcutsModal: () => void;
+  openAboutModal: () => void;
+  closeAboutModal: () => void;
+  openMixerOptionsModal: () => void;
+  closeMixerOptionsModal: () => void;
+  // View control functions
+  toggleFullscreen: () => void;
+  toggleMixerVisibility: () => void;
+  // File operations
+  createNewProject: (name: string, settings: any) => void;
+  exportAudio: (format: string, quality: string) => Promise<void>;
+  // Clip operations
+  clips: Clip[];
+  selectedClip: Clip | null;
+  createClip: (trackId: string, startTime: number, duration: number, audioFileId?: string) => void;
+  deleteClip: (clipId: string) => void;
+  splitClip: (clipId: string, splitTime: number) => void;
+  quantizeClip: (clipId: string, gridSize: number) => void;
+  selectClip: (clipId: string | null) => void;
+  updateClip: (clipId: string, updates: Partial<Clip>) => void;
+  // Event operations
+  events: AudioEvent[];
+  selectedEvent: AudioEvent | null;
+  createEvent: (trackId: string, type: AudioEvent['type'], time: number) => void;
+  editEvent: (eventId: string, updates: Partial<AudioEvent>) => void;
+  deleteEvent: (eventId: string) => void;
+  selectEvent: (eventId: string | null) => void;
+  
+  // Phase 3: Real-Time Audio I/O
+  selectedInputDevice: AudioDevice | null;
+  selectedOutputDevice: AudioDevice | null;
+  inputLevel: number;
+  latencyMs: number;
+  bufferUnderruns: number;
+  bufferOverruns: number;
+  isAudioIOActive: boolean;
+  audioIOError: string | null;
+  getInputDevices: () => Promise<AudioDevice[]>;
+  getOutputDevices: () => Promise<AudioDevice[]>;
+  selectInputDevice: (deviceId: string) => Promise<boolean>;
+  selectOutputDevice: (deviceId: string) => Promise<boolean>;
+  startAudioIO: () => Promise<boolean>;
+  stopAudioIO: () => void;
+  getLatencyMs: () => number;
+  getIOMetrics: () => AudioIOState;
+  refreshDeviceList: () => Promise<void>;
+  // Test tone methods
+  startTestTone: (frequency: number, volume: number) => boolean;
+  stopTestTone: () => void;
+  isTestTonePlaying: () => boolean;
+};
 
 const DAWContext = createContext<DAWContextType | undefined>(undefined);
 
@@ -51,9 +149,52 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const [voiceControlActive, setVoiceControlActive] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const zoom = 1;
+  const [zoom, setZoom] = useState(1);
+  const zoom_val = zoom;
   const cpuUsage = 12;
   const audioEngineRef = useRef(getAudioEngine());
+  
+  // Command history for undo/redo
+  const [history, setHistory] = useState<Track[][]>([[]]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const [clipboard, setClipboard] = useState<Track | null>(null);
+  
+  // Modal visibility states
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [showOpenProjectModal, setShowOpenProjectModal] = useState(false);
+  const [showSaveAsModal, setShowSaveAsModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+  const [showAudioSettingsModal, setShowAudioSettingsModal] = useState(false);
+  const [showMidiSettingsModal, setShowMidiSettingsModal] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showMixerOptionsModal, setShowMixerOptionsModal] = useState(false);
+  
+  // View states
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showMixer, setShowMixer] = useState(true);
+  
+  // Clip and Event states
+  const [clips, setClips] = useState<Clip[]>([]);
+  const [events, setEvents] = useState<AudioEvent[]>([]);
+  const [selectedClip, setSelectedClip] = useState<Clip | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<AudioEvent | null>(null);
+
+  // Phase 3: Real-Time Audio I/O State
+  const [selectedInputDevice, setSelectedInputDevice] = useState<AudioDevice | null>(null);
+  const [selectedOutputDevice, setSelectedOutputDevice] = useState<AudioDevice | null>(null);
+  const [inputLevel, setInputLevel] = useState(0);
+  const [latencyMs, setLatencyMs] = useState(0);
+  const [bufferUnderruns] = useState(0);
+  const [bufferOverruns] = useState(0);
+  const [isAudioIOActive, setIsAudioIOActive] = useState(false);
+  const [audioIOError, setAudioIOError] = useState<string | null>(null);
+
+  // Phase 3: Audio I/O Infrastructure References
+  const realtimeBufferRef = useRef<RealtimeBufferManager | null>(null);
+  const audioMetricsRef = useRef<AudioIOMetrics | null>(null);
+  const inputLevelMonitorRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (currentProject) {
@@ -118,7 +259,77 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     return () => {
       const engineRef = audioEngineRef.current;
       engineRef.dispose();
+      if (realtimeBufferRef.current) {
+        realtimeBufferRef.current.dispose();
+      }
+      if (audioMetricsRef.current) {
+        audioMetricsRef.current.dispose();
+      }
+      if (inputLevelMonitorRef.current) {
+        clearInterval(inputLevelMonitorRef.current);
+      }
     };
+  }, []);
+
+  // Phase 3: Initialize Audio Device Manager
+  useEffect(() => {
+    const initializeDeviceManager = async () => {
+      try {
+        const deviceManager = await getAudioDeviceManager();
+        
+        // Listen for device changes
+        deviceManager.onDevicesChanged((devices) => {
+          // Update device list on changes
+          console.log('Devices changed:', devices);
+        });
+
+        // Initialize metrics and buffer
+        realtimeBufferRef.current = new RealtimeBufferManager(8192, 2, 48000);
+        audioMetricsRef.current = new AudioIOMetrics(48000, 256);
+
+        // Load persisted device selections from localStorage
+        try {
+          const savedInputDevice = localStorage.getItem('selectedInputDeviceId');
+          const savedOutputDevice = localStorage.getItem('selectedOutputDeviceId');
+
+          if (savedInputDevice) {
+            const inputDevices = await deviceManager.getInputDevices();
+            const device = inputDevices.find(d => d.deviceId === savedInputDevice);
+            if (device && device.state === 'connected') {
+              deviceManager.selectInputDevice(savedInputDevice);
+              setSelectedInputDevice(device);
+              console.log('Restored input device from storage:', device.label);
+            } else if (device) {
+              console.warn('Saved input device is disconnected, clearing selection');
+              localStorage.removeItem('selectedInputDeviceId');
+            }
+          }
+
+          if (savedOutputDevice) {
+            const outputDevices = await deviceManager.getOutputDevices();
+            const device = outputDevices.find(d => d.deviceId === savedOutputDevice);
+            if (device && device.state === 'connected') {
+              deviceManager.selectOutputDevice(savedOutputDevice);
+              setSelectedOutputDevice(device);
+              console.log('Restored output device from storage:', device.label);
+            } else if (device) {
+              console.warn('Saved output device is disconnected, clearing selection');
+              localStorage.removeItem('selectedOutputDeviceId');
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to restore device settings from storage:', error);
+          // Continue without persisted settings
+        }
+
+        console.log('Audio Device Manager initialized');
+      } catch (error) {
+        console.error('Failed to initialize Audio Device Manager:', error);
+        setAudioIOError('Failed to initialize audio devices');
+      }
+    };
+
+    initializeDeviceManager();
   }, []);
 
   // Branching function: Get sequential track number for a given type
@@ -131,6 +342,312 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const getRandomTrackColor = (): string => {
     const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
     return colors[Math.floor(Math.random() * colors.length)];
+  };
+
+  // History management for undo/redo
+  const addToHistory = (newTracks: Track[]) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newTracks);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setTracks(history[newIndex]);
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setTracks(history[newIndex]);
+    }
+  };
+
+  const cut = () => {
+    if (selectedTrack) {
+      setClipboard(selectedTrack);
+      const newTracks = tracks.filter(t => t.id !== selectedTrack.id);
+      setTracks(newTracks);
+      addToHistory(newTracks);
+      setSelectedTrack(null);
+    }
+  };
+
+  const copy = () => {
+    if (selectedTrack) {
+      setClipboard(selectedTrack);
+    }
+  };
+
+  const paste = () => {
+    if (clipboard) {
+      const pastedTrack: Track = {
+        ...clipboard,
+        id: `track-${Date.now()}`,
+        name: `${clipboard.name} (Copy)`,
+      };
+      const newTracks = [...tracks, pastedTrack];
+      setTracks(newTracks);
+      addToHistory(newTracks);
+      setSelectedTrack(pastedTrack);
+    }
+  };
+
+  const zoomIn = () => {
+    setZoom(prev => Math.min(prev + 0.2, 3));
+  };
+
+  const zoomOut = () => {
+    setZoom(prev => Math.max(prev - 0.2, 0.5));
+  };
+
+  const resetZoom = () => {
+    setZoom(1);
+  };
+
+  const duplicateTrack = (trackId: string) => {
+    const trackToDuplicate = tracks.find(t => t.id === trackId);
+    if (trackToDuplicate) {
+      const duplicatedTrack: Track = {
+        ...trackToDuplicate,
+        id: `track-${Date.now()}`,
+        name: `${trackToDuplicate.name} (Copy)`,
+      };
+      const newTracks = [...tracks, duplicatedTrack];
+      setTracks(newTracks);
+      addToHistory(newTracks);
+    }
+  };
+
+  const muteTrack = (trackId: string, muted: boolean) => {
+    const newTracks = tracks.map(t => t.id === trackId ? { ...t, muted } : t);
+    setTracks(newTracks);
+    addToHistory(newTracks);
+    if (selectedTrack?.id === trackId) {
+      setSelectedTrack({ ...selectedTrack, muted });
+    }
+  };
+
+  const soloTrack = (trackId: string, soloed: boolean) => {
+    const newTracks = tracks.map(t => t.id === trackId ? { ...t, soloed } : t);
+    setTracks(newTracks);
+    addToHistory(newTracks);
+    if (selectedTrack?.id === trackId) {
+      setSelectedTrack({ ...selectedTrack, soloed });
+    }
+  };
+
+  const muteAllTracks = () => {
+    const newTracks = tracks.map(t => ({ ...t, muted: true }));
+    setTracks(newTracks);
+    addToHistory(newTracks);
+  };
+
+  const unmuteAllTracks = () => {
+    const newTracks = tracks.map(t => ({ ...t, muted: false }));
+    setTracks(newTracks);
+    addToHistory(newTracks);
+  };
+
+  // Modal control functions
+  const openNewProjectModal = () => setShowNewProjectModal(true);
+  const closeNewProjectModal = () => setShowNewProjectModal(false);
+  const openOpenProjectModal = () => setShowOpenProjectModal(true);
+  const closeOpenProjectModal = () => setShowOpenProjectModal(false);
+  const openSaveAsModal = () => setShowSaveAsModal(true);
+  const closeSaveAsModal = () => setShowSaveAsModal(false);
+  const openExportModal = () => setShowExportModal(true);
+  const closeExportModal = () => setShowExportModal(false);
+  const openPreferencesModal = () => setShowPreferencesModal(true);
+  const closePreferencesModal = () => setShowPreferencesModal(false);
+  const openAudioSettingsModal = () => setShowAudioSettingsModal(true);
+  const closeAudioSettingsModal = () => setShowAudioSettingsModal(false);
+  const openMidiSettingsModal = () => setShowMidiSettingsModal(true);
+  const closeMidiSettingsModal = () => setShowMidiSettingsModal(false);
+  const openShortcutsModal = () => setShowShortcutsModal(true);
+  const closeShortcutsModal = () => setShowShortcutsModal(false);
+  const openAboutModal = () => setShowAboutModal(true);
+  const closeAboutModal = () => setShowAboutModal(false);
+  const openMixerOptionsModal = () => setShowMixerOptionsModal(true);
+  const closeMixerOptionsModal = () => setShowMixerOptionsModal(false);
+
+  // View control functions
+  const toggleFullscreen = () => setIsFullscreen(prev => !prev);
+  const toggleMixerVisibility = () => setShowMixer(prev => !prev);
+
+  // File operations
+  const createNewProject = (name: string, settings: any) => {
+    const newProject: Project = {
+      id: `project-${Date.now()}`,
+      name,
+      sampleRate: settings.sampleRate || 44100,
+      bitDepth: settings.bitDepth || 24,
+      bpm: settings.bpm || 120,
+      timeSignature: settings.timeSignature || '4/4',
+      tracks: [],
+      buses: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setCurrentProject(newProject);
+    setTracks([]);
+    setHistory([[]]);
+    setHistoryIndex(0);
+    closeNewProjectModal();
+  };
+
+  const exportAudio = async (format: string, quality: string) => {
+    console.log(`Exporting audio as ${format} with quality ${quality}`);
+    try {
+      // Get all audible (non-muted, not soloed-out) tracks
+      const anySolo = tracks.some(t => t.soloed);
+      const audibleTracks = tracks.filter(t => 
+        !t.muted && t.type !== 'master' && (!anySolo || t.soloed)
+      );
+
+      if (audibleTracks.length === 0) {
+        console.warn('No audible tracks to export');
+        closeExportModal();
+        return;
+      }
+
+      // In future, create an offline audio context for rendering
+      // For MVP, just prepare the export
+      console.log(`Preparing ${audibleTracks.length} tracks for export...`);
+      // In production, integrate with audio engine to mix and render tracks
+      // For MVP, just log the preparation
+      
+      closeExportModal();
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  };
+
+  // Clip operations
+  const createClip = (trackId: string, startTime: number, duration: number, audioFileId?: string) => {
+    const newClip: Clip = {
+      id: `clip-${Date.now()}`,
+      trackId,
+      name: `Clip ${clips.filter(c => c.trackId === trackId).length + 1}`,
+      startTime,
+      duration,
+      offset: 0,
+      audioFileId,
+      color: '#3b82f6',
+      locked: false,
+      muted: false,
+    };
+    setClips(prev => [...prev, newClip]);
+    setSelectedClip(newClip);
+    console.log('Created clip:', newClip);
+  };
+
+  const deleteClip = (clipId: string) => {
+    setClips(prev => prev.filter(c => c.id !== clipId));
+    if (selectedClip?.id === clipId) {
+      setSelectedClip(null);
+    }
+    console.log('Deleted clip:', clipId);
+  };
+
+  const splitClip = (clipId: string, splitTime: number) => {
+    const clipToSplit = clips.find(c => c.id === clipId);
+    if (!clipToSplit) return;
+
+    // Calculate the offset for the second clip
+    const splitOffset = splitTime - clipToSplit.startTime;
+    
+    // Create new clip from split point
+    const newClip: Clip = {
+      id: `clip-${Date.now()}`,
+      trackId: clipToSplit.trackId,
+      name: `${clipToSplit.name} (split)`,
+      startTime: splitTime,
+      duration: clipToSplit.duration - splitOffset,
+      offset: clipToSplit.offset + splitOffset,
+      audioFileId: clipToSplit.audioFileId,
+      color: clipToSplit.color,
+      locked: false,
+      muted: clipToSplit.muted,
+    };
+
+    // Update original clip duration
+    const updatedClip = { ...clipToSplit, duration: splitOffset };
+    setClips(prev => [
+      ...prev.filter(c => c.id !== clipId),
+      updatedClip,
+      newClip,
+    ]);
+    console.log('Split clip at', splitTime);
+  };
+
+  const quantizeClip = (clipId: string, gridSize: number = 0.25) => {
+    // Snap clip start time to nearest grid line
+    const clipToQuantize = clips.find(c => c.id === clipId);
+    if (!clipToQuantize) return;
+
+    const quantizedStart = Math.round(clipToQuantize.startTime / gridSize) * gridSize;
+    setClips(prev => prev.map(c => 
+      c.id === clipId ? { ...c, startTime: quantizedStart } : c
+    ));
+    console.log(`Quantized clip to grid (${gridSize}s)`);
+  };
+
+  const selectClip = (clipId: string | null) => {
+    const clip = clipId ? clips.find(c => c.id === clipId) : null;
+    setSelectedClip(clip || null);
+  };
+
+  const updateClip = (clipId: string, updates: Partial<Clip>) => {
+    setClips(prev => prev.map(c => 
+      c.id === clipId ? { ...c, ...updates } : c
+    ));
+    if (selectedClip?.id === clipId) {
+      setSelectedClip(prev => prev ? { ...prev, ...updates } : null);
+    }
+  };
+
+  // Event operations
+  const createEvent = (trackId: string, type: AudioEvent['type'], time: number) => {
+    const newEvent: AudioEvent = {
+      id: `event-${Date.now()}`,
+      trackId,
+      type,
+      time,
+      value: type === 'automation' ? 0 : undefined,
+      note: type === 'note' ? { pitch: 60, velocity: 100, duration: 1 } : undefined,
+    };
+    setEvents(prev => [...prev, newEvent]);
+    setSelectedEvent(newEvent);
+    console.log('Created event:', newEvent);
+  };
+
+  const editEvent = (eventId: string, updates: Partial<AudioEvent>) => {
+    setEvents(prev => prev.map(e => 
+      e.id === eventId ? { ...e, ...updates } : e
+    ));
+    if (selectedEvent?.id === eventId) {
+      setSelectedEvent(prev => prev ? { ...prev, ...updates } : null);
+    }
+    console.log('Edited event:', eventId);
+  };
+
+  const deleteEvent = (eventId: string) => {
+    setEvents(prev => prev.filter(e => e.id !== eventId));
+    if (selectedEvent?.id === eventId) {
+      setSelectedEvent(null);
+    }
+    console.log('Deleted event:', eventId);
+  };
+
+  const selectEvent = (eventId: string | null) => {
+    const event = eventId ? events.find(e => e.id === eventId) : null;
+    setSelectedEvent(event || null);
   };
 
   // Branching function: Create audio track
@@ -277,7 +794,9 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         newTrack = createAudioTrack();
     }
 
-    setTracks(prev => [...prev, newTrack]);
+    const newTracks = [...tracks, newTrack];
+    setTracks(newTracks);
+    addToHistory(newTracks);
   };
 
   const selectTrack = (trackId: string) => {
@@ -286,11 +805,14 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateTrack = (trackId: string, updates: Partial<Track>) => {
-    setTracks(prev => prev.map(t => t.id === trackId ? { ...t, ...updates } : t));
+    const newTracks = tracks.map(t => t.id === trackId ? { ...t, ...updates } : t);
+    setTracks(newTracks);
   };
 
   const deleteTrack = (trackId: string) => {
-    setTracks(prev => prev.filter(t => t.id !== trackId));
+    const newTracks = tracks.filter(t => t.id !== trackId);
+    setTracks(newTracks);
+    addToHistory(newTracks);
     if (selectedTrack?.id === trackId) {
       setSelectedTrack(null);
     }
@@ -586,6 +1108,200 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     setCurrentProject(project);
   };
 
+  // Phase 3: Real-Time Audio I/O Methods
+  const getInputDevices = async (): Promise<AudioDevice[]> => {
+    try {
+      const deviceManager = await getAudioDeviceManager();
+      return deviceManager.getInputDevices();
+    } catch (error) {
+      console.error('Failed to get input devices:', error);
+      return [];
+    }
+  };
+
+  const getOutputDevices = async (): Promise<AudioDevice[]> => {
+    try {
+      const deviceManager = await getAudioDeviceManager();
+      return deviceManager.getOutputDevices();
+    } catch (error) {
+      console.error('Failed to get output devices:', error);
+      return [];
+    }
+  };
+
+  const selectInputDevice = async (deviceId: string): Promise<boolean> => {
+    try {
+      const deviceManager = await getAudioDeviceManager();
+      const success = deviceManager.selectInputDevice(deviceId);
+      if (success) {
+        const device = deviceManager.getSelectedInputDevice();
+        setSelectedInputDevice(device);
+        setAudioIOError(null);
+        // Persist to localStorage
+        try {
+          localStorage.setItem('selectedInputDeviceId', deviceId);
+        } catch (storageError) {
+          console.warn('Failed to save input device to localStorage:', storageError);
+        }
+      }
+      return success;
+    } catch (error) {
+      console.error('Failed to select input device:', error);
+      setAudioIOError('Failed to select input device');
+      return false;
+    }
+  };
+
+  const selectOutputDevice = async (deviceId: string): Promise<boolean> => {
+    try {
+      const deviceManager = await getAudioDeviceManager();
+      const success = deviceManager.selectOutputDevice(deviceId);
+      if (success) {
+        const device = deviceManager.getSelectedOutputDevice();
+        setSelectedOutputDevice(device);
+        setAudioIOError(null);
+        // Persist to localStorage
+        try {
+          localStorage.setItem('selectedOutputDeviceId', deviceId);
+        } catch (storageError) {
+          console.warn('Failed to save output device to localStorage:', storageError);
+        }
+      }
+      return success;
+    } catch (error) {
+      console.error('Failed to select output device:', error);
+      setAudioIOError('Failed to select output device');
+      return false;
+    }
+  };
+
+  const startAudioIO = async (): Promise<boolean> => {
+    try {
+      const deviceManager = await getAudioDeviceManager();
+      const device = deviceManager.getSelectedInputDevice();
+
+      if (!device) {
+        setAudioIOError('No input device selected');
+        return false;
+      }
+
+      const engine = getAudioEngine();
+      
+      // Start real-time input with callback
+      const success = await engine.startAudioInput(device.deviceId, (audioData) => {
+        if (realtimeBufferRef.current) {
+          realtimeBufferRef.current.writeAudio(audioData, 0);
+        }
+      });
+
+      if (success) {
+        setIsAudioIOActive(true);
+        setAudioIOError(null);
+
+        // Start input level monitoring
+        if (inputLevelMonitorRef.current) {
+          clearInterval(inputLevelMonitorRef.current);
+        }
+        inputLevelMonitorRef.current = setInterval(() => {
+          const level = engine.getInputLevel();
+          setInputLevel(level);
+
+          if (realtimeBufferRef.current && audioMetricsRef.current) {
+            const latency = realtimeBufferRef.current.getLatencyMs(0);
+            setLatencyMs(latency);
+            audioMetricsRef.current.setCurrentLatency(latency);
+          }
+        }, 50); // Update every 50ms
+
+        console.log('Audio I/O started successfully');
+        return true;
+      } else {
+        setAudioIOError('Failed to start audio input');
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to start audio I/O:', error);
+      setAudioIOError(`Failed to start audio I/O: ${(error as Error).message}`);
+      return false;
+    }
+  };
+
+  const stopAudioIO = () => {
+    try {
+      const engine = getAudioEngine();
+      engine.stopAudioInput();
+      setIsAudioIOActive(false);
+      setInputLevel(0);
+      setLatencyMs(0);
+
+      if (inputLevelMonitorRef.current) {
+        clearInterval(inputLevelMonitorRef.current);
+        inputLevelMonitorRef.current = null;
+      }
+
+      console.log('Audio I/O stopped');
+    } catch (error) {
+      console.error('Failed to stop audio I/O:', error);
+    }
+  };
+
+  const getLatencyMs = (): number => {
+    return latencyMs;
+  };
+
+  const getIOMetrics = (): AudioIOState => {
+    return {
+      selectedInputDevice,
+      selectedOutputDevice,
+      inputLevel,
+      latencyMs,
+      bufferUnderruns,
+      bufferOverruns,
+      isAudioIOActive,
+      audioIOError,
+    };
+  };
+
+  const refreshDeviceList = async (): Promise<void> => {
+    try {
+      const deviceManager = await getAudioDeviceManager();
+      await deviceManager.refreshDevices();
+      console.log('Device list refreshed');
+    } catch (error) {
+      console.error('Failed to refresh device list:', error);
+    }
+  };
+
+  // Test tone methods
+  const startTestTone = (frequency: number, volume: number): boolean => {
+    try {
+      const engine = audioEngineRef.current;
+      return engine.startTestTone(frequency, Math.max(0, Math.min(1, volume)));
+    } catch (error) {
+      console.error('Failed to start test tone:', error);
+      return false;
+    }
+  };
+
+  const stopTestTone = (): void => {
+    try {
+      const engine = audioEngineRef.current;
+      engine.stopTestTone();
+    } catch (error) {
+      console.error('Failed to stop test tone:', error);
+    }
+  };
+
+  const isTestTonePlaying = (): boolean => {
+    try {
+      const engine = audioEngineRef.current;
+      return engine.isTestTonePlaying();
+    } catch (error) {
+      console.error('Failed to check test tone status:', error);
+      return false;
+    }
+  };
+
   return (
     <DAWContext.Provider
       value={{
@@ -595,7 +1311,7 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         isPlaying,
         isRecording,
         currentTime,
-        zoom,
+        zoom: zoom_val,
         logicCoreMode,
         voiceControlActive,
         cpuUsage,
@@ -621,6 +1337,100 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         addPluginToTrack,
         removePluginFromTrack,
         togglePluginEnabled,
+        // Edit operations
+        undo,
+        redo,
+        cut,
+        copy,
+        paste,
+        // View operations
+        zoomIn,
+        zoomOut,
+        resetZoom,
+        // Track operations
+        duplicateTrack,
+        muteTrack,
+        soloTrack,
+        muteAllTracks,
+        unmuteAllTracks,
+        // Modal states
+        showNewProjectModal,
+        showOpenProjectModal,
+        showSaveAsModal,
+        showExportModal,
+        showPreferencesModal,
+        showAudioSettingsModal,
+        showMidiSettingsModal,
+        showShortcutsModal,
+        showAboutModal,
+        showMixerOptionsModal,
+        isFullscreen,
+        showMixer,
+        // Modal control functions
+        openNewProjectModal,
+        closeNewProjectModal,
+        openOpenProjectModal,
+        closeOpenProjectModal,
+        openSaveAsModal,
+        closeSaveAsModal,
+        openExportModal,
+        closeExportModal,
+        openPreferencesModal,
+        closePreferencesModal,
+        openAudioSettingsModal,
+        closeAudioSettingsModal,
+        openMidiSettingsModal,
+        closeMidiSettingsModal,
+        openShortcutsModal,
+        closeShortcutsModal,
+        openAboutModal,
+        closeAboutModal,
+        openMixerOptionsModal,
+        closeMixerOptionsModal,
+        // View control functions
+        toggleFullscreen,
+        toggleMixerVisibility,
+        // File operations
+        createNewProject,
+        exportAudio,
+        // Clip operations
+        clips,
+        selectedClip,
+        createClip,
+        deleteClip,
+        splitClip,
+        quantizeClip,
+        selectClip,
+        updateClip,
+        // Event operations
+        events,
+        selectedEvent,
+        createEvent,
+        editEvent,
+        deleteEvent,
+        selectEvent,
+        // Phase 3: Real-Time Audio I/O
+        selectedInputDevice,
+        selectedOutputDevice,
+        inputLevel,
+        latencyMs,
+        bufferUnderruns,
+        bufferOverruns,
+        isAudioIOActive,
+        audioIOError,
+        getInputDevices,
+        getOutputDevices,
+        selectInputDevice,
+        selectOutputDevice,
+        startAudioIO,
+        stopAudioIO,
+        getLatencyMs,
+        getIOMetrics,
+        refreshDeviceList,
+        // Test tone methods
+        startTestTone,
+        stopTestTone,
+        isTestTonePlaying,
       }}
     >
       {children}

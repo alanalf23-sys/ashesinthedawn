@@ -6,7 +6,9 @@ import TrackList from './components/TrackList';
 import Timeline from './components/Timeline';
 import Mixer from './components/Mixer';
 import Sidebar from './components/Sidebar';
+import AudioMonitor from './components/AudioMonitor';
 import WelcomeModal from './components/WelcomeModal';
+import ModalsContainer from './components/ModalsContainer';
 
 function App() {
   const [showWelcome, setShowWelcome] = useState(false);
@@ -29,9 +31,14 @@ function App() {
             <Timeline />
           </div>
 
-          {/* Right Sidebar - Browser */}
-          <div className="w-56 bg-gray-900 border-l border-gray-700 flex flex-col overflow-hidden text-xs">
-            <Sidebar />
+          {/* Right Sidebar - Browser & Audio Monitor */}
+          <div className="w-80 bg-gray-900 border-l border-gray-700 flex flex-col overflow-hidden text-xs">
+            <div className="flex-1 overflow-y-auto border-b border-gray-700">
+              <Sidebar />
+            </div>
+            <div className="h-64 border-t border-gray-700 overflow-y-auto">
+              <AudioMonitor />
+            </div>
           </div>
         </div>
 
@@ -44,6 +51,7 @@ function App() {
         </div>
 
         {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
+        <ModalsContainer />
       </div>
     </DAWProvider>
   );
