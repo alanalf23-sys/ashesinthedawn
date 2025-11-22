@@ -1,32 +1,52 @@
 # CoreLogic Studio - AI Coding Agent Instructions
 
 ## Project Overview
-CoreLogic Studio is a React + TypeScript DAW (Digital Audio Workstation) featuring a Logic Pro-inspired UI, Web Audio API integration, and modular architecture for professional audio production.
+CoreLogic Studio is a **dual-platform DAW** (Digital Audio Workstation):
+- **Frontend**: React 18 + TypeScript UI with Web Audio API for real-time playback
+- **Backend**: Python DSP library (`daw_core/`) with 19 professional audio effects, automation framework, and metering tools
 
-**Tech Stack**: React 18, TypeScript 5.5, Vite 5.4, Tailwind CSS 3.4, Supabase
+**Tech Stack**: React 18, TypeScript 5.5, Vite 5.4, Tailwind CSS 3.4, Supabase | Python 3.10+, NumPy, SciPy
 
 ## Architecture Essentials
 
-### Three-Layer Design
-1. **Context Layer** (`src/contexts/DAWContext.tsx` - 567 lines)
+### Dual-Stack Architecture
+This is a **federated mono-repo** with separate frontend and backend concerns:
+
+1. **React Frontend** (`src/`)
+   - Handles UI, state management, user interactions
+   - Uses Web Audio API for real-time playback/mixing
+   - Does NOT perform audio DSP - all effects processing would eventually call Python backend
+
+2. **Python DSP Backend** (`daw_core/`)
+   - 19 audio effects across 5 categories (EQ, Dynamics, Saturation, Delays, Reverb)
+   - Automation framework (AutomationCurve, LFO, Envelope, AutomatedParameter)
+   - Metering tools (LevelMeter, SpectrumAnalyzer, VUMeter, Correlometer)
+   - Currently **not integrated** with React frontend (separate development phase)
+   - All effects tested via pytest (197 tests passing)
+
+### Frontend Three-Layer Design (React Only)
+
+1. **Context Layer** (`src/contexts/DAWContext.tsx` - 639 lines)
    - Single source of truth for all DAW state (tracks, playback, recording, time)
    - Audio engine reference held here (singleton pattern via `getAudioEngine()`)
    - Branching functions for track creation by type (audio/instrument/midi/aux/vca)
    - **Critical insight**: Volume sync effect (lines 100-115) keeps audio parameters in sync during playback
 
-2. **Audio Engine** (`src/lib/audioEngine.ts` - 492 lines)
+2. **Audio Engine** (`src/lib/audioEngine.ts` - 500 lines)
    - Wrapper around Web Audio API with methods: `playAudio()`, `stopAudio()`, `setTrackVolume()`, `seek()`
    - **Key pattern**: dB ↔ Linear conversion via `dbToLinear()` (private method, line 475)
    - Waveform caching in `waveformCache` Map for performance
    - Source nodes stored per-track to enable resumable playback
 
-3. **UI Components** (6 components, all consume `useDAW()` hook)
+3. **UI Components** (15 components, all consume `useDAW()` hook)
    - TopBar: Transport controls + time display + CPU/settings
    - TrackList: Add/select/delete tracks with sequential numbering per type
    - Timeline: Waveform visualization + playhead + click-to-seek
-   - Mixer: Volume/pan/input-gain sliders for selected track
+   - Mixer: Volume/pan/input-gain sliders for selected track + plugin rack
    - Sidebar: Multi-tab browser for files/plugins
    - WelcomeModal: Project creation
+   - DraggableWindow, ResizableWindow: Detachable mixer UI
+   - PluginRack, AudioMeter: Effects and metering displays
 
 ### Data Flow
 ```
@@ -118,18 +138,50 @@ export default function MyComponent() {
 
 ## Build & Deployment
 
-### Commands
+### Frontend Development
 ```bash
-npm install              # Dependencies (includes Tailwind, Lucide, React Router if added)
+npm install              # Install Node dependencies (includes Tailwind, Lucide)
 npm run dev              # Vite dev server (default port 5173, fallback 5174)
 npm run build            # Production build
-npm run typecheck        # TypeScript validation
+npm run typecheck        # TypeScript validation (0 errors required)
+npm run lint             # ESLint validation
 ```
 
-### Known Issues
+### Backend Development
+```bash
+# One-time setup
+python -m venv venv
+venv\Scripts\activate  # Windows
+
+# Install dependencies
+pip install numpy scipy
+
+# Run tests (197 tests currently passing)
+python -m pytest test_phase2_*.py -v                    # All tests
+python -m pytest test_phase2_effects.py -v --cov=daw_core  # With coverage
+```
+
+### Testing Strategy
+- **Frontend**: Manual testing in dev server (no automated test suite yet)
+- **Backend**: pytest-based testing with 197 tests across 6 test files:
+  - `test_phase2_effects.py` - EQ filters
+  - `test_phase2_2_dynamics.py` - Compressor, Limiter, Expander, Gate
+  - `test_phase2_4_saturation.py` - Saturation, Distortion, WaveShaper
+  - `test_phase2_5_delays.py` - SimpleDelay, PingPong, MultiTap, Stereo
+  - `test_phase2_6_reverb.py` - Freeverb, Hall, Plate, Room presets
+  - `test_phase2_7_automation.py` - Curves, LFO, Envelopes
+  - `test_phase2_8_metering.py` - Level, Spectrum, VU, Correlometer
+
+### Frontend-Backend Architecture
+- **Currently**: Frontend and backend are separate concerns with independent test suites
+- **Future integration**: Python DSP backend will be called from DAWContext for effect processing
+- **Development workflow**: Work on frontend (npm) and backend (Python) independently
+- **Type definitions**: `src/types/index.ts` defines Plugin interface that will eventually call Python effects
+
+### Known Issues & Limitations
 - Supabase credentials optional - app runs in "demo mode" without auth
-- `caniuse-lite` outdated warning is non-blocking
-- Old CSS `appearance: slider-vertical` deprecated but functional
+- Python backend not yet integrated with React frontend (integration phase TBD)
+- Web Audio API playback limitations require seek/restart pattern (not native pause/resume)
 
 ## Type Definitions
 
@@ -179,16 +231,35 @@ interface Track {
 - Volume not changing → Check if track is muted, verify `setTrackVolume()` called in audio engine
 
 ## Files to Review First
-1. `src/contexts/DAWContext.tsx` - State management patterns
-2. `src/lib/audioEngine.ts` - Web Audio API wrapper, volume handling
-3. `src/types/index.ts` - Data model definitions
-4. `src/components/Mixer.tsx` - UI control patterns (selected track editing)
-5. `DEVELOPMENT.md` - Common tasks with code examples
-6. `ARCHITECTURE.md` - Component-by-component documentation
+1. `src/contexts/DAWContext.tsx` - State management patterns, track factory functions
+2. `src/lib/audioEngine.ts` - Web Audio API wrapper, volume handling, playback logic
+3. `src/types/index.ts` - Data model definitions (Track, Plugin, Project)
+4. `daw_core/fx/*.py` - 19 professional audio effects implementations
+5. `daw_core/automation/*.py` - Automation framework (AutomationCurve, LFO, Envelope)
+6. `src/components/TopBar.tsx` - Transport controls and UI pattern reference
+7. `src/components/Mixer.tsx` - Selected-track editing pattern
+8. `DEVELOPMENT.md` - Common development tasks and setup instructions
 
 ## When Modifying Code
+
+### Frontend Changes (React/TypeScript)
 - Always maintain `useDAW()` hook pattern for context access
 - Keep audio engine calls in DAWContext (not components directly)
 - Update state via context methods, not by importing context directly
 - Test with 0 TypeScript errors: `npm run typecheck`
 - Preserve branching function structure for track factory pattern
+- Use Tailwind dark theme utilities (bg-gray-950, text-gray-300, border-gray-700)
+
+### Backend Changes (Python DSP)
+- Follow existing effects structure in `daw_core/fx/` (class per effect)
+- All effects inherit from base Effect class
+- Include comprehensive docstrings with parameters and examples
+- Write pytest tests in matching `test_phase2_*.py` files
+- Use NumPy for array operations, SciPy for signal processing
+- Return audio in same dtype as input (prevents clipping through format conversion)
+
+### Cross-Layer Integration
+- Frontend Plugin type matches Python effect parameters
+- dB conversion happens in audio engine, not components or effects
+- Automation framework in Python can be consumed by React via API layer (future)
+- Test Python effects independently before integration with React UI
