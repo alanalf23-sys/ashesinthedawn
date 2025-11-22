@@ -275,3 +275,65 @@ export interface SpectrumData {
   peakMagnitude: number;
   average: number;
 }
+
+// Phase 5.1: Session Management Types
+export interface SessionData {
+  id: string;
+  name: string;
+  timestamp: number;
+  lastModified: number;
+  duration: number;
+  tracks: Track[];
+  project: Project | null;
+  metadata: Record<string, unknown>;
+  tags: string[];
+  autoSaved: boolean;
+}
+
+export interface SessionBackup {
+  id: string;
+  sessionId: string;
+  timestamp: number;
+  data: SessionData;
+  size: number;
+}
+
+// Phase 5.1: Enhanced Undo/Redo System Types
+export interface UndoAction {
+  id: string;
+  type: 'add-track' | 'delete-track' | 'update-track' | 'create-clip' | 'delete-clip' | 'update-clip' | 'volume-change' | 'pan-change' | 'automation' | 'plugin-add' | 'plugin-remove' | 'plugin-parameter' | 'routing-change' | 'mute' | 'solo' | 'delete-event' | 'custom';
+  timestamp: number;
+  name: string;
+  description: string;
+  data: Record<string, unknown>;
+  undo: () => void;
+  redo: () => void;
+}
+
+// Phase 5.1: Advanced Metering Types
+export interface MeteringData {
+  lufs: number;
+  truePeak: number;
+  phaseCorrelation: number;
+  headroom: number;
+  shortTermLufs: number;
+  momentaryLufs: number;
+  spectrumFrequencies: number[];
+  peakLevel: number;
+  averageLevel: number;
+  dynamicRange: number;
+  crestFactor: number;
+}
+
+export interface LoudnessAnalysis {
+  duration: number;
+  integratedLufs: number;
+  shortTermLufs: number;
+  momentaryLufs: number;
+  truePeak: number;
+  phaseCorrelation: number;
+  headroom: number;
+  clippingOccurred: boolean;
+  recommendations: string[];
+}
+

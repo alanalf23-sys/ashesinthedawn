@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mic, MicOff, AlertCircle } from 'lucide-react';
 import { getVoiceControlEngine } from '../lib/voiceControlEngine';
 

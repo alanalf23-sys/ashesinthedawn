@@ -26,12 +26,7 @@ class AutomationRecordingEngine {
   private recordingStates: Map<string, RecordingState> = new Map();
   private playbackStates: Map<string, PlaybackState> = new Map();
   private automationCurves: Map<string, AutomationCurve> = new Map();
-  private sampleRate = 44100;
   private minimumRecordingInterval = 20; // ms between recorded points
-
-  constructor(sampleRate = 44100) {
-    this.sampleRate = sampleRate;
-  }
 
   /**
    * Start recording automation for a parameter

@@ -26,11 +26,9 @@ import { AudioIOMetrics } from '../lib/audioIOMetrics';
 import { getPluginHostManager } from '../lib/pluginHost';
 import { BusManager, RoutingEngine, SidechainManager } from '../lib/audioRouter';
 import { getVoiceControlEngine } from '../lib/voiceControlEngine';
-import { getRealtimeEffectsEngine } from '../lib/realtimeEffectsEngine';
-import { getAutomationRecordingEngine } from '../lib/automationRecordingEngine';
-import { getVoiceControlEngine } from '../lib/voiceControlEngine';
-import { getRealtimeEffectsEngine } from '../lib/realtimeEffectsEngine';
-import { getAutomationRecordingEngine } from '../lib/automationRecordingEngine';
+// Phase 5.1: Session, Undo/Redo, and Metering Systems
+import { SessionManager, UndoRedoManager } from '../lib/sessionManager';
+import { MeteringEngine, MeteringMode } from '../lib/meteringEngine';
 
 interface ProjectSettings {
   sampleRate: number;
@@ -237,6 +235,49 @@ interface DAWContextType {
   // Phase 4: Analysis
   spectrumData: Record<string, number[]>;
   cpuUsageDetailed: number;
+
+  // Phase 5.1: Session Management
+  currentSession: SessionData | null;
+  sessionHistory: SessionData[];
+  sessionAutoSaveEnabled: boolean;
+  sessionLastSaved: Date | null;
+  createSession: (name: string) => void;
+  saveSession: (name?: string) => Promise<boolean>;
+  loadSession: (sessionId: string) => Promise<boolean>;
+  deleteSession: (sessionId: string) => Promise<boolean>;
+  autoSaveSession: () => Promise<void>;
+  exportSession: (sessionId: string, format: 'json' | 'zip') => Promise<Blob>;
+  createSessionBackup: () => Promise<string>;
+  restoreSessionBackup: (backupId: string) => Promise<boolean>;
+  getSessionMetadata: () => Record<string, unknown>;
+  setSessionAutoSaveEnabled: (enabled: boolean) => void;
+
+  // Phase 5.1: Enhanced Undo/Redo System
+  undoStack: UndoAction[];
+  redoStack: UndoAction[];
+  canUndo: boolean;
+  canRedo: boolean;
+  undoAction: () => void;
+  redoAction: () => void;
+  clearUndoHistory: () => void;
+  getUndoActionName: () => string;
+  getRedoActionName: () => string;
+  recordAction: (action: UndoAction) => void;
+
+  // Phase 5.1: Advanced Metering
+  meteringMode: MeteringMode;
+  meteringActive: boolean;
+  lufs: number;
+  truePeak: number;
+  phaseCorrelation: number;
+  headroom: number;
+  spectrumFrequencies: number[];
+  setMeteringMode: (mode: MeteringMode) => void;
+  startMetering: () => void;
+  stopMetering: () => void;
+  resetMetering: () => void;
+  getMeteringData: () => MeteringData;
+  analyzeLoudness: (duration?: number) => Promise<LoudnessAnalysis>;
 }
 
 const DAWContext = createContext<DAWContextType | undefined>(undefined);
@@ -338,6 +379,31 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const effectChains: Map<string, EffectChain> = new Map(effectChainsArray.map(chain => [chain.id, chain]));
   const midiDevices: MIDIDevice[] = [];
   const spectrumData: Record<string, number[]> = {};
+
+  // Phase 5.1: Session Management State
+  const [currentSession, setCurrentSession] = useState<SessionData | null>(null);
+  const [sessionHistory, setSessionHistory] = useState<SessionData[]>([]);
+  const [sessionAutoSaveEnabled, setSessionAutoSaveEnabled] = useState(true);
+  const [sessionLastSaved, setSessionLastSaved] = useState<Date | null>(null);
+  const sessionManagerRef = useRef(new SessionManager());
+
+  // Phase 5.1: Enhanced Undo/Redo State
+  const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
+  const [redoStack, setRedoStack] = useState<UndoAction[]>([]);
+  const undoRedoManagerRef = useRef(new UndoRedoManager());
+
+  // Phase 5.1: Advanced Metering State
+  const [meteringMode, setMeteringMode] = useState<MeteringMode>('integrated');
+  const [meteringActive, setMeteringActive] = useState(false);
+  const [lufs, setLufs] = useState(-60);
+  const [truePeak, setTruePeak] = useState(-60);
+  const [phaseCorrelation, setPhaseCorrelation] = useState(1.0);
+  const [headroom, setHeadroom] = useState(23);
+  const [spectrumFrequencies, setSpectrumFrequencies] = useState<number[]>([]);
+  const meteringEngineRef = useRef(new MeteringEngine());
+
+  const canUndo = undoStack.length > 0;
+  const canRedo = redoStack.length > 0;
 
   useEffect(() => {
     if (currentProject) {
@@ -2146,6 +2212,330 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     console.log(`Removed automation point at time ${pointTime}`);
   };
 
+  // ============================================================================
+  // Phase 5.1: Session Management Methods
+  // ============================================================================
+
+  const createSession = (name: string) => {
+    const sessionId = `session-${Date.now()}`;
+    const newSession: SessionData = {
+      id: sessionId,
+      name,
+      timestamp: Date.now(),
+      lastModified: Date.now(),
+      duration: currentTime,
+      tracks: tracks,
+      project: currentProject,
+      metadata: {
+        bpm: currentProject?.bpm || 120,
+        sampleRate: currentProject?.sampleRate || 48000,
+        trackCount: tracks.length,
+      },
+      tags: [],
+      autoSaved: false,
+    };
+    setCurrentSession(newSession);
+    console.log(`✅ Session created: ${name}`);
+  };
+
+  const saveSession = async (name?: string): Promise<boolean> => {
+    try {
+      const session = currentSession || {
+        id: `session-${Date.now()}`,
+        name: name || 'Untitled Session',
+        timestamp: Date.now(),
+        lastModified: Date.now(),
+        duration: currentTime,
+        tracks: tracks,
+        project: currentProject,
+        metadata: {},
+        tags: [],
+        autoSaved: false,
+      };
+
+      const manager = sessionManagerRef.current;
+      const result = manager.saveSession(session);
+      
+      if (result) {
+        setSessionLastSaved(new Date());
+        addToHistory(tracks); // Also record in undo history
+        console.log(`✅ Session saved: ${session.name}`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('❌ Failed to save session:', error);
+      return false;
+    }
+  };
+
+  const loadSession = async (sessionId: string): Promise<boolean> => {
+    try {
+      const manager = sessionManagerRef.current;
+      const session = manager.loadSession(sessionId);
+      
+      if (session) {
+        setCurrentSession(session);
+        setCurrentProject(session.project);
+        setTracks(session.tracks);
+        addToHistory(session.tracks);
+        console.log(`✅ Session loaded: ${session.name}`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('❌ Failed to load session:', error);
+      return false;
+    }
+  };
+
+  const deleteSession = async (sessionId: string): Promise<boolean> => {
+    try {
+      const manager = sessionManagerRef.current;
+      manager.deleteSession(sessionId);
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(null);
+      }
+      console.log(`✅ Session deleted: ${sessionId}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to delete session:', error);
+      return false;
+    }
+  };
+
+  const autoSaveSession = async () => {
+    if (!sessionAutoSaveEnabled || !currentSession) return;
+    
+    try {
+      const manager = sessionManagerRef.current;
+      const updated: SessionData = {
+        ...currentSession,
+        lastModified: Date.now(),
+        duration: currentTime,
+        tracks: tracks,
+        autoSaved: true,
+      };
+      manager.saveSession(updated);
+      setCurrentSession(updated);
+      console.log(`✅ Session auto-saved: ${currentSession.name}`);
+    } catch (error) {
+      console.error('❌ Auto-save failed:', error);
+    }
+  };
+
+  const exportSession = async (sessionId: string, format: 'json' | 'zip'): Promise<Blob> => {
+    try {
+      const manager = sessionManagerRef.current;
+      const session = manager.loadSession(sessionId);
+      if (!session) throw new Error('Session not found');
+
+      const jsonData = JSON.stringify(session, null, 2);
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      
+      console.log(`✅ Session exported: ${sessionId}`);
+      return blob;
+    } catch (error) {
+      console.error('❌ Export failed:', error);
+      throw error;
+    }
+  };
+
+  const createSessionBackup = async (): Promise<string> => {
+    try {
+      const manager = sessionManagerRef.current;
+      const backup = manager.createBackup(currentSession || {
+        id: `session-${Date.now()}`,
+        name: 'Backup',
+        timestamp: Date.now(),
+        lastModified: Date.now(),
+        duration: currentTime,
+        tracks: tracks,
+        project: currentProject,
+        metadata: {},
+        tags: [],
+        autoSaved: false,
+      });
+      console.log(`✅ Backup created: ${backup}`);
+      return backup;
+    } catch (error) {
+      console.error('❌ Backup failed:', error);
+      throw error;
+    }
+  };
+
+  const restoreSessionBackup = async (backupId: string): Promise<boolean> => {
+    try {
+      const manager = sessionManagerRef.current;
+      const session = manager.restoreBackup(backupId);
+      if (session) {
+        setCurrentSession(session);
+        setTracks(session.tracks);
+        addToHistory(session.tracks);
+        console.log(`✅ Backup restored: ${backupId}`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('❌ Restore failed:', error);
+      return false;
+    }
+  };
+
+  const getSessionMetadata = (): Record<string, unknown> => {
+    if (!currentSession) return {};
+    return {
+      ...currentSession.metadata,
+      lastModified: currentSession.lastModified,
+      trackCount: tracks.length,
+      currentTime: currentTime,
+    };
+  };
+
+  const setSessionAutoSaveEnabledLocal = (enabled: boolean) => {
+    setSessionAutoSaveEnabled(enabled);
+    console.log(`🔄 Auto-save ${enabled ? 'enabled' : 'disabled'}`);
+  };
+
+  // ============================================================================
+  // Phase 5.1: Enhanced Undo/Redo Methods
+  // ============================================================================
+
+  const recordAction = (action: UndoAction) => {
+    setUndoStack(prev => [...prev.slice(-99), action]); // Keep last 100 actions
+    setRedoStack([]); // Clear redo stack when new action is recorded
+    
+    const undoRedoManager = undoRedoManagerRef.current;
+    undoRedoManager.addAction(action);
+    
+    console.log(`📝 Action recorded: ${action.name}`);
+  };
+
+  const undoAction = () => {
+    if (!canUndo) return;
+    
+    setUndoStack(prev => {
+      const newUndoStack = [...prev];
+      const action = newUndoStack.pop();
+      if (action) {
+        setRedoStack(prev => [...prev, action]);
+        action.undo();
+        console.log(`↶ Undo: ${action.name}`);
+      }
+      return newUndoStack;
+    });
+  };
+
+  const redoAction = () => {
+    if (!canRedo) return;
+    
+    setRedoStack(prev => {
+      const newRedoStack = [...prev];
+      const action = newRedoStack.pop();
+      if (action) {
+        setUndoStack(prev => [...prev, action]);
+        action.redo();
+        console.log(`↷ Redo: ${action.name}`);
+      }
+      return newRedoStack;
+    });
+  };
+
+  const clearUndoHistory = () => {
+    setUndoStack([]);
+    setRedoStack([]);
+    console.log('🗑️ Undo/Redo history cleared');
+  };
+
+  const getUndoActionName = (): string => {
+    return undoStack.length > 0 ? undoStack[undoStack.length - 1].name : 'Undo';
+  };
+
+  const getRedoActionName = (): string => {
+    return redoStack.length > 0 ? redoStack[redoStack.length - 1].name : 'Redo';
+  };
+
+  // ============================================================================
+  // Phase 5.1: Advanced Metering Methods
+  // ============================================================================
+
+  const setMeteringModeLocal = (mode: MeteringMode) => {
+    setMeteringMode(mode);
+    const meter = meteringEngineRef.current;
+    meter.setMode(mode);
+    console.log(`📊 Metering mode set to: ${mode}`);
+  };
+
+  const startMetering = () => {
+    setMeteringActive(true);
+    const meter = meteringEngineRef.current;
+    meter.start();
+    
+    // Update metering state every 100ms
+    const meterInterval = setInterval(() => {
+      const data = meter.getMeteringData();
+      setLufs(data.lufs);
+      setTruePeak(data.truePeak);
+      setPhaseCorrelation(data.phaseCorrelation);
+      setHeadroom(data.headroom);
+      setSpectrumFrequencies(data.spectrumFrequencies);
+    }, 100);
+
+    // Store interval ID for cleanup
+    (startMetering as any).__intervalId = meterInterval;
+    console.log('📊 Metering started');
+  };
+
+  const stopMetering = () => {
+    setMeteringActive(false);
+    const meter = meteringEngineRef.current;
+    meter.stop();
+    
+    // Clear interval if it exists
+    if ((stopMetering as any).__intervalId) {
+      clearInterval((stopMetering as any).__intervalId);
+    }
+    console.log('📊 Metering stopped');
+  };
+
+  const resetMetering = () => {
+    const meter = meteringEngineRef.current;
+    meter.reset();
+    setLufs(-60);
+    setTruePeak(-60);
+    setPhaseCorrelation(1.0);
+    setHeadroom(23);
+    console.log('📊 Metering reset');
+  };
+
+  const getMeteringData = (): MeteringData => {
+    return meteringEngineRef.current.getMeteringData();
+  };
+
+  const analyzeLoudness = async (duration: number = currentTime): Promise<LoudnessAnalysis> => {
+    try {
+      const meter = meteringEngineRef.current;
+      const analysis = meter.analyzeLoudness(duration);
+      
+      console.log(`📊 Loudness analysis: ${analysis.integratedLufs.toFixed(1)} LUFS`);
+      return analysis;
+    } catch (error) {
+      console.error('❌ Loudness analysis failed:', error);
+      throw error;
+    }
+  };
+
+  // Setup auto-save interval
+  useEffect(() => {
+    if (sessionAutoSaveEnabled && currentSession) {
+      const autoSaveInterval = setInterval(() => {
+        autoSaveSession();
+      }, 60000); // Auto-save every 60 seconds
+      
+      return () => clearInterval(autoSaveInterval);
+    }
+  }, [sessionAutoSaveEnabled, currentSession]);
+
   return (
     <DAWContext.Provider
       value={{
@@ -2333,6 +2723,46 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         // Phase 4: Analysis
         spectrumData,
         cpuUsageDetailed,
+        // Phase 5.1: Session Management
+        currentSession,
+        sessionHistory,
+        sessionAutoSaveEnabled,
+        sessionLastSaved,
+        createSession,
+        saveSession,
+        loadSession,
+        deleteSession,
+        autoSaveSession,
+        exportSession,
+        createSessionBackup,
+        restoreSessionBackup,
+        getSessionMetadata,
+        setSessionAutoSaveEnabled: setSessionAutoSaveEnabledLocal,
+        // Phase 5.1: Enhanced Undo/Redo
+        undoStack,
+        redoStack,
+        canUndo,
+        canRedo,
+        undoAction,
+        redoAction,
+        clearUndoHistory,
+        getUndoActionName,
+        getRedoActionName,
+        recordAction,
+        // Phase 5.1: Advanced Metering
+        meteringMode,
+        meteringActive,
+        lufs,
+        truePeak,
+        phaseCorrelation,
+        headroom,
+        spectrumFrequencies,
+        setMeteringMode: setMeteringModeLocal,
+        startMetering,
+        stopMetering,
+        resetMetering,
+        getMeteringData,
+        analyzeLoudness,
       }}
     >
       {children}

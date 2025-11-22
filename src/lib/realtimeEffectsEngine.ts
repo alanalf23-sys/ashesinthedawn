@@ -522,7 +522,7 @@ class RealtimeEffectsEngine {
     for (const effectId of this.effectChain) {
       const effect = this.effectInstances.get(effectId);
       if (effect) {
-        buffer = effect.process(buffer);
+        buffer = effect.process(buffer, {});
       }
     }
 
