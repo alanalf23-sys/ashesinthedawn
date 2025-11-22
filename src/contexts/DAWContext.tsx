@@ -7,6 +7,9 @@ import { RealtimeBufferManager } from '../lib/realtimeBufferManager';
 import { AudioIOMetrics } from '../lib/audioIOMetrics';
 import { getPluginHostManager } from '../lib/pluginHost';
 import { BusManager, RoutingEngine, SidechainManager } from '../lib/audioRouter';
+import { getVoiceControlEngine } from '../lib/voiceControlEngine';
+import { getRealtimeEffectsEngine } from '../lib/realtimeEffectsEngine';
+import { getAutomationRecordingEngine } from '../lib/automationRecordingEngine';
 
 interface ProjectSettings {
   sampleRate: number;
@@ -1090,7 +1093,82 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleVoiceControl = () => {
-    setVoiceControlActive(prev => !prev);
+    const voiceEngine = getVoiceControlEngine();
+    
+    setVoiceControlActive(prev => {
+      const newState = !prev;
+      
+      if (newState) {
+        // Enable voice control
+        voiceEngine.enable();
+        
+        // Register voice command callbacks
+        voiceEngine.onCommand('play', () => {
+          setIsPlaying(true);
+        });
+        
+        voiceEngine.onCommand('pause', () => {
+          setIsPlaying(false);
+        });
+        
+        voiceEngine.onCommand('stop', () => {
+          setIsPlaying(false);
+          setCurrentTime(0);
+        });
+        
+        voiceEngine.onCommand('record', () => {
+          setIsRecording(prev => !prev);
+        });
+        
+        voiceEngine.onCommand('nextTrack', () => {
+          const currentIndex = tracks.findIndex(t => t.id === selectedTrack?.id);
+          if (currentIndex < tracks.length - 1) {
+            setSelectedTrack(tracks[currentIndex + 1]);
+          }
+        });
+        
+        voiceEngine.onCommand('prevTrack', () => {
+          const currentIndex = tracks.findIndex(t => t.id === selectedTrack?.id);
+          if (currentIndex > 0) {
+            setSelectedTrack(tracks[currentIndex - 1]);
+          }
+        });
+        
+        voiceEngine.onCommand('undo', () => {
+          undo();
+        });
+        
+        voiceEngine.onCommand('redo', () => {
+          redo();
+        });
+        
+        voiceEngine.onCommand('solo', () => {
+          if (selectedTrack) {
+            updateTrack(selectedTrack.id, { soloed: !selectedTrack.soloed });
+          }
+        });
+        
+        voiceEngine.onCommand('mute', () => {
+          if (selectedTrack) {
+            updateTrack(selectedTrack.id, { muted: true });
+          }
+        });
+        
+        voiceEngine.onCommand('unmute', () => {
+          if (selectedTrack) {
+            updateTrack(selectedTrack.id, { muted: false });
+          }
+        });
+
+        console.log('Voice Control enabled');
+      } else {
+        // Disable voice control
+        voiceEngine.disable();
+        console.log('Voice Control disabled');
+      }
+      
+      return newState;
+    });
   };
 
   const uploadAudioFile = async (file: File): Promise<boolean> => {
