@@ -10,6 +10,9 @@ import { BusManager, RoutingEngine, SidechainManager } from '../lib/audioRouter'
 import { getVoiceControlEngine } from '../lib/voiceControlEngine';
 import { getRealtimeEffectsEngine } from '../lib/realtimeEffectsEngine';
 import { getAutomationRecordingEngine } from '../lib/automationRecordingEngine';
+import { getVoiceControlEngine } from '../lib/voiceControlEngine';
+import { getRealtimeEffectsEngine } from '../lib/realtimeEffectsEngine';
+import { getAutomationRecordingEngine } from '../lib/automationRecordingEngine';
 
 interface ProjectSettings {
   sampleRate: number;
