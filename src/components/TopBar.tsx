@@ -8,9 +8,12 @@ import {
   SkipBack,
   SkipForward,
   Zap,
+  Eye,
+  ChevronDown,
 } from "lucide-react";
 import { useDAW } from "../contexts/DAWContext";
 import { useTransportClock, useTransportAPI } from "../hooks/useTransportClock";
+import { useState } from "react";
 
 export default function TopBar() {
   const {
@@ -29,6 +32,15 @@ export default function TopBar() {
   // Real-time transport from WebSocket
   const { state: transport, connected, error } = useTransportClock();
   const api = useTransportAPI();
+
+  const [showViewMenu, setShowViewMenu] = useState(false);
+  const [viewOptions, setViewOptions] = useState({
+    showWaveform: true,
+    showMixer: true,
+    showTimeline: true,
+    showTransport: true,
+    compactMode: false,
+  });
 
   const handleSearch = () => {
     // Placeholder for search functionality
@@ -217,6 +229,107 @@ export default function TopBar() {
         >
           <Search className="w-4 h-4" />
         </button>
+
+        {/* View Menu */}
+        <div className="relative">
+          <button
+            onClick={() => setShowViewMenu(!showViewMenu)}
+            className="flex items-center gap-1 px-2 py-1.5 rounded hover:bg-gray-800 text-gray-300 transition"
+            title="View Options"
+          >
+            <Eye className="w-4 h-4" />
+            <ChevronDown className="w-3 h-3" />
+          </button>
+
+          {showViewMenu && (
+            <div className="absolute right-0 top-full mt-1 bg-gray-900 border border-gray-600 rounded shadow-lg z-50 min-w-48">
+              <div className="p-2 space-y-2">
+                {/* Waveform Toggle */}
+                <label className="flex items-center gap-2 px-2 py-1 hover:bg-gray-800 rounded cursor-pointer text-gray-300 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={viewOptions.showWaveform}
+                    onChange={(e) =>
+                      setViewOptions({
+                        ...viewOptions,
+                        showWaveform: e.target.checked,
+                      })
+                    }
+                    className="w-4 h-4 rounded accent-blue-600"
+                  />
+                  <span>Show Waveform</span>
+                </label>
+
+                {/* Mixer Toggle */}
+                <label className="flex items-center gap-2 px-2 py-1 hover:bg-gray-800 rounded cursor-pointer text-gray-300 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={viewOptions.showMixer}
+                    onChange={(e) =>
+                      setViewOptions({
+                        ...viewOptions,
+                        showMixer: e.target.checked,
+                      })
+                    }
+                    className="w-4 h-4 rounded accent-blue-600"
+                  />
+                  <span>Show Mixer</span>
+                </label>
+
+                {/* Timeline Toggle */}
+                <label className="flex items-center gap-2 px-2 py-1 hover:bg-gray-800 rounded cursor-pointer text-gray-300 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={viewOptions.showTimeline}
+                    onChange={(e) =>
+                      setViewOptions({
+                        ...viewOptions,
+                        showTimeline: e.target.checked,
+                      })
+                    }
+                    className="w-4 h-4 rounded accent-blue-600"
+                  />
+                  <span>Show Timeline</span>
+                </label>
+
+                {/* Transport Toggle */}
+                <label className="flex items-center gap-2 px-2 py-1 hover:bg-gray-800 rounded cursor-pointer text-gray-300 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={viewOptions.showTransport}
+                    onChange={(e) =>
+                      setViewOptions({
+                        ...viewOptions,
+                        showTransport: e.target.checked,
+                      })
+                    }
+                    className="w-4 h-4 rounded accent-blue-600"
+                  />
+                  <span>Show Transport</span>
+                </label>
+
+                <div className="h-px bg-gray-700 my-1" />
+
+                {/* Compact Mode */}
+                <label className="flex items-center gap-2 px-2 py-1 hover:bg-gray-800 rounded cursor-pointer text-gray-300 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={viewOptions.compactMode}
+                    onChange={(e) =>
+                      setViewOptions({
+                        ...viewOptions,
+                        compactMode: e.target.checked,
+                      })
+                    }
+                    className="w-4 h-4 rounded accent-blue-600"
+                  />
+                  <span>Compact Mode</span>
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
+
         <button
           onClick={handleSettings}
           className="p-1.5 rounded hover:bg-gray-800 text-gray-300 transition"

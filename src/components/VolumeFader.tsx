@@ -173,6 +173,7 @@ export default function VolumeFader({
             className="relative w-8 bg-gray-800 hover:bg-gray-700 rounded border border-gray-600 hover:border-blue-600 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-200"
             style={{ height: "100%" }}
             onClick={handleTrackClick}
+            onDoubleClick={handleDoubleClick}
             onWheel={handleWheel}
           >
             {/* Background fill (volume visualization) */}

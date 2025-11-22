@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Track } from "../types";
-import { Trash2, Maximize2, Minimize2 } from "lucide-react";
+import { Track, Plugin } from "../types";
+import { Trash2, Maximize2, Plus, X, Minimize } from "lucide-react";
 import Tooltip from "./Tooltip";
 import VolumeFader from "./VolumeFader";
 
@@ -10,6 +10,8 @@ interface MixerTileProps {
   onSelect: (trackId: string) => void;
   onDelete: (trackId: string) => void;
   onUpdate: (trackId: string, updates: Partial<Track>) => void;
+  onAddPlugin?: (trackId: string, plugin: Plugin) => void;
+  onRemovePlugin?: (trackId: string, pluginId: string) => void;
   levels: Record<string, number>;
   stripWidth?: number;
   stripHeight?: number;
@@ -24,6 +26,8 @@ export default function MixerTile({
   onSelect,
   onDelete,
   onUpdate,
+  onAddPlugin,
+  onRemovePlugin,
   levels,
   stripWidth = 100,
   stripHeight = 400,
@@ -42,7 +46,36 @@ export default function MixerTile({
     width: 0,
     height: 0,
   });
+  const [activeTab, setActiveTab] = useState<"controls" | "plugins">(
+    "controls"
+  );
+  const [showPluginMenu, setShowPluginMenu] = useState(false);
   const tileRef = useRef<HTMLDivElement>(null);
+
+  const AVAILABLE_PLUGINS = [
+    { id: "eq", name: "Parametric EQ", type: "eq" as const, icon: "🎚️" },
+    { id: "comp", name: "Compressor", type: "compressor" as const, icon: "⚙️" },
+    { id: "gate", name: "Gate", type: "gate" as const, icon: "🚪" },
+    { id: "sat", name: "Saturation", type: "saturation" as const, icon: "⚡" },
+    { id: "delay", name: "Delay", type: "delay" as const, icon: "⏱️" },
+    { id: "reverb", name: "Reverb", type: "reverb" as const, icon: "🌊" },
+    { id: "meter", name: "Meter", type: "meter" as const, icon: "📊" },
+  ];
+
+  const addPlugin = (pluginId: string) => {
+    const pluginDef = AVAILABLE_PLUGINS.find((p) => p.id === pluginId);
+    if (pluginDef && onAddPlugin) {
+      const newPlugin: Plugin = {
+        id: `${pluginId}-${Date.now()}-${track.id}`,
+        name: pluginDef.name,
+        type: pluginDef.type,
+        enabled: true,
+        parameters: {},
+      };
+      onAddPlugin(track.id, newPlugin);
+      setShowPluginMenu(false);
+    }
+  };
 
   const getMeterColor = (db: number) => {
     if (db > -3) return "rgb(255, 0, 0)";
@@ -261,50 +294,151 @@ export default function MixerTile({
           </div>
         </div>
 
-        {/* METER + FADER */}
-        <div className="flex flex-col items-center justify-end flex-1 gap-2">
-          {/* Meter */}
-          <div
-            className="rounded border border-gray-700 bg-gray-950 flex flex-col-reverse shadow-inner"
-            style={{
-              width: `${meterWidth}px`,
-              height: "60%",
-              minHeight: "40px",
-            }}
+        {/* TAB BUTTONS */}
+        <div className="flex gap-1 w-full flex-shrink-0">
+          <button
+            onClick={() => setActiveTab("controls")}
+            className={`flex-1 py-1 text-xs rounded font-semibold transition ${
+              activeTab === "controls"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+            }`}
           >
-            <div
-              style={{
-                height: `${meter * 100}%`,
-                backgroundColor: getMeterColor(db),
-                transition: "height 0.1s linear",
-                borderRadius: "1px",
-              }}
-            />
-          </div>
+            Vol
+          </button>
+          <button
+            onClick={() => setActiveTab("plugins")}
+            className={`flex-1 py-1 text-xs rounded font-semibold transition relative ${
+              activeTab === "plugins"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+            }`}
+          >
+            FX{" "}
+            {track.inserts?.length > 0 && (
+              <span className="ml-1 text-xs">({track.inserts.length})</span>
+            )}
+          </button>
+        </div>
 
-          {/* dB Display */}
-          <Tooltip content="RMS level in decibels" position="right">
-            <div
-              className="font-mono text-xs text-gray-400 text-center cursor-help"
-              style={{
-                padding: "2px",
-                minHeight: "16px",
-              }}
-            >
-              {db.toFixed(1)} dB
+        {/* CONTENT AREA */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {activeTab === "controls" ? (
+            // CONTROLS TAB: METER + FADER
+            <div className="flex flex-col items-center justify-end flex-1 gap-2 w-full">
+              {/* Meter */}
+              <div
+                className="rounded border border-gray-700 bg-gray-950 flex flex-col-reverse shadow-inner"
+                style={{
+                  width: `${meterWidth}px`,
+                  height: "60%",
+                  minHeight: "40px",
+                }}
+              >
+                <div
+                  style={{
+                    height: `${meter * 100}%`,
+                    backgroundColor: getMeterColor(db),
+                    transition: "height 0.1s linear",
+                    borderRadius: "1px",
+                  }}
+                />
+              </div>
+
+              {/* dB Display */}
+              <Tooltip content="RMS level in decibels" position="right">
+                <div
+                  className="font-mono text-xs text-gray-400 text-center cursor-help"
+                  style={{
+                    padding: "2px",
+                    minHeight: "16px",
+                  }}
+                >
+                  {db.toFixed(1)} dB
+                </div>
+              </Tooltip>
+
+              {/* Professional Volume Fader */}
+              <VolumeFader
+                trackId={track.id}
+                currentVolume={track.volume}
+                onVolumeChange={(vol) => onUpdate(track.id, { volume: vol })}
+                label="VOL"
+                height={Math.max(currentHeight * 0.4, 80)}
+                showLabel={true}
+                showValue={true}
+              />
             </div>
-          </Tooltip>
+          ) : (
+            // PLUGINS TAB: PLUGIN LIST
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2 w-full">
+              {/* Plugin List */}
+              <div className="space-y-1 flex-1 overflow-y-auto">
+                {track.inserts && track.inserts.length > 0 ? (
+                  track.inserts.map((pluginItem: Plugin | string) => {
+                    const pluginId =
+                      typeof pluginItem === "string"
+                        ? pluginItem
+                        : pluginItem.id || "unknown";
+                    return (
+                      <div
+                        key={pluginId}
+                        className="flex items-center gap-1 px-2 py-1 rounded bg-gray-700 border border-gray-600 text-xs"
+                      >
+                        <div className="flex-1 truncate text-gray-300">
+                          📦 {pluginId}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemovePlugin?.(track.id, pluginId);
+                          }}
+                          className="p-0.5 hover:bg-red-600 rounded transition"
+                        >
+                          <X className="w-3 h-3 text-gray-400 hover:text-white" />
+                        </button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-xs text-gray-500 text-center py-3 italic">
+                    No plugins
+                  </div>
+                )}
+              </div>
 
-          {/* Professional Volume Fader */}
-          <VolumeFader
-            trackId={track.id}
-            currentVolume={track.volume}
-            onVolumeChange={(vol) => onUpdate(track.id, { volume: vol })}
-            label="VOL"
-            height={Math.max(currentHeight * 0.4, 80)}
-            showLabel={true}
-            showValue={true}
-          />
+              {/* Add Plugin Button */}
+              <div className="relative flex-shrink-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPluginMenu(!showPluginMenu);
+                  }}
+                  className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition"
+                >
+                  <Plus className="w-3 h-3" /> Add
+                </button>
+
+                {showPluginMenu && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 bg-gray-900 border border-gray-600 rounded shadow-lg z-50 max-h-48 overflow-y-auto">
+                    {AVAILABLE_PLUGINS.map((plugin) => (
+                      <button
+                        key={plugin.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addPlugin(plugin.id);
+                        }}
+                        className="w-full text-left px-2 py-1 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition first:rounded-t last:rounded-b whitespace-nowrap flex items-center gap-2"
+                      >
+                        <span>{plugin.icon}</span>
+                        <span className="truncate">{plugin.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Delete Button */}
@@ -368,7 +502,7 @@ export default function MixerTile({
             }}
             className="p-0.5 hover:bg-blue-600/30 rounded transition-all duration-150 text-gray-400 hover:text-blue-400 hover:scale-110 active:scale-95 ml-2"
           >
-            <Minimize2 className="w-3 h-3" />
+            <Minimize className="w-3 h-3" />
           </button>
         </Tooltip>
       </div>

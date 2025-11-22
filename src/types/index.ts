@@ -1,4 +1,10 @@
-export type TrackType = 'audio' | 'instrument' | 'midi' | 'aux' | 'vca' | 'master';
+export type TrackType =
+  | "audio"
+  | "instrument"
+  | "midi"
+  | "aux"
+  | "vca"
+  | "master";
 
 export interface Track {
   id: string;
@@ -15,7 +21,7 @@ export interface Track {
   phaseFlip: boolean;
   parentTrackId?: string;
   childTrackIds?: string[];
-  automationMode?: 'off' | 'read' | 'write' | 'touch' | 'latch';
+  automationMode?: "off" | "read" | "write" | "touch" | "latch";
   inserts: Plugin[];
   sends: Send[];
   routing: string;
@@ -25,7 +31,16 @@ export interface Track {
 export interface Plugin {
   id: string;
   name: string;
-  type: 'eq' | 'compressor' | 'gate' | 'saturation' | 'delay' | 'reverb' | 'utility' | 'meter' | 'third-party';
+  type:
+    | "eq"
+    | "compressor"
+    | "gate"
+    | "saturation"
+    | "delay"
+    | "reverb"
+    | "utility"
+    | "meter"
+    | "third-party";
   enabled: boolean;
   parameters: Record<string, number>;
 }
@@ -34,7 +49,7 @@ export interface Send {
   id: string;
   destination: string;
   level: number;
-  prePost: 'pre' | 'post';
+  prePost: "pre" | "post";
   enabled: boolean;
 }
 
@@ -51,7 +66,28 @@ export interface Project {
   updatedAt: string;
 }
 
-export type LogicCoreMode = 'ON' | 'SILENT' | 'OFF';
+export type LogicCoreMode = "ON" | "SILENT" | "OFF";
+
+export interface Marker {
+  id: string;
+  name: string;
+  time: number;
+  color: string;
+  locked: boolean;
+}
+
+export interface LoopRegion {
+  enabled: boolean;
+  startTime: number;
+  endTime: number;
+}
+
+export interface MetronomeSettings {
+  enabled: boolean;
+  volume: number; // 0-1
+  beatSound: "click" | "cowbell" | "woodblock";
+  accentFirst: boolean; // Emphasize first beat of measure
+}
 
 export interface AIPattern {
   type: string;
