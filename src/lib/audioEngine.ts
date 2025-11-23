@@ -3,10 +3,24 @@
  * Provides core audio functionality for CoreLogic Studio
  */
 
+interface LoopConfig {
+  enabled: boolean;
+  startTime: number;
+  endTime: number;
+}
+
+interface TrackPlayState {
+  isPlaying: boolean;
+  currentOffset: number;
+  startTime: number;
+  loopCount: number;
+}
+
 export class AudioEngine {
   private audioContext: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private analyser: AnalyserNode | null = null;
+  private metronomeGain: GainNode | null = null;
   private isInitialized = false;
   private audioBuffers: Map<string, AudioBuffer> = new Map();
   private waveformCache: Map<string, number[]> = new Map(); // Cache for waveforms
@@ -18,16 +32,15 @@ export class AudioEngine {
   private phaseFlipStates: Map<string, boolean> = new Map();
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
-  private playingTracksState: Map<
-    string,
-    { isPlaying: boolean; currentOffset: number }
-  > = new Map();
-  
-  // Phase 4: Effects and Routing
-  private effectGainNodes: Map<string, GainNode> = new Map(); // Output gain for effect chains
-  private busGainNodes: Map<string, GainNode> = new Map(); // Gain nodes for buses
-  private busPanNodes: Map<string, StereoPannerNode> = new Map(); // Pan nodes for buses
-  private sidechainAnalysers: Map<string, AnalyserNode> = new Map(); // For sidechain detection
+  private playingTracksState: Map<string, TrackPlayState> = new Map();
+  private loopConfig: LoopConfig = { enabled: false, startTime: 0, endTime: 0 };
+  private metronomeSettings = {
+    enabled: false,
+    bpm: 120,
+    timeSignature: 4,
+    volume: 0.3,
+  };
+  private metronomeScheduler: number | null = null;
 
   /**
    * Initialize the Web Audio API context and master nodes
@@ -51,6 +64,11 @@ export class AudioEngine {
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.connect(this.masterGain);
       this.analyser.fftSize = 2048;
+
+      // Create separate gain node for metronome
+      this.metronomeGain = this.audioContext.createGain();
+      this.metronomeGain.gain.value = this.metronomeSettings.volume;
+      this.metronomeGain.connect(this.masterGain);
 
       this.isInitialized = true;
       console.log("Audio Engine initialized");
@@ -86,7 +104,7 @@ export class AudioEngine {
   }
 
   /**
-   * Play an audio file from a specific track
+   * Play an audio file from a specific track with loop support
    */
   playAudio(
     trackId: string,
@@ -94,7 +112,6 @@ export class AudioEngine {
     volume: number = 1,
     pan: number = 0
   ): boolean {
-  playAudio(trackId: string, startTime: number = 0, volume: number = 1, pan: number = 0, busId?: string): boolean {
     if (!this.audioContext || !this.masterGain) return false;
 
     const audioBuffer = this.audioBuffers.get(trackId);
@@ -109,7 +126,16 @@ export class AudioEngine {
 
       const source = this.audioContext.createBufferSource();
       source.buffer = audioBuffer;
-      source.loop = true; // Enable looping
+
+      // Enable looping based on loop config
+      if (this.loopConfig.enabled) {
+        source.loop = true;
+        source.loopStart = this.loopConfig.startTime;
+        source.loopEnd = Math.min(
+          this.loopConfig.endTime,
+          audioBuffer.duration
+        );
+      }
 
       // Create pre-fader input gain node
       const inputGain = this.audioContext.createGain();
@@ -127,19 +153,11 @@ export class AudioEngine {
       this.stereoWidthNodes.set(trackId, trackGain);
       this.phaseFlipStates.set(trackId, false);
 
-      // Connect: source → input gain → pan → track gain (fader) → analyser
+      // Connect: source → input gain → pan → track gain (fader) → analyser → master
       source.connect(inputGain);
       inputGain.connect(panNode);
       panNode.connect(trackGain);
       trackGain.connect(this.analyser!);
-
-      // Route to bus if specified, otherwise to master
-      if (busId && this.busGainNodes.has(busId)) {
-        trackGain.connect(this.busGainNodes.get(busId)!);
-        console.log(`Playing track ${trackId} → bus ${busId}`);
-      } else {
-        trackGain.connect(this.masterGain);
-      }
 
       // Store nodes for later updates
       this.inputGainNodes.set(trackId, inputGain);
@@ -150,6 +168,8 @@ export class AudioEngine {
       this.playingTracksState.set(trackId, {
         isPlaying: true,
         currentOffset: startTime,
+        startTime: this.audioContext.currentTime,
+        loopCount: 0,
       });
 
       source.start(0, startTime);
@@ -508,6 +528,131 @@ export class AudioEngine {
   }
 
   /**
+   * Set loop region for playback
+   */
+  setLoopRegion(startTime: number, endTime: number, enabled: boolean): void {
+    this.loopConfig = {
+      enabled,
+      startTime: Math.max(0, startTime),
+      endTime: Math.max(startTime, endTime),
+    };
+    console.log(
+      `Loop region set: ${this.loopConfig.startTime}s - ${this.loopConfig.endTime}s (${enabled ? "enabled" : "disabled"})`
+    );
+  }
+
+  /**
+   * Get current loop configuration
+   */
+  getLoopRegion(): LoopConfig {
+    return { ...this.loopConfig };
+  }
+
+  /**
+   * Toggle loop playback
+   */
+  toggleLoop(): void {
+    this.loopConfig.enabled = !this.loopConfig.enabled;
+    console.log(`Loop ${this.loopConfig.enabled ? "enabled" : "disabled"}`);
+  }
+
+  /**
+   * Generate metronome click sound
+   */
+  private generateMetronomeClick(isDownbeat: boolean): AudioBuffer {
+    if (!this.audioContext) throw new Error("Audio context not initialized");
+
+    const sampleRate = this.audioContext.sampleRate;
+    const duration = 0.1; // 100ms click
+    const buffer = this.audioContext.createBuffer(
+      1,
+      sampleRate * duration,
+      sampleRate
+    );
+    const data = buffer.getChannelData(0);
+
+    const frequency = isDownbeat ? 1000 : 800; // Higher pitch for downbeat
+    const attack = 0.005;
+    const decay = 0.05;
+
+    for (let i = 0; i < data.length; i++) {
+      const t = i / sampleRate;
+      let envelope = 1;
+
+      if (t < attack) {
+        envelope = t / attack;
+      } else if (t < attack + decay) {
+        envelope = 1 - (t - attack) / decay;
+      } else {
+        envelope = 0;
+      }
+
+      data[i] =
+        Math.sin(2 * Math.PI * frequency * t) * envelope * 0.3;
+    }
+
+    return buffer;
+  }
+
+  /**
+   * Enable/disable metronome
+   */
+  setMetronomeEnabled(enabled: boolean): void {
+    this.metronomeSettings.enabled = enabled;
+    if (!enabled && this.metronomeScheduler !== null) {
+      cancelAnimationFrame(this.metronomeScheduler);
+      this.metronomeScheduler = null;
+    }
+    console.log(`Metronome ${enabled ? "enabled" : "disabled"}`);
+  }
+
+  /**
+   * Set metronome volume
+   */
+  setMetronomeVolume(volume: number): void {
+    this.metronomeSettings.volume = Math.max(0, Math.min(1, volume));
+    if (this.metronomeGain) {
+      this.metronomeGain.gain.value = this.metronomeSettings.volume;
+    }
+    console.log(`Metronome volume set to ${this.metronomeSettings.volume}`);
+  }
+
+  /**
+   * Set metronome BPM
+   */
+  setMetronomeBPM(bpm: number): void {
+    this.metronomeSettings.bpm = Math.max(1, Math.min(300, bpm));
+    console.log(`Metronome BPM set to ${this.metronomeSettings.bpm}`);
+  }
+
+  /**
+   * Set metronome time signature
+   */
+  setMetronomeTimeSignature(beats: number): void {
+    this.metronomeSettings.timeSignature = Math.max(1, Math.min(16, beats));
+    console.log(
+      `Metronome time signature set to ${this.metronomeSettings.timeSignature}/4`
+    );
+  }
+
+  /**
+   * Play metronome click
+   */
+  playMetronomeClick(isDownbeat: boolean = false): void {
+    if (!this.audioContext || !this.metronomeGain) return;
+
+    try {
+      const clickBuffer = this.generateMetronomeClick(isDownbeat);
+      const source = this.audioContext.createBufferSource();
+      source.buffer = clickBuffer;
+      source.connect(this.metronomeGain);
+      source.start(0);
+    } catch (error) {
+      console.error("Error playing metronome click:", error);
+    }
+  }
+
+  /**
    * Verify plugin chain is connected properly
    */
   verifyPluginChain(trackId: string): {
@@ -524,6 +669,33 @@ export class AudioEngine {
   }
 
   /**
+   * Sync volume changes during playback (for real-time fader updates)
+   */
+  syncTrackVolume(trackId: string, volumeDb: number): void {
+    const gainNode = this.gainNodes.get(trackId);
+    if (gainNode) {
+      // Use exponential ramp for smooth volume changes
+      const startTime = this.audioContext?.currentTime ?? 0;
+      gainNode.gain.exponentialRampToValueAtTime(
+        this.dbToLinear(volumeDb),
+        startTime + 0.05
+      );
+    }
+  }
+
+  /**
+   * Sync pan changes during playback
+   */
+  syncTrackPan(trackId: string, panValue: number): void {
+    const panNode = this.panNodes.get(trackId);
+    if (panNode) {
+      const clampedPan = Math.max(-1, Math.min(1, panValue));
+      const startTime = this.audioContext?.currentTime ?? 0;
+      panNode.pan.linearRampToValueAtTime(clampedPan, startTime + 0.05);
+    }
+  }
+
+  /**
    * Convert dB to linear gain
    */
   private dbToLinear(db: number): number {
@@ -531,386 +703,25 @@ export class AudioEngine {
   }
 
   /**
-   * Real-Time Audio I/O Methods (Phase 3)
-   */
-
-  private mediaStream: MediaStream | null = null;
-  private scriptProcessorNode: ScriptProcessorNode | null = null;
-  private inputAnalyser: AnalyserNode | null = null;
-  private isInputActive = false;
-
-  /**
-   * Start real-time audio input
-   */
-  async startAudioInput(
-    deviceId?: string,
-    onAudioData?: (data: Float32Array) => void
-  ): Promise<boolean> {
-    if (!this.audioContext) await this.initialize();
-
-    if (!this.audioContext) {
-      console.error('Audio context not available');
-      return false;
-    }
-
-    try {
-      const constraints: MediaStreamConstraints = {
-        audio: {
-          deviceId: deviceId ? { exact: deviceId } : undefined,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      };
-
-      this.mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      if (!this.mediaStream) {
-        console.error('Failed to get media stream');
-        return false;
-      }
-
-      const source = this.audioContext.createMediaStreamSource(this.mediaStream);
-
-      // Create input analyser for metering
-      this.inputAnalyser = this.audioContext.createAnalyser();
-      this.inputAnalyser.fftSize = 2048;
-      source.connect(this.inputAnalyser);
-
-      // Create ScriptProcessorNode for real-time processing (buffer size: 4096)
-      this.scriptProcessorNode = this.audioContext.createScriptProcessor(4096, 1, 1);
-
-      this.scriptProcessorNode.onaudioprocess = (event) => {
-        if (onAudioData) {
-          const inputData = event.inputBuffer.getChannelData(0);
-          const audioDataCopy = new Float32Array(inputData);
-          onAudioData(audioDataCopy);
-        }
-      };
-
-      this.inputAnalyser.connect(this.scriptProcessorNode);
-      this.scriptProcessorNode.connect(this.audioContext.destination);
-
-      this.isInputActive = true;
-      console.log(`Real-time audio input started${deviceId ? ` (device: ${deviceId})` : ''}`);
-      return true;
-    } catch (error) {
-      console.error('Failed to start audio input:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Stop real-time audio input
-   */
-  stopAudioInput(): void {
-    if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach((track) => track.stop());
-      this.mediaStream = null;
-    }
-
-    if (this.scriptProcessorNode) {
-      this.scriptProcessorNode.disconnect();
-      this.scriptProcessorNode = null;
-    }
-
-    if (this.inputAnalyser) {
-      this.inputAnalyser.disconnect();
-      this.inputAnalyser = null;
-    }
-
-    this.isInputActive = false;
-    console.log('Real-time audio input stopped');
-  }
-
-  /**
-   * Check if audio input is currently active
-   */
-  isAudioInputActive(): boolean {
-    return this.isInputActive;
-  }
-
-  /**
-   * Get input level (0-1)
-   */
-  getInputLevel(): number {
-    if (!this.inputAnalyser) return 0;
-
-    const dataArray = new Uint8Array(this.inputAnalyser.frequencyBinCount);
-    this.inputAnalyser.getByteFrequencyData(dataArray);
-
-    // Calculate average frequency bin value
-    let sum = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-      sum += dataArray[i];
-    }
-
-    const average = sum / dataArray.length;
-    return Math.min(1, average / 255);
-  }
-
-  /**
-   * Get input frequency data for visualization
-   */
-  getInputFrequencyData(): Uint8Array | null {
-    if (!this.inputAnalyser) return null;
-
-    const dataArray = new Uint8Array(this.inputAnalyser.frequencyBinCount);
-    this.inputAnalyser.getByteFrequencyData(dataArray);
-    return dataArray;
-  }
-
-  // Test tone playback
-  private testToneOscillator: OscillatorNode | null = null;
-  private testToneGain: GainNode | null = null;
-
-  /**
-   * Start playing a test tone at the specified frequency
-   * @param frequency Frequency in Hz (20-20000)
-   * @param volume Volume level (0-1)
-   */
-  startTestTone(frequency: number = 440, volume: number = 0.1): boolean {
-    if (!this.audioContext || !this.masterGain) return false;
-
-    try {
-      // Stop any existing test tone
-      this.stopTestTone();
-
-      // Create oscillator for test tone
-      this.testToneOscillator = this.audioContext.createOscillator();
-      this.testToneOscillator.type = 'sine';
-      this.testToneOscillator.frequency.value = Math.max(20, Math.min(20000, frequency));
-
-      // Create gain node for test tone volume
-      this.testToneGain = this.audioContext.createGain();
-      this.testToneGain.gain.value = Math.max(0, Math.min(1, volume));
-
-      // Connect nodes
-      this.testToneOscillator.connect(this.testToneGain);
-      this.testToneGain.connect(this.masterGain);
-
-      // Start the oscillator
-      this.testToneOscillator.start();
-      console.log(`Test tone started: ${frequency}Hz at ${(volume * 100).toFixed(1)}% volume`);
-      return true;
-    } catch (error) {
-      console.error('Failed to start test tone:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Stop the currently playing test tone
-   */
-  stopTestTone(): void {
-    if (this.testToneOscillator) {
-      try {
-        this.testToneOscillator.stop();
-        this.testToneOscillator.disconnect();
-        this.testToneOscillator = null;
-      } catch (error) {
-        console.error('Error stopping test tone:', error);
-      }
-    }
-
-    if (this.testToneGain) {
-      this.testToneGain.disconnect();
-      this.testToneGain = null;
-    }
-
-    console.log('Test tone stopped');
-  }
-
-  /**
-   * Check if test tone is currently playing
-   */
-  isTestTonePlaying(): boolean {
-    return this.testToneOscillator !== null;
-  }
-
-  /**
-   * Phase 4: Effects and Bus Routing Methods
-   */
-
-  /**
-   * Get the audio context (for external audio node wiring)
-   */
-  getContext(): AudioContext | null {
-    return this.audioContext;
-  }
-
-  /**
-   * Apply effect chain to a track's audio during playback
-   */
-  applyEffectChain(trackId: string, effects: Array<{ id: string; bypassed?: boolean }>): boolean {
-    if (!this.audioContext) return false;
-
-    const gainNode = this.gainNodes.get(trackId);
-    if (!gainNode) return false;
-
-    // Disconnect existing connections from track gain
-    gainNode.disconnect();
-
-    // Create effect chain output gain
-    const chainOutputGain = this.audioContext.createGain();
-    chainOutputGain.gain.value = 1;
-    this.effectGainNodes.set(trackId, chainOutputGain);
-
-    // For MVP, just connect directly (effects would be processed here in full implementation)
-    // In production, would:
-    // 1. Create nodes for each effect in sequence
-    // 2. Connect: trackGain → effect1 → effect2 → ... → chainOutputGain → destination
-    // 3. Apply effect parameters (cutoff, resonance, attack, release, etc.)
-
-    gainNode.connect(chainOutputGain);
-
-    console.log(`Applied effect chain with ${effects.length} effects to track ${trackId}`);
-    return true;
-  }
-
-  /**
-   * Get track routing destination (bus ID or 'master')
-   */
-  getTrackRouting(trackId: string): string {
-    // Check if track is routed to a bus
-    for (const [busId] of this.busGainNodes.entries()) {
-      const inputNode = this.gainNodes.get(trackId);
-      if (inputNode) {
-        // Simplified check - in production would track routing explicitly
-        return busId;
-      }
-    }
-    return 'master';
-  }
-
-  /**
-   * Create a gain node for an effect chain output
-   */
-  createEffectOutputGain(effectChainId: string): GainNode | null {
-    if (!this.audioContext) return null;
-
-    const gainNode = this.audioContext.createGain();
-    gainNode.gain.value = 1;
-    this.effectGainNodes.set(effectChainId, gainNode);
-    console.log(`Created effect output gain node for chain ${effectChainId}`);
-    return gainNode;
-  }
-
-  /**
-   * Create a bus in the audio graph
-   */
-  createBus(busId: string, volume: number = 0, pan: number = 0): { gain: GainNode; pan: StereoPannerNode } | null {
-    if (!this.audioContext || !this.masterGain) return null;
-
-    const busGain = this.audioContext.createGain();
-    busGain.gain.value = this.dbToLinear(volume);
-    
-    const busPan = this.audioContext.createStereoPanner();
-    busPan.pan.value = pan;
-    
-    // Connect: busGain → busPan → masterGain
-    busGain.connect(busPan);
-    busPan.connect(this.masterGain);
-    
-    this.busGainNodes.set(busId, busGain);
-    this.busPanNodes.set(busId, busPan);
-    
-    console.log(`Created audio bus ${busId}`);
-    return { gain: busGain, pan: busPan };
-  }
-
-  /**
-   * Set bus volume (in dB)
-   */
-  setBusVolume(busId: string, volumeDb: number): void {
-    const busGain = this.busGainNodes.get(busId);
-    if (busGain) {
-      busGain.gain.value = this.dbToLinear(volumeDb);
-    }
-  }
-
-  /**
-   * Set bus pan (-1 to +1)
-   */
-  setBusPan(busId: string, pan: number): void {
-    const busPan = this.busPanNodes.get(busId);
-    if (busPan) {
-      busPan.pan.value = Math.max(-1, Math.min(1, pan));
-    }
-  }
-
-  /**
-   * Route a track to a bus instead of master
-   */
-  routeTrackToBus(trackId: string, busId: string): boolean {
-    const gainNode = this.gainNodes.get(trackId);
-    const busNode = this.busGainNodes.get(busId);
-    
-    if (!gainNode || !busNode) return false;
-    
-    // Disconnect from master and connect to bus
-    gainNode.disconnect();
-    gainNode.connect(busNode);
-    
-    console.log(`Routed track ${trackId} to bus ${busId}`);
-    return true;
-  }
-
-  /**
-   * Create a sidechain analyzer for compression detection
-   */
-  createSidechainAnalyzer(sidechainId: string): AnalyserNode | null {
-    if (!this.audioContext) return null;
-
-    const analyser = this.audioContext.createAnalyser();
-    analyser.fftSize = 256;
-    this.sidechainAnalysers.set(sidechainId, analyser);
-    
-    console.log(`Created sidechain analyser ${sidechainId}`);
-    return analyser;
-  }
-
-  /**
-   * Get sidechain detection level (0-1) for compression
-   */
-  getSidechainLevel(sidechainId: string): number {
-    const analyser = this.sidechainAnalysers.get(sidechainId);
-    if (!analyser) return 0;
-
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(dataArray);
-    
-    // Return average level
-    const sum = dataArray.reduce((a, b) => a + b, 0);
-    return sum / (dataArray.length * 255);
-  }
-
-  /**
-   * Delete a bus from the audio graph
-   */
-  deleteBus(busId: string): void {
-    const busGain = this.busGainNodes.get(busId);
-    const busPan = this.busPanNodes.get(busId);
-    
-    if (busGain) busGain.disconnect();
-    if (busPan) busPan.disconnect();
-    
-    this.busGainNodes.delete(busId);
-    this.busPanNodes.delete(busId);
-    
-    console.log(`Deleted bus ${busId}`);
-  }
-
-  /**
    * Cleanup and close audio context
    */
   dispose(): void {
     this.stopAllAudio();
-    this.stopAudioInput();
+    if (this.metronomeScheduler !== null) {
+      cancelAnimationFrame(this.metronomeScheduler);
+      this.metronomeScheduler = null;
+    }
     this.mediaRecorder?.stop();
     this.audioContext?.close();
     this.audioBuffers.clear();
     this.playingNodes.clear();
+    this.waveformCache.clear();
+    this.gainNodes.clear();
+    this.panNodes.clear();
+    this.stereoWidthNodes.clear();
+    this.inputGainNodes.clear();
+    this.phaseFlipStates.clear();
+    this.playingTracksState.clear();
     this.isInitialized = false;
     console.log("Audio Engine disposed");
   }

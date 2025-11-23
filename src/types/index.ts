@@ -337,3 +337,29 @@ export interface LoudnessAnalysis {
   recommendations: string[];
 }
 
+// Bus/Routing Types
+export interface Bus {
+  id: string;
+  name: string;
+  color: string;
+  volume: number;
+  pan: number;
+  muted: boolean;
+  trackIds: string[];
+  inserts: Plugin[];
+}
+
+// MIDI Types
+export interface MidiDevice {
+  id: string;
+  name: string;
+  type: 'input' | 'output';
+  enabled: boolean;
+}
+
+export interface MidiRoute {
+  id: string;
+  sourceDeviceId: string;
+  targetTrackId: string;
+  channel: number;
+}

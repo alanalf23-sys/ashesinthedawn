@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { getAudioEngine } from '../lib/audioEngine';
 
 export default function AudioMeter() {

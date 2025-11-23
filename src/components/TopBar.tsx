@@ -14,10 +14,6 @@ import {
 import { useDAW } from "../contexts/DAWContext";
 import { useTransportClock } from "../hooks/useTransportClock";
 import { useState } from "react";
-import { Play, Pause, Square, Circle, Settings, Search, SkipBack, SkipForward, Zap } from 'lucide-react';
-import { useDAW } from '../contexts/DAWContext';
-import { useEffect } from 'react';
-import { DropdownMenu } from './DropdownMenu';
 
 export default function TopBar() {
   const {
@@ -31,11 +27,6 @@ export default function TopBar() {
     togglePlay,
     toggleRecord,
     stop,
-    isAudioIOActive,
-    inputLevel,
-    latencyMs,
-    audioIOError,
-    openAudioSettingsModal,
   } = useDAW();
 
   // Real-time transport from WebSocket
@@ -52,68 +43,21 @@ export default function TopBar() {
   });
 
   const handleSearch = () => {
-    // Placeholder for search functionality
-    console.log("Search opened");
-  };
-
-  const handleSettings = () => {
-    // Placeholder for settings functionality
-    console.log("Settings opened");
-  // Global keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if user is typing in an input
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) {
-        return;
-      }
-
-      // Playback controls
-      if (e.code === 'Space' && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
-        e.preventDefault();
-        togglePlay();
-        return;
-      }
-
-      // Stop playback
-      if (e.code === 'Escape') {
-        e.preventDefault();
-        stop();
-        return;
-      }
-
-      // Record
-      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyR') {
-        e.preventDefault();
-        toggleRecord();
-        return;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlay, stop, toggleRecord]);
-
-  const handleSearch = () => {
-    // Focus on first track if none selected
-    if (tracks.length > 0 && !selectedTrack) {
-      selectTrack(tracks[0].id);
+    // Open file browser / search panel
+    const searchInput = prompt("Search files or tracks...", "");
+    if (searchInput) {
+      console.log("Searching for:", searchInput);
+      // TODO: Implement actual file/track search
     }
   };
 
   const handleSettings = () => {
-    // Open audio settings modal
-    openAudioSettingsModal();
-  };
-
-  // Helper function to determine input level color
-  const getInputLevelColor = () => {
-    if (!isAudioIOActive) return 'text-gray-500';
-    if (inputLevel < 0.6) return 'text-green-400';
-    if (inputLevel < 0.85) return 'text-yellow-400';
-    return 'text-red-500';
+    // Open settings/preferences
+    const confirmed = confirm("Open Audio Settings?");
+    if (confirmed) {
+      console.log("Audio Settings dialog would open here");
+      // TODO: Implement settings modal
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -141,51 +85,38 @@ export default function TopBar() {
     }
   };
 
-  // Tooltip component for consistent tooltip styling
-  const Tooltip = ({ text, children }: { text: string; children: React.ReactNode }) => (
-    <div className="group relative inline-block">
-      {children}
-      <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-950 text-gray-200 text-xs rounded whitespace-nowrap border border-gray-700 z-50 pointer-events-none shadow-lg">
-        {text}
-      </div>
-    </div>
-  );
-
   return (
     <div className="h-12 bg-gradient-to-r from-gray-800 via-gray-750 to-gray-800 border-b border-gray-600 flex items-center justify-between px-4 gap-4 text-xs shadow-md">
       {/* LEFT SECTION: Previous/Next Track, Stop, Play, Record, Pause */}
       <div className="flex items-center gap-2">
-        {/* Previous/Next Track Buttons with Tooltips */}
-        <Tooltip text="Previous Track (Shift+←)">
-          <button
-            onClick={prevTrack}
-            className="p-1.5 rounded hover:bg-gray-700 text-gray-300 transition"
-          >
-            <SkipBack className="w-4 h-4" />
-          </button>
-        </Tooltip>
-        <Tooltip text="Next Track (Shift+→)">
-          <button
-            onClick={nextTrack}
-            className="p-1.5 rounded hover:bg-gray-700 text-gray-300 transition"
-          >
-            <SkipForward className="w-4 h-4" />
-          </button>
-        </Tooltip>
+        {/* Previous/Next Track Buttons */}
+        <button
+          onClick={prevTrack}
+          className="p-1.5 rounded hover:bg-gray-700 text-gray-300 transition"
+          title="Previous Track"
+        >
+          <SkipBack className="w-4 h-4" />
+        </button>
+        <button
+          onClick={nextTrack}
+          className="p-1.5 rounded hover:bg-gray-700 text-gray-300 transition"
+          title="Next Track"
+        >
+          <SkipForward className="w-4 h-4" />
+        </button>
 
         <div className="w-px h-6 bg-gray-700 mx-1" />
 
         {/* Transport Controls */}
         <div className="flex items-center gap-1 bg-gray-900 rounded-md px-2 py-1 border border-gray-700">
           {/* Stop Button (red square) */}
-          <Tooltip text="Stop (Esc)">
-            <button
-              onClick={stop}
-              className="p-1.5 rounded hover:bg-red-700/30 text-red-400 transition"
-            >
-              <Square className="w-4 h-4 fill-current" />
-            </button>
-          </Tooltip>
+          <button
+            onClick={stop}
+            className="p-1.5 rounded hover:bg-red-700/30 text-red-400 transition"
+            title="Stop"
+          >
+            <Square className="w-4 h-4 fill-current" />
+          </button>
 
           {/* Play Button (green circle) - currently active */}
           <button
@@ -226,35 +157,6 @@ export default function TopBar() {
           >
             <Pause className="w-4 h-4 fill-current" />
           </button>
-          <Tooltip text="Play/Pause (Space)">
-            <button
-              onClick={togglePlay}
-              className={`p-1.5 rounded transition ${isPlaying ? 'bg-green-600 text-white shadow-lg' : 'hover:bg-gray-800 text-green-400'}`}
-            >
-              <Play className="w-4 h-4 fill-current" />
-            </button>
-          </Tooltip>
-
-          {/* Record Button */}
-          <Tooltip text="Record (Ctrl+R)">
-            <button
-              onClick={toggleRecord}
-              className={`p-1.5 rounded transition ${isRecording ? 'bg-red-600 text-white shadow-lg animate-pulse' : 'hover:bg-gray-800 text-gray-300'}`}
-            >
-              <Circle className="w-4 h-4 fill-current" />
-            </button>
-          </Tooltip>
-
-          {/* Pause Button */}
-          <Tooltip text="Pause (Space)">
-            <button
-              onClick={isPlaying ? togglePlay : undefined}
-              className={`p-1.5 rounded transition ${isPlaying ? 'hover:bg-gray-800 text-gray-300' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
-              disabled={!isPlaying}
-            >
-              <Pause className="w-4 h-4 fill-current" />
-            </button>
-          </Tooltip>
         </div>
       </div>
 
@@ -304,9 +206,6 @@ export default function TopBar() {
         {/* Tempo/BPM display */}
         <div className="font-mono text-gray-400 text-xs">
           {transport.bpm.toFixed(1)} BPM
-        {/* Total duration - calculated from longest track */}
-        <div className="font-mono text-gray-500 text-xs">
-          / {formatTime(tracks.reduce((max, track) => Math.max(max, track.duration || 0), 0))}
         </div>
       </div>
 
@@ -315,24 +214,9 @@ export default function TopBar() {
         {/* Sync indicator */}
         {!connected && (
           <span className="text-xs text-yellow-500 font-semibold">
-            ⚠️ Local Mode
+            ΓÜá∩╕Å Local Mode
           </span>
         )}
-        {/* Current selection time display */}
-        <div className="text-xs text-gray-400">
-          Sel: <span className="text-gray-200 font-mono">{formatTime(currentTime)}</span>
-        </div>
-
-        {/* Calculation of max track duration for total time display */}
-        {(() => {
-          const maxDuration = tracks.reduce((max, track) => Math.max(max, track.duration || 0), 0);
-          const endTime = Math.max(maxDuration, currentTime);
-          return (
-            <div className="text-xs text-gray-500">
-              <span className="text-gray-300">{formatTime(endTime)}</span> / <span className="text-gray-300">{formatTime(maxDuration)}</span>
-            </div>
-          );
-        })()}
 
         <div className="w-px h-6 bg-gray-700" />
 
@@ -344,54 +228,6 @@ export default function TopBar() {
             <span className="text-gray-200 font-semibold">{cpuUsage}%</span>
           </span>
         </div>
-
-        <div className="w-px h-6 bg-gray-700" />
-
-        {/* Audio I/O Dropdown Menu */}
-        <DropdownMenu
-          trigger={
-            <>
-              <Zap className={`w-4 h-4 ${audioIOError ? 'text-red-400' : isAudioIOActive ? getInputLevelColor() : 'text-gray-500'}`} />
-              <span className="text-xs">
-                {audioIOError ? 'I/O Error' : isAudioIOActive ? `${(inputLevel * 100).toFixed(0)}%` : 'Offline'}
-              </span>
-            </>
-          }
-          items={[
-            {
-              label: audioIOError ? 'Audio I/O Error - Click to configure' : `Input Level: ${(inputLevel * 100).toFixed(0)}%`,
-              disabled: true,
-              onClick: undefined,
-              className: 'cursor-default hover:bg-gray-800 text-gray-300'
-            },
-            {
-              label: `Latency: ${latencyMs.toFixed(1)}ms`,
-              disabled: true,
-              onClick: undefined,
-              className: 'cursor-default hover:bg-gray-800 text-gray-300'
-            },
-            {
-              label: isAudioIOActive ? 'Status: Active' : 'Status: Offline',
-              disabled: true,
-              onClick: undefined,
-              className: `cursor-default hover:bg-gray-800 ${isAudioIOActive ? 'text-green-400' : 'text-gray-500'}`
-            },
-            {
-              label: 'Configure Audio Settings',
-              icon: <Settings className="w-3.5 h-3.5" />,
-              onClick: openAudioSettingsModal
-            }
-          ]}
-          align="right"
-          triggerClassName={`px-2 py-1 rounded text-xs font-medium transition ${
-            audioIOError
-              ? 'bg-red-900/30 border border-red-700 hover:bg-red-900/50 text-red-400'
-              : isAudioIOActive
-                ? 'bg-gray-800 border border-gray-700 hover:bg-gray-700 text-gray-300'
-                : 'bg-gray-800 border border-gray-700 hover:bg-gray-700 text-gray-500'
-          }`}
-          menuClassName="bg-gray-800 border border-gray-700"
-        />
 
         {/* Settings & Search buttons */}
         <button
@@ -509,22 +345,6 @@ export default function TopBar() {
         >
           <Settings className="w-4 h-4" />
         </button>
-        <Tooltip text="Search Tracks (Ctrl+F)">
-          <button 
-            onClick={handleSearch}
-            className="p-1.5 rounded hover:bg-gray-800 text-gray-300 transition"
-          >
-            <Search className="w-4 h-4" />
-          </button>
-        </Tooltip>
-        <Tooltip text="Audio Settings">
-          <button 
-            onClick={handleSettings}
-            className="p-1.5 rounded hover:bg-gray-800 text-gray-300 transition"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </Tooltip>
       </div>
     </div>
   );

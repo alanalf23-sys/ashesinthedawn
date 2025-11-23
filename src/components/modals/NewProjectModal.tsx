@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useDAW } from '../../contexts/DAWContext';
+import { Project } from '../../types';
 
 export default function NewProjectModal() {
-  const { showNewProjectModal, closeNewProjectModal, createNewProject } = useDAW();
+  const { showNewProjectModal, closeNewProjectModal, setCurrentProject } = useDAW();
   const [projectName, setProjectName] = useState('Untitled Project');
   const [sampleRate, setSampleRate] = useState(44100);
   const [bitDepth, setBitDepth] = useState(24);
@@ -11,12 +12,21 @@ export default function NewProjectModal() {
   const [timeSignature, setTimeSignature] = useState('4/4');
 
   const handleCreate = () => {
-    createNewProject(projectName, {
-      sampleRate,
-      bitDepth,
+    const now = new Date().toISOString();
+    const newProject: Project = {
+      id: 'project-' + Date.now(),
+      name: projectName,
+      tracks: [],
+      buses: [],
       bpm,
       timeSignature,
-    });
+      sampleRate,
+      bitDepth,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setCurrentProject(newProject);
+    closeNewProjectModal();
   };
 
   if (!showNewProjectModal) return null;

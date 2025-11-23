@@ -1,9 +1,4 @@
-import { useDAW } from "../contexts/DAWContext";
-import { Sliders } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-import MixerTile from "./MixerTile";
 import { useDAW } from '../contexts/DAWContext';
-import { Track } from '../types';
 import { Sliders } from 'lucide-react';
 import { useState, useRef, useEffect, memo } from 'react';
 import MixerTile from './MixerTile';
@@ -16,24 +11,18 @@ interface DetachedTileState {
   size: { width: number; height: number };
 }
 
-export default function Mixer() {
-  const {
-    tracks,
-    selectedTrack,
-    updateTrack,
-    deleteTrack,
-    selectTrack,
-    addTrack,
-    addPluginToTrack,
-    removePluginFromTrack,
-  } = useDAW();
-  const [stripWidth, setStripWidth] = useState(100);
-  const [stripHeight, setStripHeight] = useState(400);
-  const [detachedTiles, setDetachedTiles] = useState<DetachedTileState[]>([]);
+// Define mixer constants
+const MIN_STRIP_WIDTH = 60;
+const MAX_STRIP_WIDTH = 200;
+const MIN_STRIP_HEIGHT = 300;
+const MAX_STRIP_HEIGHT = 600;
+const DEFAULT_STRIP_WIDTH = 100;
+const DEFAULT_STRIP_HEIGHT = 400;
+
 const MixerComponent = () => {
-  const { tracks, selectedTrack, updateTrack, deleteTrack, selectTrack, addPluginToTrack, removePluginFromTrack, togglePluginEnabled } = useDAW();
-  const [stripWidth] = useState(100);
-  const [stripHeight] = useState(400);
+  const { tracks, selectedTrack, updateTrack, deleteTrack, selectTrack, addPluginToTrack, removePluginFromTrack, togglePluginEnabled, addTrack } = useDAW();
+  const [stripWidth, setStripWidth] = useState(DEFAULT_STRIP_WIDTH);
+  const [stripHeight, setStripHeight] = useState(DEFAULT_STRIP_HEIGHT);
   const [detachedTiles, setDetachedTiles] = useState<DetachedTileState[]>([]);
   const [detachedOptionsTile, setDetachedOptionsTile] = useState(false);
   const [detachedPluginRacks, setDetachedPluginRacks] = useState<Record<string, boolean>>({});
@@ -152,8 +141,8 @@ const MixerComponent = () => {
               W:
               <input
                 type="range"
-                min={minStripWidth}
-                max={maxStripWidth}
+                min={MIN_STRIP_WIDTH}
+                max={MAX_STRIP_WIDTH}
                 value={stripWidth}
                 onChange={(e) => setStripWidth(parseInt(e.target.value))}
                 className="w-20 accent-blue-500 ml-2"
@@ -164,8 +153,8 @@ const MixerComponent = () => {
               H:
               <input
                 type="range"
-                min={minStripHeight}
-                max={maxStripHeight}
+                min={MIN_STRIP_HEIGHT}
+                max={MAX_STRIP_HEIGHT}
                 value={stripHeight}
                 onChange={(e) => setStripHeight(parseInt(e.target.value))}
                 className="w-20 accent-blue-500 ml-2"
@@ -384,7 +373,6 @@ const MixerComponent = () => {
       </div>
     </>
   );
-}
 };
 
 export default memo(MixerComponent);

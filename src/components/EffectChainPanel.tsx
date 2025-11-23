@@ -3,10 +3,10 @@ import { Sliders, Volume2, Trash2 } from 'lucide-react';
 import { useDAW } from '../contexts/DAWContext';
 
 export default function EffectChainPanel() {
-  const { selectedTrack, setPluginParameter, removePluginFromTrack, loadedPlugins } = useDAW();
+  const { selectedTrack, removePluginFromTrack } = useDAW();
   const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null);
 
-  const trackPlugins = selectedTrack ? loadedPlugins.get(selectedTrack.id) || [] : [];
+  const trackPlugins = selectedTrack?.inserts || [];
 
   return (
     <div className="flex flex-col h-full bg-gray-900 border-r border-gray-700">
@@ -37,7 +37,7 @@ export default function EffectChainPanel() {
           <div className="text-center py-8">
             <Volume2 className="w-8 h-8 text-gray-600 mx-auto mb-2" />
             <p className="text-xs text-gray-500">No effects loaded</p>
-            <p className="text-xs text-gray-600 mt-1">Use Plugin Browser to add effects</p>
+            <p className="text-xs text-gray-600 mt-1">Use Plugin Rack to add effects</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -58,44 +58,36 @@ export default function EffectChainPanel() {
                     <button className="p-1 hover:bg-gray-700 rounded">
                       <Volume2 className="w-3 h-3 text-gray-400" />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removePluginFromTrack(selectedTrack!.id, plugin.id);
-                      }}
-                      className="p-1 hover:bg-red-600/20 rounded"
-                    >
-                      <Trash2 className="w-3 h-3 text-red-400" />
-                    </button>
+                    {selectedTrack && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removePluginFromTrack(selectedTrack.id, plugin.id);
+                        }}
+                        className="p-1 hover:bg-red-600/20 rounded"
+                      >
+                        <Trash2 className="w-3 h-3 text-red-400" />
+                      </button>
+                    )}
                   </div>
                 </button>
 
                 {/* Plugin Parameters */}
                 {expandedPlugin === plugin.id && (
                   <div className="bg-gray-900 border-t border-gray-700 p-3 space-y-3">
-                    {Object.entries(plugin.currentValues).map(([paramId, value]) => (
-                      <div key={paramId}>
-                        <label className="text-xs font-medium text-gray-400 block mb-1">
-                          {paramId}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={(value as number) || 50}
-                          onChange={(e) =>
-                            setPluginParameter(selectedTrack!.id, plugin.id, paramId, parseInt(e.target.value))
-                          }
-                          className="w-full"
-                        />
-                        <div className="text-xs text-gray-500 mt-1 text-right">
-                          {((value as number) || 50).toFixed(0)}%
-                        </div>
-                      </div>
-                    ))}
-                    {Object.keys(plugin.currentValues).length === 0 && (
-                      <p className="text-xs text-gray-600">No parameters available</p>
-                    )}
+                    <div className="text-xs text-gray-400">
+                      <p className="font-mono">Type: {plugin.type}</p>
+                      <p className="font-mono text-gray-500 mt-1">ID: {plugin.id}</p>
+                      {plugin.enabled !== undefined && (
+                        <p className="mt-1">
+                          Status: {plugin.enabled ? (
+                            <span className="text-green-400">Enabled</span>
+                          ) : (
+                            <span className="text-gray-500">Disabled</span>
+                          )}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
