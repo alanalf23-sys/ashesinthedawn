@@ -135,7 +135,7 @@ function AppContent() {
           onMouseDown={handleMixerResizeStart}
         />
         <div className="flex-1 overflow-hidden">
-          <Mixer />
+          <Mixer mixerHeight={mixerHeight} />
         </div>
       </div>
 

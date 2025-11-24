@@ -14,9 +14,13 @@ interface DetachedTileState {
 // Define mixer constants
 const MIN_STRIP_WIDTH = 60;
 const MAX_STRIP_WIDTH = 200;
-const MIN_STRIP_HEIGHT = 300;
+const MIN_STRIP_HEIGHT = 200;
 
-const MixerComponent = () => {
+interface MixerProps {
+  mixerHeight?: number;
+}
+
+const MixerComponent = ({ mixerHeight = 288 }: MixerProps) => {
   const { tracks, selectedTrack, updateTrack, deleteTrack, selectTrack, addPluginToTrack, removePluginFromTrack, togglePluginEnabled, addTrack } = useDAW();
   const [detachedTiles, setDetachedTiles] = useState<DetachedTileState[]>([]);
   const [detachedOptionsTile, setDetachedOptionsTile] = useState(false);
@@ -36,7 +40,12 @@ const MixerComponent = () => {
   // Cap strip width at 100px max for better visibility of multiple tracks
   const baseStripWidth = Math.max(MIN_STRIP_WIDTH, Math.min(100, (containerWidth - paddingWidth) / Math.max(stripCount, 3)));
   const effectiveStripWidth = Math.min(baseStripWidth, MAX_STRIP_WIDTH);
-  const effectiveStripHeight = MIN_STRIP_HEIGHT;
+  
+  // Calculate dynamic strip height based on mixer container height (account for resize handle and padding)
+  const resizeHandleHeight = 4; // h-1 = 4px
+  const containerPadding = 12; // p-3 = 12px top + bottom
+  const availableMixerHeight = mixerHeight - resizeHandleHeight - containerPadding;
+  const effectiveStripHeight = Math.max(MIN_STRIP_HEIGHT, availableMixerHeight);
 
   // --- Global Drag Handler for Master Fader ---
   useEffect(() => {
