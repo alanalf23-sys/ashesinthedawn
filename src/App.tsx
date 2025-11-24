@@ -5,8 +5,7 @@ import TopBar from './components/TopBar';
 import TrackList from './components/TrackList';
 import Timeline from './components/Timeline';
 import Mixer from './components/Mixer';
-import Sidebar from './components/Sidebar';
-import AudioMonitor from './components/AudioMonitor';
+import EnhancedSidebar from './components/EnhancedSidebar';
 import WelcomeModal from './components/WelcomeModal';
 import ModalsContainer from './components/ModalsContainer';
 
@@ -95,14 +94,9 @@ function AppContent() {
           <Timeline />
         </div>
 
-        {/* Right Sidebar - Browser & Audio Monitor */}
+        {/* Right Sidebar - Enhanced Multi-Tab Browser & Controls */}
         <div className="w-80 bg-gray-900 border-l border-gray-700 flex flex-col overflow-hidden text-xs">
-          <div className="flex-1 overflow-y-auto border-b border-gray-700">
-            <Sidebar />
-          </div>
-          <div className="h-64 border-t border-gray-700 overflow-y-auto">
-            <AudioMonitor />
-          </div>
+          <EnhancedSidebar />
         </div>
       </div>
 

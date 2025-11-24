@@ -10,6 +10,12 @@ import {
   Zap,
   Eye,
   ChevronDown,
+  Repeat,
+  Undo2,
+  Redo2,
+  Music,
+  Flag,
+  Volume2,
 } from "lucide-react";
 import { useDAW } from "../contexts/DAWContext";
 import { useTransportClock } from "../hooks/useTransportClock";
@@ -27,6 +33,18 @@ export default function TopBar() {
     togglePlay,
     toggleRecord,
     stop,
+    loopRegion,
+    toggleLoop,
+    metronomeSettings,
+    toggleMetronome,
+    setMetronomeVolume,
+    setMetronomeBeatSound,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    addMarker,
+    markers,
   } = useDAW();
 
   // Real-time transport from WebSocket
@@ -34,6 +52,7 @@ export default function TopBar() {
   // const api = useTransportAPI(); // Unused for now
 
   const [showViewMenu, setShowViewMenu] = useState(false);
+  const [showMetronomeMenu, setShowMetronomeMenu] = useState(false);
   const [viewOptions, setViewOptions] = useState({
     showWaveform: true,
     showMixer: true,
@@ -113,7 +132,7 @@ export default function TopBar() {
           <button
             onClick={stop}
             className="p-1.5 rounded hover:bg-red-700/30 text-red-400 transition"
-            title="Stop"
+            title="Stop (Space)"
           >
             <Square className="w-4 h-4 fill-current" />
           </button>
@@ -126,7 +145,7 @@ export default function TopBar() {
                 ? "bg-green-600 text-white shadow-lg"
                 : "hover:bg-gray-800 text-green-400"
             }`}
-            title="Play"
+            title="Play (Space)"
           >
             <Play className="w-4 h-4 fill-current" />
           </button>
@@ -139,7 +158,7 @@ export default function TopBar() {
                 ? "bg-red-600 text-white shadow-lg animate-pulse"
                 : "hover:bg-gray-800 text-gray-300"
             }`}
-            title="Record"
+            title="Record (Ctrl+R)"
           >
             <Circle className="w-4 h-4 fill-current" />
           </button>
@@ -158,6 +177,69 @@ export default function TopBar() {
             <Pause className="w-4 h-4 fill-current" />
           </button>
         </div>
+
+        <div className="w-px h-6 bg-gray-700 mx-1" />
+
+        {/* Loop Control */}
+        <button
+          onClick={toggleLoop}
+          className={`p-1.5 rounded transition ${
+            loopRegion.enabled
+              ? "bg-blue-600 text-white shadow-lg"
+              : "hover:bg-gray-800 text-gray-300"
+          }`}
+          title={`Loop ${loopRegion.enabled ? "On" : "Off"} (Ctrl+L)`}
+        >
+          <Repeat className="w-4 h-4" />
+        </button>
+
+        {/* Undo/Redo */}
+        <button
+          onClick={undo}
+          disabled={!canUndo}
+          className={`p-1.5 rounded transition ${
+            canUndo
+              ? "hover:bg-gray-800 text-gray-300"
+              : "text-gray-600 cursor-not-allowed"
+          }`}
+          title="Undo (Ctrl+Z)"
+        >
+          <Undo2 className="w-4 h-4" />
+        </button>
+        <button
+          onClick={redo}
+          disabled={!canRedo}
+          className={`p-1.5 rounded transition ${
+            canRedo
+              ? "hover:bg-gray-800 text-gray-300"
+              : "text-gray-600 cursor-not-allowed"
+          }`}
+          title="Redo (Ctrl+Shift+Z)"
+        >
+          <Redo2 className="w-4 h-4" />
+        </button>
+
+        {/* Metronome Toggle */}
+        <button
+          onClick={toggleMetronome}
+          className={`p-1.5 rounded transition ${
+            metronomeSettings.enabled
+              ? "bg-yellow-600 text-white shadow-lg"
+              : "hover:bg-gray-800 text-gray-300"
+          }`}
+          title="Metronome"
+        >
+          <Music className="w-4 h-4" />
+        </button>
+
+        {/* Add Marker */}
+        <button
+          onClick={() => addMarker(currentTime, `Marker ${markers.length + 1}`)}
+          className="p-1.5 rounded hover:bg-gray-800 text-purple-400 transition"
+          title="Add Marker (M)"
+        >
+          <Flag className="w-4 h-4" />
+        </button>
       </div>
 
       {/* CENTER SECTION: Time display and Status */}
@@ -214,8 +296,64 @@ export default function TopBar() {
         {/* Sync indicator */}
         {!connected && (
           <span className="text-xs text-yellow-500 font-semibold">
-            ΓÜá∩╕Å Local Mode
+            Local Mode
           </span>
+        )}
+
+        <div className="w-px h-6 bg-gray-700" />
+
+        {/* Metronome Volume Control */}
+        {metronomeSettings.enabled && (
+          <div className="flex items-center gap-2">
+            <Volume2 className="w-3 h-3 text-yellow-500" />
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={metronomeSettings.volume}
+              onChange={(e) => setMetronomeVolume(parseFloat(e.target.value))}
+              className="w-20 h-1 rounded appearance-none bg-gray-700 cursor-pointer"
+              title="Metronome Volume"
+            />
+            <span className="text-xs text-gray-400 w-8">
+              {Math.round(metronomeSettings.volume * 100)}%
+            </span>
+          </div>
+        )}
+
+        {/* Metronome Beat Sound Selector */}
+        {metronomeSettings.enabled && (
+          <div className="relative">
+            <button
+              onClick={() => setShowMetronomeMenu(!showMetronomeMenu)}
+              className="px-2 py-1 rounded text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center gap-1 transition"
+              title="Beat Sound"
+            >
+              {metronomeSettings.beatSound}
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            {showMetronomeMenu && (
+              <div className="absolute right-0 top-full mt-1 bg-gray-900 border border-gray-700 rounded shadow-lg z-50">
+                {(["click", "cowbell", "woodblock"] as const).map((sound) => (
+                  <button
+                    key={sound}
+                    onClick={() => {
+                      setMetronomeBeatSound(sound);
+                      setShowMetronomeMenu(false);
+                    }}
+                    className={`w-full px-3 py-2 text-left text-xs hover:bg-gray-800 ${
+                      metronomeSettings.beatSound === sound
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-300"
+                    }`}
+                  >
+                    {sound.charAt(0).toUpperCase() + sound.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         <div className="w-px h-6 bg-gray-700" />
