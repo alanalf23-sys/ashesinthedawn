@@ -37,9 +37,8 @@ const MixerComponent = ({ mixerHeight = 288 }: MixerProps) => {
   const paddingWidth = 24; // p-3 = 12px * 2
   const stripCount = tracks.filter(t => t.type !== 'master').length + 1; // +1 for master
   
-  // Cap strip width at 100px max for better visibility of multiple tracks
-  const baseStripWidth = Math.max(MIN_STRIP_WIDTH, Math.min(100, (containerWidth - paddingWidth) / Math.max(stripCount, 3)));
-  const effectiveStripWidth = Math.min(baseStripWidth, MAX_STRIP_WIDTH);
+  // Use minimum strip width for maximum track visibility
+  const effectiveStripWidth = MIN_STRIP_WIDTH;
   
   // Calculate dynamic strip height based on mixer container height (account for resize handle and padding)
   const resizeHandleHeight = 4; // h-1 = 4px
