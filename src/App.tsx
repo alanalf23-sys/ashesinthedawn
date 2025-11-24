@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DAWProvider, useDAW } from './contexts/DAWContext';
+import { ThemeProvider } from './themes/ThemeContext';
 import MenuBar from './components/MenuBar';
 import TopBar from './components/TopBar';
 import TrackList from './components/TrackList';
@@ -156,9 +157,11 @@ function AppContent() {
 
 function App() {
   return (
-    <DAWProvider>
-      <AppContent />
-    </DAWProvider>
+    <ThemeProvider initialTheme="codette-graphite">
+      <DAWProvider>
+        <AppContent />
+      </DAWProvider>
+    </ThemeProvider>
   );
 }
 

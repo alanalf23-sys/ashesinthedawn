@@ -2,12 +2,11 @@ import { Plus, Music, Mic2, Piano, Radio, Eye, X } from 'lucide-react';
 import { useDAW } from '../contexts/DAWContext';
 import { Track } from '../types';
 import { memo } from 'react';
-import { APP_CONFIG } from '../config/appConfig';
 import { DropdownMenu } from './DropdownMenu';
 
 const TrackListComponent = () => {
   const { tracks, selectedTrack, addTrack, selectTrack, updateTrack, deleteTrack } = useDAW();
-  const maxTracks = APP_CONFIG.audio.MAX_TRACKS;
+  const maxTracks = 256; // Maximum tracks allowed
   const canAddTracks = tracks.length < maxTracks;
 
   const getTrackNumber = (track: Track): number => {

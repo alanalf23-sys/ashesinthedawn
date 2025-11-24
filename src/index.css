@@ -18,13 +18,23 @@
 
 /* Range input slider styling */
 input[type="range"]::-webkit-slider-thumb {
-  background: theme(colors.blue.600);
+  appearance: none;
+  -webkit-appearance: none;
+  background: #2563eb;
   border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
 }
 
 input[type="range"]::-moz-range-thumb {
-  background: theme(colors.blue.600);
+  appearance: none;
+  background: #2563eb;
   border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+  border: none;
 }
 
 /* Channel strip styling */

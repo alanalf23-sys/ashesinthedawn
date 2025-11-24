@@ -1,7 +1,6 @@
 import { useDAW } from '../contexts/DAWContext';
 import { Sliders } from 'lucide-react';
 import { useState, useRef, useEffect, memo } from 'react';
-import { APP_CONFIG } from '../config/appConfig';
 import MixerTile from './MixerTile';
 import DetachablePluginRack from './DetachablePluginRack';
 import MixerOptionsTile from './MixerOptionsTile';
@@ -22,13 +21,12 @@ const MixerComponent = () => {
   const { tracks, selectedTrack, updateTrack, deleteTrack, selectTrack, addPluginToTrack, removePluginFromTrack, togglePluginEnabled, addTrack } = useDAW();
   
   // Access configuration values inside component (at runtime)
-  const stripWidth = APP_CONFIG.display.CHANNEL_WIDTH || DEFAULT_STRIP_WIDTH;
   const stripHeight = DEFAULT_STRIP_HEIGHT; // Fixed height for channel strips
-  const maxTracks = APP_CONFIG.audio.MAX_TRACKS; // Use configured maximum tracks
+  const maxTracks = 256; // Maximum tracks allowed (configurable)
   
-  // Warn if track count exceeds configuration maximum
+  // Warn if track count exceeds maximum
   if (tracks.length > maxTracks) {
-    console.warn(`Track count (${tracks.length}) exceeds MAX_TRACKS configuration (${maxTracks})`);
+    console.warn(`Track count (${tracks.length}) exceeds maximum tracks (${maxTracks})`);
   }
   
   const [detachedTiles, setDetachedTiles] = useState<DetachedTileState[]>([]);

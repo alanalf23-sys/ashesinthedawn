@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { useDAW } from "../contexts/DAWContext";
 import { useTransportClock } from "../hooks/useTransportClock";
-import { APP_CONFIG } from "../config/appConfig";
 import { useState } from "react";
 
 export default function TopBar() {
@@ -81,20 +80,11 @@ export default function TopBar() {
   };
 
   const formatTime = (seconds: number) => {
-    // Use APP_CONFIG.transport.TIMER_FORMAT to determine display format
-    if (APP_CONFIG.transport.TIMER_FORMAT === 'HH:MM:SS') {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
-    // Bars:Beats.Milliseconds format (default)
-    const bars = Math.floor(seconds / 4);
-    const beats = Math.floor((seconds % 4) / 1);
-    const ms = Math.floor((seconds % 1) * 100);
-    return `${bars.toString()}:${beats.toString().padStart(2, "0")}.${ms
-      .toString()
-      .padStart(2, "0")}`;
+    // Format time display - using HH:MM:SS format
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
   const prevTrack = () => {
