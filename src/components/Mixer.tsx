@@ -11,10 +11,9 @@ interface DetachedTileState {
   size: { width: number; height: number };
 }
 
-// Define mixer constants
-const MIN_STRIP_WIDTH = 60;
-const MAX_STRIP_WIDTH = 200;
-const MIN_STRIP_HEIGHT = 200;
+// Define mixer constants based on Pro Tools & Reaper
+const MIN_STRIP_HEIGHT = 240; // Compact view
+const PRO_TOOLS_DEFAULT_WIDTH = 104;
 
 interface MixerProps {
   mixerHeight?: number;
@@ -32,13 +31,8 @@ const MixerComponent = ({ mixerHeight = 288 }: MixerProps) => {
   const faderDraggingRef = useRef(false);
   const faderContainerRef = useRef<HTMLDivElement>(null);
 
-  // Calculate dynamic strip dimensions - keep tracks narrow for visibility
-  const containerWidth = typeof window !== 'undefined' ? window.innerWidth - 80 : 800;
-  const paddingWidth = 24; // p-3 = 12px * 2
-  const stripCount = tracks.filter(t => t.type !== 'master').length + 1; // +1 for master
-  
-  // Use minimum strip width for maximum track visibility
-  const effectiveStripWidth = MIN_STRIP_WIDTH;
+  // Use Pro Tools default width for a professional feel
+  const effectiveStripWidth = PRO_TOOLS_DEFAULT_WIDTH;
   
   // Calculate dynamic strip height based on mixer container height (account for resize handle and padding)
   const resizeHandleHeight = 4; // h-1 = 4px

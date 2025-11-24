@@ -53,7 +53,6 @@ export default function MixerTile({
   const tileRef = useRef<HTMLDivElement>(null);
 
   // Calculate responsive button sizing based on track width
-  const buttonScale = Math.max(0.8, Math.min(1, stripWidth / 100));
   const buttonPadding = Math.max(2, Math.floor(stripWidth * 0.08));
   const buttonFontSize = Math.max(9, Math.floor(stripWidth * 0.12));
   const iconSize = Math.max(12, Math.floor(stripWidth * 0.2));
