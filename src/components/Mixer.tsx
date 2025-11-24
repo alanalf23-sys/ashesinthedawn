@@ -28,17 +28,14 @@ const MixerComponent = () => {
   const faderDraggingRef = useRef(false);
   const faderContainerRef = useRef<HTMLDivElement>(null);
 
-  // Calculate dynamic strip dimensions based on available space
+  // Calculate dynamic strip dimensions - keep tracks narrow for visibility
   const containerWidth = typeof window !== 'undefined' ? window.innerWidth - 80 : 800;
-  const gapWidth = 8; // gap-2 = 8px
   const paddingWidth = 24; // p-3 = 12px * 2
-  const totalAvailableWidth = containerWidth - paddingWidth;
   const stripCount = tracks.filter(t => t.type !== 'master').length + 1; // +1 for master
-  const calculatedStripWidth = Math.max(
-    MIN_STRIP_WIDTH,
-    Math.floor((totalAvailableWidth - (stripCount - 1) * gapWidth) / stripCount)
-  );
-  const effectiveStripWidth = Math.min(calculatedStripWidth, MAX_STRIP_WIDTH);
+  
+  // Cap strip width at 100px max for better visibility of multiple tracks
+  const baseStripWidth = Math.max(MIN_STRIP_WIDTH, Math.min(100, (containerWidth - paddingWidth) / Math.max(stripCount, 3)));
+  const effectiveStripWidth = Math.min(baseStripWidth, MAX_STRIP_WIDTH);
   const effectiveStripHeight = MIN_STRIP_HEIGHT;
 
   // --- Global Drag Handler for Master Fader ---
@@ -154,12 +151,7 @@ const MixerComponent = () => {
           <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-950">
             <div
               className="flex h-full gap-2 p-3 min-w-max"
-              onDoubleClick={(e) => {
-                // Only add track if double-clicking on empty space (not on tracks)
-                if (e.target === e.currentTarget) {
-                  addTrack("audio");
-                }
-              }}
+              onDoubleClick={() => addTrack("audio")}
             >
               {/* Master Strip */}
               <div
