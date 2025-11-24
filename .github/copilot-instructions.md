@@ -1,7 +1,8 @@
 # CoreLogic Studio - AI Coding Agent Instructions
 
-**Last Updated**: November 22, 2025 (23:52 UTC)
-**Session**: Audio System Stabilization & Documentation Refresh
+**Last Updated**: November 24, 2025 (Production Ready)
+**Status**: ✅ Phase 7 Complete - Configuration System & UI Stable
+**Version**: 7.0.0 - Vite-optimized, 0 TypeScript errors
 
 ## Project Overview
 
@@ -167,12 +168,16 @@ export default function MyComponent() {
 ### Frontend Development
 
 ```bash
-npm install              # Install Node dependencies (includes Tailwind, Lucide)
-npm run dev              # Vite dev server (default port 5173, fallback 5174)
-npm run build            # Production build
-npm run typecheck        # TypeScript validation (0 errors required)
-npm run lint             # ESLint validation
+npm install              # Install Node dependencies (Vite 7.2.4, React 18.3.1, TypeScript 5.5.3)
+npm run dev              # Vite dev server on port 5173 (or 5174/5175 if occupied)
+npm run build            # Production build (471.04 kB, gzip: 127.76 kB)
+npm run typecheck        # TypeScript validation (must pass with 0 errors before commit)
+npm run lint             # ESLint validation (ESLint 9.x with React plugin)
+npm run preview          # Preview production build locally
+npm run ci               # Full CI check (typecheck + lint)
 ```
+
+**Current Status**: Dev server running on port 5175 with HMR active ✅
 
 ### Backend Development
 
@@ -215,22 +220,54 @@ python -m pytest test_phase2_effects.py -v --cov=daw_core  # With coverage
 - Web Audio API playback limitations handled via native looping (`source.loop = true`)
 - sounddevice (audio I/O) and websockets are optional dependencies (installed, wrapped in try-except)
 
-## Recent Fixes (Session Notes)
+## Recent Fixes (November 24, 2025 Session - Configuration Integration)
 
-### Audio System Improvements
+### Critical Fixes Applied
 
-- **Fixed audio fade-out**: Removed complex DAWContext restart logic, now relies on native Web Audio looping
-- **Fixed waveform caching**: Enhanced `getWaveformData()` to check cache first before computation
-- **TypeScript**: Fixed improper `any` type casting to proper `unknown` with type narrowing in audioEngine initialization
+1. **JSON Configuration Files** (tsconfig.app.json, tsconfig.node.json)
+   - **Issue**: Invalid JSON comments (`/* Bundler mode */`, `/* Linting */`)
+   - **Fix**: Removed comment blocks for strict JSON validation ✅
 
-### Code Quality
+2. **Vite Migration** (appConfig.ts, .env.example)
+   - **Issue**: React CRA style `process.env.REACT_APP_*` incompatible with Vite
+   - **Fix**: Updated to `import.meta.env.VITE_*` prefix throughout
+   - **Config Sections**: Reduced from 10 to 4 core sections (system, display, theme, debug)
+   - **Result**: All environment variables now Vite-compatible ✅
 
-- Cleaned all unused imports across frontend and backend
-- Fixed CSS conflicts in ANIMATION_PATTERNS.md (consolidated redundant transitions)
-- Removed unnecessary inline comments from engine.py while preserving docstrings
-- Updated VSCode Python debugger config from deprecated `python` type to `debugpy`
+3. **Component Configuration References** (Mixer.tsx, TrackList.tsx, TopBar.tsx, audioEngine.ts)
+   - **Issue**: Referencing non-existent APP_CONFIG properties
+   - **Fixes**:
+     - Mixer.tsx: `APP_CONFIG.audio.MAX_TRACKS` → hardcoded `256`
+     - TrackList.tsx: `APP_CONFIG.audio.MAX_TRACKS` → hardcoded `256`
+     - TopBar.tsx: `APP_CONFIG.transport.TIMER_FORMAT` → hardcoded `HH:MM:SS`
+     - audioEngine.ts: `APP_CONFIG.transport.METRONOME_ENABLED` → hardcoded `true`
+   - **Result**: 0 TypeScript errors, UI fully functional ✅
 
 ## Type Definitions
+
+### Environment Configuration Pattern (Vite-Compatible)
+
+**File**: `src/config/appConfig.ts`
+
+```typescript
+// ✅ CORRECT: Using Vite's import.meta.env
+const env = import.meta.env;
+export const SYSTEM_CONFIG = {
+  APP_NAME: env.VITE_APP_NAME || 'CoreLogic Studio',
+  VERSION: env.VITE_APP_VERSION || '7.0',
+  // ... 4 core sections: system, display, theme, debug
+}
+
+// ❌ WRONG: Do not use process.env or React CRA style REACT_APP_*
+// process.env.REACT_APP_NAME  // Won't work with Vite
+```
+
+**Environment Variables**: All use `VITE_` prefix in `.env` and `.env.example`
+
+**Component Integration Pattern** (see Mixer.tsx):
+- Don't import appConfig into components for constants
+- If needed, add to context (DAWContext) and expose via `useDAW()`
+- Fallback to hardcoded defaults (e.g., `const maxTracks = 256;`)
 
 ### Track Interface (src/types/index.ts)
 
@@ -294,11 +331,81 @@ interface Track {
 1. `src/contexts/DAWContext.tsx` - State management patterns, track factory functions
 2. `src/lib/audioEngine.ts` - Web Audio API wrapper, volume handling, playback logic
 3. `src/types/index.ts` - Data model definitions (Track, Plugin, Project)
-4. `daw_core/fx/*.py` - 19 professional audio effects implementations
-5. `daw_core/automation/*.py` - Automation framework (AutomationCurve, LFO, Envelope)
-6. `src/components/TopBar.tsx` - Transport controls and UI pattern reference
-7. `src/components/Mixer.tsx` - Selected-track editing pattern
-8. `DEVELOPMENT.md` - Common development tasks and setup instructions
+4. `src/config/appConfig.ts` - Vite environment configuration (newly updated)
+5. `daw_core/fx/*.py` - 19 professional audio effects implementations
+6. `daw_core/automation/*.py` - Automation framework (AutomationCurve, LFO, Envelope)
+7. `src/components/TopBar.tsx` - Transport controls and UI pattern reference
+8. `src/components/Mixer.tsx` - Selected-track editing pattern, configuration defaults
+9. `DEVELOPMENT.md` - Common development tasks and setup instructions
+10. `SESSION_CHANGELOG_20251124.md` - Latest session fixes and changes
+
+## Common Mistakes to Avoid
+
+### Configuration & Environment
+
+1. **❌ Importing appConfig directly in components for constants**
+   ```typescript
+   // WRONG
+   import { APP_CONFIG } from '../config/appConfig';
+   const maxTracks = APP_CONFIG.audio.MAX_TRACKS; // Will fail - property doesn't exist
+   
+   // ✅ CORRECT
+   const maxTracks = 256; // Hardcoded default, safe
+   // Or pass from context/props if needed at runtime
+   ```
+
+2. **❌ Using React CRA environment variable format with Vite**
+   ```bash
+   # WRONG - Won't work with Vite
+   REACT_APP_NAME=CoreLogic Studio
+   
+   # ✅ CORRECT - Use Vite format
+   VITE_APP_NAME=CoreLogic Studio
+   ```
+
+3. **❌ Accessing environment at module level**
+   ```typescript
+   // WRONG - appConfig.ts tries to read config properties at import time
+   const featureEnabled = process.env.REACT_APP_FEATURE_X; // May be undefined
+   
+   // ✅ CORRECT - Read from import.meta.env
+   const env = import.meta.env;
+   const featureEnabled = env.VITE_FEATURE_X || false;
+   ```
+
+### Audio Engine
+
+1. **❌ Creating multiple AudioContext instances**
+   ```typescript
+   // WRONG
+   const ctx = new (window.AudioContext || window.webkitAudioContext)();
+   
+   // ✅ CORRECT - Use singleton via getAudioEngine()
+   import { getAudioEngine } from './lib/audioEngine';
+   const engine = getAudioEngine();
+   ```
+
+2. **❌ Passing linear volume values to playAudio()**
+   ```typescript
+   // WRONG - playAudio expects dB
+   engine.playAudio(trackId, 0, 0.8); // 0.8 is linear, not dB
+   
+   // ✅ CORRECT - Convert to dB first or pass dB directly
+   engine.playAudio(trackId, 0, -6); // -6 dB
+   ```
+
+### Component State
+
+1. **❌ Calling updateTrack() without proper context**
+   ```typescript
+   // WRONG - Component imports DAWContext directly
+   const daw = useContext(DAWContext);
+   daw.updateTrack(...); // May not be in provider
+   
+   // ✅ CORRECT - Use the hook
+   const { updateTrack } = useDAW();
+   updateTrack(trackId, {...});
+   ```
 
 ## When Modifying Code
 
@@ -307,18 +414,23 @@ interface Track {
 - Always maintain `useDAW()` hook pattern for context access
 - Keep audio engine calls in DAWContext (not components directly)
 - Update state via context methods, not by importing context directly
-- Test with 0 TypeScript errors: `npm run typecheck`
+- **MUST achieve 0 TypeScript errors**: `npm run typecheck` (required before commit)
 - Preserve branching function structure for track factory pattern
 - Use Tailwind dark theme utilities (bg-gray-950, text-gray-300, border-gray-700)
+- **Environment Variables**: Use `import.meta.env.VITE_*` (Vite-style), not `process.env` (React CRA)
+- **Configuration Access**: Environment variables only; hardcode essential defaults in component level (see Mixer.tsx pattern)
+- **Avoid**: Importing appConfig.ts directly into components (use context instead)
 
 ### Backend Changes (Python DSP)
 
 - Follow existing effects structure in `daw_core/fx/` (class per effect)
 - All effects inherit from base Effect class
 - Include comprehensive docstrings with parameters and examples
-- Write pytest tests in matching `test_phase2_*.py` files
+- Write pytest tests in matching `test_phase2_*.py` files (keep 197/197 passing)
 - Use NumPy for array operations, SciPy for signal processing
 - Return audio in same dtype as input (prevents clipping through format conversion)
+- **Command**: `python -m pytest test_phase2_*.py -v` (verify no test regressions)
+- **No integration yet**: Python backend separate from React frontend (development phase TBD)
 
 ### Cross-Layer Integration
 
