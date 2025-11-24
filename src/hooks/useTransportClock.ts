@@ -14,6 +14,7 @@ interface TransportState {
 /**
  * Hook for connecting to WebSocket transport clock
  * Handles connection lifecycle, reconnection, and state updates
+ * Note: WebSocket endpoints currently not implemented on Codette server
  */
 export function useTransportClock(
   wsUrl: string = "ws://localhost:8000/ws/transport/clock"
@@ -34,14 +35,23 @@ export function useTransportClock(
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const reconnectAttemptsRef = useRef(0);
+  const maxReconnectAttempts = 3; // Reduced from 10 to fail faster
 
   // Connect to WebSocket
   useEffect(() => {
     const connect = () => {
       try {
         const ws = new WebSocket(wsUrl);
+        // Set a timeout for connection attempt
+        const connectionTimeout = setTimeout(() => {
+          if (ws.readyState === WebSocket.CONNECTING) {
+            ws.close();
+            setError("WebSocket connection timeout");
+          }
+        }, 5000);
 
         ws.onopen = () => {
+          clearTimeout(connectionTimeout);
           console.log("✓ Connected to transport clock");
           setConnected(true);
           setError(null);
@@ -64,37 +74,41 @@ export function useTransportClock(
         };
 
         ws.onerror = (error) => {
+          clearTimeout(connectionTimeout);
           console.error("WebSocket error:", error);
-          setError("Connection error");
+          setError("WebSocket connection failed");
+          setConnected(false);
         };
 
         ws.onclose = () => {
+          clearTimeout(connectionTimeout);
           console.log("✗ Disconnected from transport clock");
           setConnected(false);
           wsRef.current = null;
 
-          // Attempt reconnection
-          if (reconnectAttemptsRef.current < 10) {
+          // Attempt reconnection with reduced attempts
+          if (reconnectAttemptsRef.current < maxReconnectAttempts) {
             const delay = Math.min(
               1000 * Math.pow(1.5, reconnectAttemptsRef.current),
-              30000
+              10000
             );
             reconnectTimeoutRef.current = setTimeout(() => {
               reconnectAttemptsRef.current++;
               console.log(
-                `Reconnecting... (attempt ${reconnectAttemptsRef.current})`
+                `Reconnecting to transport clock... (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
               );
               connect();
             }, delay);
           } else {
-            setError("Failed to connect after 10 attempts");
+            console.log("WebSocket: Max reconnection attempts reached");
+            setError("Transport clock WebSocket unavailable");
           }
         };
 
         wsRef.current = ws;
       } catch (err) {
         console.error("Failed to create WebSocket:", err);
-        setError(String(err));
+        setError("WebSocket creation failed");
       }
     };
 
@@ -128,6 +142,7 @@ export function useTransportClock(
 
 /**
  * Hook for REST API control (play, stop, seek, etc.)
+ * Uses Codette API endpoints
  */
 export function useTransportAPI(baseUrl: string = "http://localhost:8000") {
   const [error, setError] = useState<string | null>(null);
@@ -150,7 +165,7 @@ export function useTransportAPI(baseUrl: string = "http://localhost:8000") {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || `HTTP ${response.status}`);
         }
 
@@ -158,6 +173,7 @@ export function useTransportAPI(baseUrl: string = "http://localhost:8000") {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setError(message);
+        console.error("API request failed:", message);
         throw err;
       } finally {
         setLoading(false);
@@ -167,14 +183,16 @@ export function useTransportAPI(baseUrl: string = "http://localhost:8000") {
   );
 
   return {
-    play: () => request("/transport/play"),
-    stop: () => request("/transport/stop"),
-    pause: () => request("/transport/pause"),
-    resume: () => request("/transport/resume"),
-    seek: (seconds: number) => request(`/transport/seek?seconds=${seconds}`),
-    setTempo: (bpm: number) => request(`/transport/tempo?bpm=${bpm}`),
-    getStatus: () => request("/transport/status", "GET"),
-    getMetrics: () => request("/transport/metrics", "GET"),
+    play: () => request("/codette/process", "POST", { type: "play" }),
+    stop: () => request("/codette/process", "POST", { type: "stop" }),
+    pause: () => request("/codette/process", "POST", { type: "pause" }),
+    resume: () => request("/codette/process", "POST", { type: "resume" }),
+    seek: (seconds: number) =>
+      request("/codette/process", "POST", { type: "seek", seconds }),
+    setTempo: (bpm: number) =>
+      request("/codette/process", "POST", { type: "tempo", bpm }),
+    getStatus: () => request("/codette/status", "GET"),
+    getMetrics: () => request("/codette/process", "GET"),
     error,
     loading,
   };

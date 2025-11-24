@@ -20,6 +20,7 @@ import {
 import { useDAW } from "../contexts/DAWContext";
 import { useTransportClock } from "../hooks/useTransportClock";
 import { useState } from "react";
+import CodetteStatus from "./CodetteStatus";
 
 export default function TopBar() {
   const {
@@ -475,6 +476,8 @@ export default function TopBar() {
             </div>
           )}
         </div>
+
+        <CodetteStatus />
 
         <button
           onClick={handleSettings}

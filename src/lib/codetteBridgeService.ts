@@ -42,9 +42,9 @@ class CodetteBridgeService {
 
   constructor(config?: Partial<CodetteBridgeConfig>) {
     this.config = {
-      backendUrl: process.env.REACT_APP_CODETTE_BACKEND || 'http://localhost:5000',
-      timeout: parseInt(process.env.REACT_APP_CODETTE_TIMEOUT || '10000'),
-      retryAttempts: parseInt(process.env.REACT_APP_CODETTE_RETRIES || '3'),
+      backendUrl: import.meta.env.VITE_CODETTE_BACKEND || 'http://localhost:8000',
+      timeout: parseInt(import.meta.env.VITE_CODETTE_TIMEOUT || '10000'),
+      retryAttempts: parseInt(import.meta.env.VITE_CODETTE_RETRIES || '3'),
       ...config,
     };
 
@@ -71,7 +71,18 @@ class CodetteBridgeService {
    * Check if backend is healthy
    */
   async healthCheck(): Promise<CodetteResponse> {
-    return this.makeRequest('GET', '/api/health', null, 1);
+    try {
+      const response = await fetch(`${this.config.backendUrl}/health`, {
+        method: 'GET',
+      });
+      if (response.ok) {
+        return { success: true, data: null, duration: 0 };
+      }
+      throw new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      console.error('Health check failed:', error);
+      return { success: false, data: null, error: 'Health check failed', duration: 0 };
+    }
   }
 
   /**
@@ -107,8 +118,18 @@ class CodetteBridgeService {
 
     const response = await this.makeRequest('POST', '/api/analyze/session', context);
     if (response.success && response.data) {
-      this.analysisCache.set(cacheKey, response.data);
-      return response.data;
+      const data = response.data as any;
+      const prediction: CodettePrediction = {
+        id: `session_${Date.now()}`,
+        type: 'session',
+        prediction: data.prediction,
+        confidence: data.confidence,
+        actionItems: data.actionItems || [],
+        reasoning: 'Full session analysis',
+        timestamp: Date.now(),
+      };
+      this.analysisCache.set(cacheKey, prediction);
+      return prediction;
     }
     throw new Error(response.error || 'Session analysis failed');
   }
@@ -126,7 +147,17 @@ class CodetteBridgeService {
       metrics,
     });
     if (response.success && response.data) {
-      return response.data;
+      // Transform flat response into CodettePrediction format
+      const data = response.data as any;
+      return {
+        id: `mixing_${Date.now()}`,
+        type: 'mixing',
+        prediction: data.prediction,
+        confidence: data.confidence,
+        actionItems: data.actionItems || [],
+        reasoning: `Analysis for ${trackType} track`,
+        timestamp: Date.now(),
+      };
     }
     throw new Error(response.error || 'Mixing analysis failed');
   }
@@ -141,7 +172,16 @@ class CodetteBridgeService {
   }): Promise<CodettePrediction> {
     const response = await this.makeRequest('POST', '/api/analyze/routing', context);
     if (response.success && response.data) {
-      return response.data;
+      const data = response.data as any;
+      return {
+        id: `routing_${Date.now()}`,
+        type: 'routing',
+        prediction: data.prediction,
+        confidence: data.confidence,
+        actionItems: data.actionItems || [],
+        reasoning: 'Routing analysis',
+        timestamp: Date.now(),
+      };
     }
     throw new Error(response.error || 'Routing analysis failed');
   }
@@ -156,7 +196,16 @@ class CodetteBridgeService {
   }): Promise<CodettePrediction> {
     const response = await this.makeRequest('POST', '/api/analyze/mastering', levels);
     if (response.success && response.data) {
-      return response.data;
+      const data = response.data as any;
+      return {
+        id: `mastering_${Date.now()}`,
+        type: 'mastering',
+        prediction: data.prediction,
+        confidence: data.confidence,
+        actionItems: data.actionItems || [],
+        reasoning: 'Mastering analysis',
+        timestamp: Date.now(),
+      };
     }
     throw new Error(response.error || 'Mastering analysis failed');
   }
@@ -171,7 +220,16 @@ class CodetteBridgeService {
   }): Promise<CodettePrediction> {
     const response = await this.makeRequest('POST', '/api/analyze/creative', context);
     if (response.success && response.data) {
-      return response.data;
+      const data = response.data as any;
+      return {
+        id: `creative_${Date.now()}`,
+        type: 'creative',
+        prediction: data.prediction,
+        confidence: data.confidence,
+        actionItems: data.actionItems || [],
+        reasoning: 'Creative suggestions',
+        timestamp: Date.now(),
+      };
     }
     throw new Error(response.error || 'Creative analysis failed');
   }
@@ -186,7 +244,16 @@ class CodetteBridgeService {
   }>): Promise<CodettePrediction> {
     const response = await this.makeRequest('POST', '/api/analyze/gain-staging', { tracks });
     if (response.success && response.data) {
-      return response.data;
+      const data = response.data as any;
+      return {
+        id: `gain_${Date.now()}`,
+        type: 'gain',
+        prediction: data.prediction,
+        confidence: data.confidence,
+        actionItems: data.actionItems || [],
+        reasoning: 'Gain staging analysis',
+        timestamp: Date.now(),
+      };
     }
     throw new Error(response.error || 'Gain staging analysis failed');
   }

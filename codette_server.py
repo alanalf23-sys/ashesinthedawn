@@ -7,11 +7,14 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+from collections import Counter
 import sys
 import os
 import importlib.util
 from pathlib import Path
 import asyncio
+import json
+import time
 
 # Verify dependencies on startup
 def verify_dependencies():
@@ -32,7 +35,7 @@ def verify_dependencies():
         return False
     
     # Try optional packages but don't fail if they're missing
-    optional = ['nltk', 'numpy', 'scipy', 'pymc', 'sympy', 'arviz']
+    optional = ['nltk', 'numpy', 'scipy']
     optional_missing = []
     for package in optional:
         try:
@@ -55,33 +58,52 @@ sys.path.insert(0, str(codette_path))
 
 # Try to import Codette, but provide fallback
 Codette = None
+codette = None  # Instance of Codette
 try:
-    # Try importing from codette.py directly (not the package)
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("codette_module", codette_path / "codette.py")
-    codette_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(codette_module)
-    Codette = codette_module.Codette
-    print("[OK] Codette module imported successfully from codette.py")
-except Exception as e:
-    print(f"[WARNING] Could not import Codette: {e}")
+    # Try importing from the codette package (Codette/codette/__init__.py)
+    from codette import BroaderPerspectiveEngine
+    Codette = BroaderPerspectiveEngine
+    print("[OK] Codette (BroaderPerspectiveEngine) imported successfully from package")
+    
+    # Instantiate it
+    codette = Codette()
+    print("[OK] Codette AI engine initialized")
+    
+except ImportError as ie:
+    print(f"[WARNING] Could not import Codette: {ie}")
     print(f"   Codette will work in demo/fallback mode")
     Codette = None
+    codette = None
+except Exception as e:
+    print(f"[WARNING] Could not initialize Codette: {e}")
+    print(f"   Backend will operate in demo mode with fallback responses")
+    Codette = None
+    codette = None
 
-app = FastAPI(title="Codette AI Server", version="1.0.0")
+try:
+    app = FastAPI(title="Codette AI Server", version="1.0.0")
+    print("[DEBUG] FastAPI app created")
+except Exception as e:
+    print(f"[ERROR] Failed to create FastAPI app: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
 
-print("[DEBUG] FastAPI app created")
-
-# Enable CORS for React frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-print("[DEBUG] CORS middleware added")
+try:
+    # Enable CORS for React frontend
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    print("[DEBUG] CORS middleware added")
+except Exception as e:
+    print(f"[ERROR] Failed to add CORS middleware: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
 
 # Models
 class ChatRequest(BaseModel):
@@ -124,25 +146,114 @@ class ProcessResponse(BaseModel):
     data: Dict[str, Any]
     processingTime: float
 
-# Initialize Codette
-codette = None
-if Codette:
-    try:
-        import nltk
-        # Download NLTK data if not already present
-        try:
-            nltk.data.find('tokenizers/punkt')
-        except LookupError:
-            nltk.download('punkt', quiet=True)
+# Transport Clock Models
+class TransportState(BaseModel):
+    playing: bool
+    time_seconds: float
+    sample_pos: int
+    bpm: float
+    beat_pos: float
+    loop_enabled: bool
+    loop_start_seconds: float
+    loop_end_seconds: float
+
+class TransportCommandResponse(BaseModel):
+    success: bool
+    message: str
+    state: Optional[TransportState] = None
+
+# Global Transport State Manager
+class TransportManager:
+    def __init__(self):
+        self.playing = False
+        self.time_seconds = 0.0
+        self.sample_pos = 0
+        self.bpm = 120.0
+        self.sample_rate = 44100
+        self.start_time = None
+        self.loop_enabled = False
+        self.loop_start_seconds = 0.0
+        self.loop_end_seconds = 10.0
+        self.connected_clients: set = set()
+    
+    def get_state(self) -> TransportState:
+        """Get current transport state"""
+        if self.playing and self.start_time:
+            import time
+            elapsed = time.time() - self.start_time
+            self.time_seconds = elapsed
+            self.sample_pos = int(self.time_seconds * self.sample_rate)
         
-        codette = Codette()
-        print("[OK] Codette AI engine initialized")
-    except Exception as e:
-        print(f"[WARNING] Could not initialize Codette: {e}")
-        print(f"   Backend will operate in demo mode with fallback responses")
-        codette = None
-else:
-    print("[INFO] Codette not available - running in demo/fallback mode")
+        # Calculate beat position (4 beats per measure)
+        beat_duration = 60.0 / self.bpm
+        self.beat_pos = (self.time_seconds % (beat_duration * 4)) / beat_duration
+        
+        return TransportState(
+            playing=self.playing,
+            time_seconds=self.time_seconds,
+            sample_pos=self.sample_pos,
+            bpm=self.bpm,
+            beat_pos=self.beat_pos,
+            loop_enabled=self.loop_enabled,
+            loop_start_seconds=self.loop_start_seconds,
+            loop_end_seconds=self.loop_end_seconds
+        )
+    
+    def play(self) -> TransportState:
+        """Start playback"""
+        if not self.playing:
+            import time
+            self.playing = True
+            self.start_time = time.time() - self.time_seconds
+        return self.get_state()
+    
+    def stop(self) -> TransportState:
+        """Stop playback and reset"""
+        self.playing = False
+        self.time_seconds = 0.0
+        self.sample_pos = 0
+        self.start_time = None
+        return self.get_state()
+    
+    def pause(self) -> TransportState:
+        """Pause playback (time remains)"""
+        if self.playing:
+            import time
+            self.time_seconds = time.time() - self.start_time
+            self.playing = False
+        return self.get_state()
+    
+    def resume(self) -> TransportState:
+        """Resume playback from pause"""
+        if not self.playing:
+            import time
+            self.playing = True
+            self.start_time = time.time() - self.time_seconds
+        return self.get_state()
+    
+    def seek(self, time_seconds: float) -> TransportState:
+        """Seek to time position"""
+        self.time_seconds = max(0.0, time_seconds)
+        self.sample_pos = int(self.time_seconds * self.sample_rate)
+        if self.playing:
+            import time
+            self.start_time = time.time() - self.time_seconds
+        return self.get_state()
+    
+    def set_tempo(self, bpm: float) -> TransportState:
+        """Set BPM"""
+        self.bpm = max(1.0, min(300.0, bpm))  # Clamp 1-300 BPM
+        return self.get_state()
+    
+    def set_loop(self, enabled: bool, start: float = 0.0, end: float = 10.0) -> TransportState:
+        """Configure loop region"""
+        self.loop_enabled = enabled
+        self.loop_start_seconds = max(0.0, start)
+        self.loop_end_seconds = max(self.loop_start_seconds + 0.1, end)
+        return self.get_state()
+
+# Initialize transport manager
+transport_manager = TransportManager()
 
 @app.get("/")
 async def root():
@@ -355,14 +466,469 @@ async def get_status():
         ],
     }
 
+# ============================================================================
+# AI ANALYSIS ENDPOINTS (for React AIPanel)
+# ============================================================================
+
+class AnalysisResponse(BaseModel):
+    """Standard response format for AI analysis endpoints"""
+    prediction: str
+    confidence: float
+    actionItems: Optional[List[Dict[str, Any]]] = None
+
+@app.get("/api/health")
+@app.post("/api/health")
+async def api_health():
+    """Health check endpoint"""
+    return {"success": True, "data": {"status": "ok", "service": "codette"}, "duration": 0}
+
+@app.post("/api/analyze/gain-staging")
+async def analyze_gain_staging(request: Dict[str, Any]) -> AnalysisResponse:
+    """Analyze gain staging across tracks"""
+    try:
+        tracks = request.get("tracks", [])
+        
+        # Find clipping tracks
+        clipping_tracks = []
+        low_headroom = []
+        
+        for track in tracks:
+            peak = track.get("peak", -60)
+            if peak > -1:
+                clipping_tracks.append(track["id"])
+            elif peak > -6:
+                low_headroom.append(track["id"])
+        
+        # Generate prediction
+        if clipping_tracks:
+            prediction = f"⚠️ CLIPPING DETECTED on {len(clipping_tracks)} track(s). Reduce gain immediately to prevent digital distortion. Target: -6dB headroom minimum."
+            confidence = 0.95
+            action_items = [
+                {"action": "Reduce", "parameter": f"Track {tid} Gain", "value": -3, "priority": "high"}
+                for tid in clipping_tracks[:3]
+            ]
+        elif low_headroom:
+            prediction = f"⚡ Low headroom on {len(low_headroom)} track(s). Recommended target: -6dB peak level for safe mixing margin."
+            confidence = 0.85
+            action_items = [
+                {"action": "Reduce", "parameter": f"Track {tid} Gain", "value": -2, "priority": "medium"}
+                for tid in low_headroom[:3]
+            ]
+        else:
+            prediction = "✅ Excellent gain staging! Levels are well-optimized with good headroom across all tracks."
+            confidence = 0.90
+            action_items = []
+        
+        return AnalysisResponse(
+            prediction=prediction,
+            confidence=confidence,
+            actionItems=action_items
+        )
+    except Exception as e:
+        return AnalysisResponse(
+            prediction=f"Error analyzing gain staging: {str(e)}",
+            confidence=0,
+            actionItems=[]
+        )
+
+@app.post("/api/analyze/mixing")
+async def analyze_mixing(request: Dict[str, Any]) -> AnalysisResponse:
+    """Suggest mixing chain for selected track"""
+    try:
+        track_type = request.get("trackType", "audio")
+        metrics = request.get("metrics", {})
+        level = metrics.get("level", -60)
+        
+        # Track-type specific recommendations
+        recommendations = {
+            "audio": {
+                "chain": "EQ → Compressor → Reverb",
+                "suggestion": "General audio track: Use EQ to clean up, add compression for control (4:1 ratio, 5ms attack), and reverb for space.",
+                "action_items": [
+                    {"action": "Add", "parameter": "EQ", "value": "Parametric", "priority": "high"},
+                    {"action": "Add", "parameter": "Compressor", "value": "4:1", "priority": "high"},
+                    {"action": "Add", "parameter": "Reverb", "value": "Room", "priority": "medium"},
+                ]
+            },
+            "vocal": {
+                "chain": "EQ → Compressor → Reverb → Delay",
+                "suggestion": "Start with subtle EQ to remove mud (100-200Hz), then add compression (4:1 ratio, 4ms attack) for control. Add plate reverb and slapback delay for depth.",
+                "action_items": [
+                    {"action": "Add", "parameter": "EQ", "value": "Parametric", "priority": "high"},
+                    {"action": "Add", "parameter": "Compressor", "value": "4:1", "priority": "high"},
+                    {"action": "Add", "parameter": "Reverb", "value": "Plate", "priority": "medium"},
+                ]
+            },
+            "drum": {
+                "chain": "EQ → Compressor → Saturation",
+                "suggestion": "Enhance drum attack with subtle saturation, use compressor to glue the kit together (3:1 ratio, 2ms attack). Boost presence around 5kHz.",
+                "action_items": [
+                    {"action": "Add", "parameter": "Saturation", "value": "Light", "priority": "medium"},
+                    {"action": "Add", "parameter": "Compressor", "value": "3:1", "priority": "high"},
+                ]
+            },
+            "bass": {
+                "chain": "EQ → Compressor → Saturator",
+                "suggestion": "Control low frequencies with high-pass filter above 30Hz. Use compressor (2:1 ratio) to lock in with drums. Add subtle saturation for warmth.",
+                "action_items": [
+                    {"action": "Add", "parameter": "EQ", "value": "High-Pass", "priority": "high"},
+                    {"action": "Add", "parameter": "Compressor", "value": "2:1", "priority": "high"},
+                ]
+            },
+            "guitar": {
+                "chain": "EQ → Compressor → Delay → Reverb",
+                "suggestion": "Use compression to even out pick dynamics (5:1 ratio). Add EQ to reduce muddiness. Combine delay and reverb for spacious, cohesive tone.",
+                "action_items": [
+                    {"action": "Add", "parameter": "Compressor", "value": "5:1", "priority": "high"},
+                    {"action": "Add", "parameter": "Delay", "value": "Tape", "priority": "medium"},
+                ]
+            },
+            "synth": {
+                "chain": "EQ → Compressor → Reverb",
+                "suggestion": "Use EQ to carve space in the mix. Compress lightly (1.5:1) to add glue. Add reverb for depth without losing definition.",
+                "action_items": [
+                    {"action": "Add", "parameter": "Compressor", "value": "1.5:1", "priority": "medium"},
+                    {"action": "Add", "parameter": "Reverb", "value": "Room", "priority": "medium"},
+                ]
+            },
+        }
+        
+        rec = recommendations.get(track_type, recommendations["audio"])
+        
+        return AnalysisResponse(
+            prediction=rec["suggestion"],
+            confidence=0.88,
+            actionItems=rec.get("action_items", [])
+        )
+    except Exception as e:
+        return AnalysisResponse(
+            prediction=f"Error analyzing mixing chain: {str(e)}",
+            confidence=0,
+            actionItems=[]
+        )
+
+@app.post("/api/analyze/routing")
+async def analyze_routing(request: Dict[str, Any]) -> AnalysisResponse:
+    """Suggest routing configuration"""
+    try:
+        track_count = request.get("trackCount", 0)
+        track_types = request.get("trackTypes", [])
+        
+        # Count track types
+        type_counts = Counter(track_types)
+        
+        # Generate routing suggestion
+        if track_count < 4:
+            prediction = "✨ For your mix size, route all tracks to Master for simple, clean mixing."
+            action_items = []
+        elif track_count < 10:
+            prediction = "📊 Recommended: Create 2-3 buses (Drums, Vocals, Instruments) for better control and gain staging."
+            action_items = [
+                {"action": "Create", "parameter": "Bus", "value": "Drums", "priority": "high"},
+                {"action": "Create", "parameter": "Bus", "value": "Vocals", "priority": "high"},
+                {"action": "Create", "parameter": "Bus", "value": "Instruments", "priority": "medium"},
+            ]
+        else:
+            prediction = f"🎚️ Recommended: Create 4-5 buses by instrument group. Current mix ({track_count} tracks) will benefit from hierarchical routing."
+            action_items = [
+                {"action": "Create", "parameter": "Bus", "value": "Drums", "priority": "high"},
+                {"action": "Create", "parameter": "Bus", "value": "Percussion", "priority": "high"},
+                {"action": "Create", "parameter": "Bus", "value": "Vocals", "priority": "high"},
+                {"action": "Create", "parameter": "Bus", "value": "Instruments", "priority": "medium"},
+                {"action": "Create", "parameter": "Bus", "value": "FX", "priority": "medium"},
+            ]
+        
+        return AnalysisResponse(
+            prediction=prediction,
+            confidence=0.92,
+            actionItems=action_items
+        )
+    except Exception as e:
+        return AnalysisResponse(
+            prediction=f"Error analyzing routing: {str(e)}",
+            confidence=0,
+            actionItems=[]
+        )
+
+@app.post("/api/analyze/session")
+async def analyze_session(request: Dict[str, Any]) -> AnalysisResponse:
+    """Comprehensive session analysis"""
+    try:
+        track_count = request.get("trackCount", 0)
+        track_metrics = request.get("trackMetrics", [])
+        master_level = request.get("masterLevel", -60)
+        has_clipping = request.get("hasClipping", False)
+        
+        insights = []
+        action_items = []
+        
+        # Analyze clipping
+        if has_clipping:
+            insights.append("⚠️ Clipping detected - reduce track levels")
+            action_items.append(
+                {"action": "Reduce", "parameter": "Master Gain", "value": -2, "priority": "high"}
+            )
+        elif master_level > -6:
+            insights.append("⚡ Master level high - ensure -6dB headroom for limiting/mastering")
+            action_items.append(
+                {"action": "Reduce", "parameter": "Master Gain", "value": -1, "priority": "medium"}
+            )
+        else:
+            insights.append("✅ Master level healthy")
+        
+        # Analyze track count
+        if track_count < 4:
+            insights.append(f"📍 Small mix ({track_count} tracks) - focus on balance and tone")
+        elif track_count < 16:
+            insights.append(f"📍 Medium mix ({track_count} tracks) - organize with buses for better control")
+            action_items.append(
+                {"action": "Create", "parameter": "Submix Buses", "value": 3, "priority": "medium"}
+            )
+        else:
+            insights.append(f"📍 Large mix ({track_count} tracks) - establish clear routing hierarchy")
+            action_items.append(
+                {"action": "Create", "parameter": "Submix Buses", "value": 5, "priority": "high"}
+            )
+        
+        prediction = "\n".join(insights) + "\n\n📋 Recommended actions: See action items below."
+        
+        return AnalysisResponse(
+            prediction=prediction,
+            confidence=0.85,
+            actionItems=action_items
+        )
+    except Exception as e:
+        return AnalysisResponse(
+            prediction=f"Error analyzing session: {str(e)}",
+            confidence=0,
+            actionItems=[]
+        )
+
+# ============================================================================
+# TRANSPORT CLOCK ENDPOINTS (WebSocket + REST API)
+# ============================================================================
+
+@app.websocket("/ws/transport/clock")
+async def websocket_transport_clock(websocket: WebSocket):
+    """WebSocket endpoint for DAW transport clock synchronization"""
+    try:
+        await websocket.accept()
+    except Exception as e:
+        print(f"Failed to accept WebSocket: {e}")
+        return
+    
+    transport_manager.connected_clients.add(websocket)
+    print(f"WebSocket client connected. Total clients: {len(transport_manager.connected_clients)}")
+    
+    try:
+        import asyncio
+        import time as time_module
+        
+        last_send = time_module.time()
+        send_interval = 1.0 / 60.0  # 60 FPS update rate
+        
+        # Send initial state
+        try:
+            state = transport_manager.get_state()
+            await websocket.send_json({
+                "type": "state",
+                "data": state.dict()
+            })
+        except Exception as e:
+            print(f"Failed to send initial state: {e}")
+            return
+        
+        while True:
+            try:
+                # Non-blocking receive with very short timeout
+                try:
+                    data = await asyncio.wait_for(
+                        websocket.receive_text(),
+                        timeout=0.001
+                    )
+                    try:
+                        message = json.loads(data)
+                        
+                        # Handle incoming commands
+                        if message.get("type") == "play":
+                            transport_manager.play()
+                        elif message.get("type") == "stop":
+                            transport_manager.stop()
+                        elif message.get("type") == "pause":
+                            transport_manager.pause()
+                        elif message.get("type") == "resume":
+                            transport_manager.resume()
+                        elif message.get("type") == "seek":
+                            transport_manager.seek(message.get("time_seconds", 0))
+                        elif message.get("type") == "tempo":
+                            transport_manager.set_tempo(message.get("bpm", 120))
+                        elif message.get("type") == "loop":
+                            transport_manager.set_loop(
+                                message.get("enabled", False),
+                                message.get("start_seconds", 0),
+                                message.get("end_seconds", 10)
+                            )
+                    except json.JSONDecodeError:
+                        pass  # Ignore invalid JSON
+                    
+                except asyncio.TimeoutError:
+                    pass  # No message received, continue to send updates
+                
+                # Send state at regular interval
+                current_time = time_module.time()
+                if current_time - last_send >= send_interval:
+                    try:
+                        state = transport_manager.get_state()
+                        await websocket.send_json({
+                            "type": "state",
+                            "data": state.dict()
+                        })
+                        last_send = current_time
+                    except RuntimeError as e:
+                        # Connection closed
+                        print(f"Connection closed: {e}")
+                        break
+                    except Exception as e:
+                        print(f"Send error: {e}")
+                        break
+                
+                # Very minimal sleep
+                await asyncio.sleep(0.0001)
+            
+            except asyncio.CancelledError:
+                print("WebSocket task cancelled")
+                break
+            except Exception as e:
+                print(f"Unexpected error in loop: {type(e).__name__}: {e}")
+                break
+    
+    except WebSocketDisconnect:
+        print("WebSocket client disconnected (clean disconnect)")
+    except Exception as e:
+        print(f"WebSocket handler error: {type(e).__name__}: {e}")
+    finally:
+        transport_manager.connected_clients.discard(websocket)
+        print(f"WebSocket cleanup. Remaining clients: {len(transport_manager.connected_clients)}")
+
+@app.post("/transport/play")
+async def transport_play() -> TransportCommandResponse:
+    """Start playback"""
+    try:
+        state = transport_manager.play()
+        return TransportCommandResponse(
+            success=True,
+            message="Playback started",
+            state=state
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/transport/stop")
+async def transport_stop() -> TransportCommandResponse:
+    """Stop playback and reset to beginning"""
+    try:
+        state = transport_manager.stop()
+        return TransportCommandResponse(
+            success=True,
+            message="Playback stopped",
+            state=state
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/transport/pause")
+async def transport_pause() -> TransportCommandResponse:
+    """Pause playback (time remains at current position)"""
+    try:
+        state = transport_manager.pause()
+        return TransportCommandResponse(
+            success=True,
+            message="Playback paused",
+            state=state
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/transport/resume")
+async def transport_resume() -> TransportCommandResponse:
+    """Resume playback from pause"""
+    try:
+        state = transport_manager.resume()
+        return TransportCommandResponse(
+            success=True,
+            message="Playback resumed",
+            state=state
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/transport/seek")
+async def transport_seek(seconds: float) -> TransportCommandResponse:
+    """Seek to time position (in seconds)"""
+    try:
+        state = transport_manager.seek(seconds)
+        return TransportCommandResponse(
+            success=True,
+            message=f"Seeked to {seconds} seconds",
+            state=state
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/transport/tempo")
+async def transport_tempo(bpm: float) -> TransportCommandResponse:
+    """Set playback tempo in BPM (1-300)"""
+    try:
+        if not 1 <= bpm <= 300:
+            raise ValueError("BPM must be between 1 and 300")
+        state = transport_manager.set_tempo(bpm)
+        return TransportCommandResponse(
+            success=True,
+            message=f"Tempo set to {bpm} BPM",
+            state=state
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/transport/loop")
+async def transport_loop(
+    enabled: bool,
+    start_seconds: float = 0.0,
+    end_seconds: float = 10.0
+) -> TransportCommandResponse:
+    """Configure loop region"""
+    try:
+        state = transport_manager.set_loop(enabled, start_seconds, end_seconds)
+        return TransportCommandResponse(
+            success=True,
+            message=f"Loop {'enabled' if enabled else 'disabled'}",
+            state=state
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/transport/status")
+async def transport_status() -> TransportState:
+    """Get current transport state"""
+    return transport_manager.get_state()
+
+@app.get("/transport/metrics")
+async def transport_metrics() -> Dict[str, Any]:
+    """Get transport metrics for analytics"""
+    state = transport_manager.get_state()
+    return {
+        "state": state.dict(),
+        "connected_clients": len(transport_manager.connected_clients),
+        "timestamp": time.time(),
+        "beat_fraction": state.beat_pos,
+        "sample_rate": transport_manager.sample_rate
+    }
+
 if __name__ == "__main__":
     import uvicorn
-    import sys
-    import traceback
-    import subprocess
 
     port = int(os.getenv("CODETTE_PORT", "8000"))
-    host = os.getenv("CODETTE_HOST", "0.0.0.0")
+    host = os.getenv("CODETTE_HOST", "127.0.0.1")
 
     print("\n" + "="*70)
     print("Codette AI FastAPI Server Starting")
@@ -385,27 +951,6 @@ if __name__ == "__main__":
     print(f"\nPress Ctrl+C to stop the server")
     print("="*70 + "\n")
 
-    sys.stdout.flush()
-    sys.stderr.flush()
+    # Run uvicorn directly - use absolute host binding
+    uvicorn.run(app, host=host, port=port, log_level="info")
 
-    try:
-        # Use subprocess to run uvicorn as a module
-        result = subprocess.run(
-            [
-                sys.executable, "-m", "uvicorn",
-                "__main__:app",
-                "--host", host,
-                "--port", str(port),
-                "--log-level", "critical",
-            ],
-            cwd=Path(__file__).parent,
-        )
-        sys.exit(result.returncode)
-        
-    except KeyboardInterrupt:
-        print("\n\nServer stopped by user")
-        sys.exit(0)
-    except Exception as e:
-        print(f"\nServer error: {e}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        sys.exit(1)

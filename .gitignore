@@ -21,3 +21,12 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Codette ML Models & Training Data (too large for git)
+Codette/models/
+Codette/training/
+Codette/__pycache__/
+*.safetensors
+*.bin
+*.pt
+*.pth

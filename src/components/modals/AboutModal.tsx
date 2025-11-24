@@ -1,8 +1,55 @@
 import { X } from 'lucide-react';
 import { useDAW } from '../../contexts/DAWContext';
+import { useEffect, useState } from 'react';
+
+interface CodettStatus {
+  connected: boolean;
+  status: string;
+  error?: string;
+}
 
 export default function AboutModal() {
   const { showAboutModal, closeAboutModal } = useDAW();
+  const [codetteStatus, setCodetteStatus] = useState<CodettStatus>({
+    connected: false,
+    status: 'checking...',
+  });
+
+  useEffect(() => {
+    const checkCodette = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/health', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setCodetteStatus({
+            connected: true,
+            status: data.status,
+          });
+        } else {
+          setCodetteStatus({
+            connected: false,
+            status: 'offline',
+            error: `HTTP ${response.status}`,
+          });
+        }
+      } catch (err) {
+        setCodetteStatus({
+          connected: false,
+          status: 'offline',
+          error: 'Connection refused',
+        });
+      }
+    };
+
+    if (showAboutModal) {
+      checkCodette();
+      const interval = setInterval(checkCodette, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [showAboutModal]);
 
   if (!showAboutModal) return null;
 
@@ -44,6 +91,29 @@ export default function AboutModal() {
             </div>
           </div>
 
+          {/* Codette Status */}
+          <div className="bg-gray-800 border border-gray-700 rounded p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Codette AI Engine</span>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${codetteStatus.connected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+                <span className={`text-sm font-mono ${codetteStatus.connected ? 'text-green-400' : 'text-red-400'}`}>
+                  {codetteStatus.connected ? 'Connected' : 'Offline'}
+                </span>
+              </div>
+            </div>
+            {codetteStatus.connected && (
+              <p className="text-xs text-gray-500 mt-1">
+                Status: <span className="text-gray-400">{codetteStatus.status}</span>
+              </p>
+            )}
+            {!codetteStatus.connected && codetteStatus.error && (
+              <p className="text-xs text-red-400 mt-1">
+                Error: {codetteStatus.error}
+              </p>
+            )}
+          </div>
+
           {/* Description */}
           <div className="text-sm text-gray-300 space-y-3">
             <p>
@@ -62,6 +132,7 @@ export default function AboutModal() {
               <li>• Web Audio API for audio processing</li>
               <li>• Vite for fast development</li>
               <li>• Tailwind CSS for styling</li>
+              <li>• Codette AI Engine for intelligent features</li>
             </ul>
           </div>
 
