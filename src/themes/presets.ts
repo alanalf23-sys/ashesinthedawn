@@ -1,14 +1,17 @@
 /**
- * REAPER Theme Presets
- * Default themes inspired by REAPER professional DAW
+ * Codette Quantum DAW Theme Presets
+ * Based on Codette Python GUI design with 4 professional themes
  */
 
 import { Theme } from './types';
 
-export const reaper_default: Theme = {
-  id: 'reaper-default',
-  name: 'REAPER Default (Dark)',
-  description: 'REAPER 7.x inspired dark theme with professional audio production aesthetic',
+/**
+ * Codette Dark Theme - Teal/green accents on dark background
+ */
+export const codette_dark: Theme = {
+  id: 'codette-dark',
+  name: 'Codette Dark',
+  description: 'Codette dark theme with teal/green accents for professional audio production',
   version: '1.0',
   author: 'CoreLogic Studio',
   category: 'dark',
@@ -18,72 +21,72 @@ export const reaper_default: Theme = {
 
   colors: {
     bg: {
-      primary: '#292929',
-      secondary: '#3d3d3d',
-      tertiary: '#3c3c3c',
-      alt: '#2d2d2d',
-      hover: '#4a4a4a',
+      primary: '#111111',
+      secondary: '#1e1e1e',
+      tertiary: '#2a2a2a',
+      alt: '#0d0d0d',
+      hover: '#333333',
       selected: '#404040',
     },
     text: {
-      primary: '#e0e0e0',
-      secondary: '#b0b0b0',
-      tertiary: '#808080',
-      accent: '#66bb6a',
+      primary: '#cccccc',
+      secondary: '#999999',
+      tertiary: '#666666',
+      accent: '#00ffaa',
     },
     border: {
-      primary: '#464646',
-      secondary: '#3a3a3a',
-      divider: '#414141',
+      primary: '#444444',
+      secondary: '#333333',
+      divider: '#2a2a2a',
     },
     ui: {
-      mute: '#6b8cae',
-      solo: '#d4a574',
-      record: '#c85a54',
-      play: '#66bb6a',
-      stop: '#b0b0b0',
-      armed: '#d4a574',
-      success: '#66bb6a',
-      warning: '#ffa726',
-      error: '#ef5350',
+      mute: '#00ffaa',
+      solo: '#ffaa00',
+      record: '#ff0000',
+      play: '#00ff00',
+      stop: '#cccccc',
+      armed: '#ffaa00',
+      success: '#00ffaa',
+      warning: '#ffaa00',
+      error: '#ff0000',
     },
     meter: {
-      background: '#1a1a1a',
-      filled: '#4db84d',
-      peak: '#ff6b6b',
+      background: '#0a0a0a',
+      filled: '#00ff00',
+      peak: '#ffff00',
       clipping: '#ff0000',
-      rms: '#88cc88',
+      rms: '#00ffaa',
     },
     fader: {
-      background: '#2a2a2a',
-      thumb: '#5a5a5a',
-      hover: '#6a6a6a',
-      zeroLine: '#4db84d',
+      background: '#1a1a1a',
+      thumb: '#666666',
+      hover: '#888888',
+      zeroLine: '#00ffaa',
     },
     waveform: {
-      background: '#1a1a1a',
-      foreground: '#4db84d',
-      peak: '#66bb6a',
-      rms: '#3d8b40',
-      selection: '#6b8cae33',
+      background: '#111111',
+      foreground: '#00ffaa',
+      peak: '#00ff00',
+      rms: '#00ccaa',
+      selection: '#00ffaa33',
     },
     track: {
-      background: '#3d3d3d',
-      backgroundSelected: '#464646',
-      nameBackground: '#2d2d2d',
-      border: '#464646',
+      background: '#1e1e1e',
+      backgroundSelected: '#2a2a2a',
+      nameBackground: '#0d0d0d',
+      border: '#444444',
     },
     automation: {
-      line: '#66bb6a',
-      point: '#4db84d',
-      envelope: '#6b8cae',
+      line: '#ffcc00',
+      point: '#ffcc00',
+      envelope: '#00ffaa',
     },
   },
 
   fonts: {
     family: {
-      ui: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      mono: '"Monaco", "Courier New", monospace',
+      ui: '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
+      mono: '"Consolas", "Monaco", "Courier New", monospace',
     },
     size: {
       xs: 10,
@@ -101,7 +104,7 @@ export const reaper_default: Theme = {
 
   layout: {
     tcp: {
-      width: 240,
+      width: 120,
       minHeight: 74,
       folderIndent: 22,
       defaultHeights: {
@@ -113,7 +116,7 @@ export const reaper_default: Theme = {
     },
     mcp: {
       minHeight: 230,
-      stripWidth: 104,
+      stripWidth: 120,
       masterMinHeight: 74,
     },
     transport: {
@@ -123,15 +126,15 @@ export const reaper_default: Theme = {
       rulerHeight: 32,
     },
     spacing: {
-      xs: 2,
+      xs: 4,
       sm: 4,
       md: 8,
-      lg: 16,
+      lg: 12,
     },
     radius: {
       none: 0,
-      sm: 2,
-      md: 4,
+      sm: 4,
+      md: 6,
       lg: 8,
     },
     shadow: {
@@ -142,10 +145,13 @@ export const reaper_default: Theme = {
   },
 };
 
-export const reaper_light: Theme = {
-  id: 'reaper-light',
-  name: 'REAPER Light',
-  description: 'REAPER-inspired light theme for bright environments',
+/**
+ * Codette Light Theme - Blue accents on light background
+ */
+export const codette_light: Theme = {
+  id: 'codette-light',
+  name: 'Codette Light',
+  description: 'Codette light theme with blue accents for bright environments',
   version: '1.0',
   author: 'CoreLogic Studio',
   category: 'light',
@@ -156,71 +162,71 @@ export const reaper_light: Theme = {
   colors: {
     bg: {
       primary: '#f5f5f5',
-      secondary: '#efefef',
-      tertiary: '#e8e8e8',
-      alt: '#fafafa',
-      hover: '#e0e0e0',
-      selected: '#d0d0d0',
+      secondary: '#e0e0e0',
+      tertiary: '#d0d0d0',
+      alt: '#ffffff',
+      hover: '#c8c8c8',
+      selected: '#b8b8b8',
     },
     text: {
-      primary: '#1a1a1a',
-      secondary: '#4a4a4a',
-      tertiary: '#8a8a8a',
-      accent: '#2e7d32',
+      primary: '#222222',
+      secondary: '#555555',
+      tertiary: '#888888',
+      accent: '#0099cc',
     },
     border: {
-      primary: '#d0d0d0',
-      secondary: '#e0e0e0',
-      divider: '#dcdcdc',
+      primary: '#c0c0c0',
+      secondary: '#d0d0d0',
+      divider: '#e0e0e0',
     },
     ui: {
-      mute: '#1976d2',
-      solo: '#f57c00',
-      record: '#d32f2f',
-      play: '#388e3c',
-      stop: '#757575',
-      armed: '#f57c00',
-      success: '#4caf50',
-      warning: '#ff9800',
-      error: '#f44336',
+      mute: '#0099cc',
+      solo: '#ff6600',
+      record: '#ff0000',
+      play: '#00aa00',
+      stop: '#666666',
+      armed: '#ff6600',
+      success: '#00aa00',
+      warning: '#ff6600',
+      error: '#ff0000',
     },
     meter: {
-      background: '#fff9c4',
-      filled: '#66bb6a',
-      peak: '#ff5252',
+      background: '#ffffff',
+      filled: '#00aa00',
+      peak: '#ffff00',
       clipping: '#ff0000',
-      rms: '#81c784',
+      rms: '#0099cc',
     },
     fader: {
-      background: '#f0f0f0',
-      thumb: '#9e9e9e',
-      hover: '#757575',
-      zeroLine: '#66bb6a',
+      background: '#e8e8e8',
+      thumb: '#888888',
+      hover: '#666666',
+      zeroLine: '#0099cc',
     },
     waveform: {
-      background: '#fafafa',
-      foreground: '#66bb6a',
-      peak: '#4caf50',
-      rms: '#2e7d32',
-      selection: '#1976d233',
+      background: '#f5f5f5',
+      foreground: '#0077aa',
+      peak: '#0099cc',
+      rms: '#0077aa',
+      selection: '#0099cc33',
     },
     track: {
-      background: '#f5f5f5',
-      backgroundSelected: '#e3f2fd',
-      nameBackground: '#fafafa',
-      border: '#e0e0e0',
+      background: '#e0e0e0',
+      backgroundSelected: '#d0d0d0',
+      nameBackground: '#ffffff',
+      border: '#c0c0c0',
     },
     automation: {
-      line: '#66bb6a',
-      point: '#4caf50',
-      envelope: '#1976d2',
+      line: '#ff6600',
+      point: '#ff6600',
+      envelope: '#0099cc',
     },
   },
 
   fonts: {
     family: {
-      ui: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      mono: '"Monaco", "Courier New", monospace',
+      ui: '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
+      mono: '"Consolas", "Monaco", "Courier New", monospace',
     },
     size: {
       xs: 10,
@@ -238,7 +244,7 @@ export const reaper_light: Theme = {
 
   layout: {
     tcp: {
-      width: 240,
+      width: 120,
       minHeight: 74,
       folderIndent: 22,
       defaultHeights: {
@@ -250,7 +256,7 @@ export const reaper_light: Theme = {
     },
     mcp: {
       minHeight: 230,
-      stripWidth: 104,
+      stripWidth: 120,
       masterMinHeight: 74,
     },
     transport: {
@@ -260,15 +266,15 @@ export const reaper_light: Theme = {
       rulerHeight: 32,
     },
     spacing: {
-      xs: 2,
+      xs: 4,
       sm: 4,
       md: 8,
-      lg: 16,
+      lg: 12,
     },
     radius: {
       none: 0,
-      sm: 2,
-      md: 4,
+      sm: 4,
+      md: 6,
       lg: 8,
     },
     shadow: {
@@ -279,10 +285,13 @@ export const reaper_light: Theme = {
   },
 };
 
-export const high_contrast: Theme = {
-  id: 'high-contrast',
-  name: 'High Contrast',
-  description: 'High contrast theme for better visibility and accessibility',
+/**
+ * Codette Graphite Theme - Orange accents on gray background (default)
+ */
+export const codette_graphite: Theme = {
+  id: 'codette-graphite',
+  name: 'Codette Graphite',
+  description: 'Codette graphite theme with orange accents - professional audio grade',
   version: '1.0',
   author: 'CoreLogic Studio',
   category: 'dark',
@@ -292,79 +301,79 @@ export const high_contrast: Theme = {
 
   colors: {
     bg: {
-      primary: '#000000',
-      secondary: '#1a1a1a',
-      tertiary: '#2a2a2a',
-      alt: '#0d0d0d',
-      hover: '#3a3a3a',
-      selected: '#404040',
+      primary: '#2a2a2a',
+      secondary: '#3b3b3b',
+      tertiary: '#4a4a4a',
+      alt: '#1f1f1f',
+      hover: '#4a4a4a',
+      selected: '#565656',
     },
     text: {
-      primary: '#ffffff',
-      secondary: '#cccccc',
-      tertiary: '#999999',
-      accent: '#ffff00',
+      primary: '#dddddd',
+      secondary: '#aaaaaa',
+      tertiary: '#777777',
+      accent: '#ffaa00',
     },
     border: {
-      primary: '#ffffff',
-      secondary: '#808080',
-      divider: '#666666',
+      primary: '#555555',
+      secondary: '#3f3f3f',
+      divider: '#3f3f3f',
     },
     ui: {
-      mute: '#00ccff',
-      solo: '#ffff00',
-      record: '#ff0000',
+      mute: '#ffaa00',
+      solo: '#ffaa00',
+      record: '#ff3333',
       play: '#00ff00',
-      stop: '#cccccc',
-      armed: '#ffff00',
+      stop: '#aaaaaa',
+      armed: '#ffaa00',
       success: '#00ff00',
       warning: '#ffaa00',
-      error: '#ff0000',
+      error: '#ff3333',
     },
     meter: {
-      background: '#000000',
+      background: '#151515',
       filled: '#00ff00',
-      peak: '#ff0000',
-      clipping: '#ff00ff',
-      rms: '#00ffff',
+      peak: '#ffff00',
+      clipping: '#ff0000',
+      rms: '#00ccff',
     },
     fader: {
-      background: '#1a1a1a',
-      thumb: '#cccccc',
-      hover: '#ffffff',
-      zeroLine: '#00ff00',
+      background: '#1f1f1f',
+      thumb: '#666666',
+      hover: '#888888',
+      zeroLine: '#00ccff',
     },
     waveform: {
-      background: '#000000',
-      foreground: '#00ff00',
+      background: '#2a2a2a',
+      foreground: '#ffaa00',
       peak: '#ffff00',
-      rms: '#00ffff',
-      selection: '#0088ff44',
+      rms: '#ffaa00',
+      selection: '#ffaa0044',
     },
     track: {
-      background: '#1a1a1a',
-      backgroundSelected: '#3a3a3a',
-      nameBackground: '#0d0d0d',
-      border: '#ffffff',
+      background: '#3b3b3b',
+      backgroundSelected: '#4a4a4a',
+      nameBackground: '#1f1f1f',
+      border: '#555555',
     },
     automation: {
-      line: '#00ff00',
-      point: '#ffff00',
-      envelope: '#00ccff',
+      line: '#00ccff',
+      point: '#00ccff',
+      envelope: '#ffaa00',
     },
   },
 
   fonts: {
     family: {
-      ui: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      mono: '"Monaco", "Courier New", monospace',
+      ui: '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
+      mono: '"Consolas", "Monaco", "Courier New", monospace',
     },
     size: {
-      xs: 11,
-      sm: 12,
-      base: 13,
-      lg: 14,
-      xl: 15,
+      xs: 10,
+      sm: 11,
+      base: 12,
+      lg: 13,
+      xl: 14,
     },
     weight: {
       normal: 400,
@@ -375,43 +384,191 @@ export const high_contrast: Theme = {
 
   layout: {
     tcp: {
-      width: 260,
-      minHeight: 80,
-      folderIndent: 24,
+      width: 120,
+      minHeight: 74,
+      folderIndent: 22,
       defaultHeights: {
-        superCollapsed: 28,
-        small: 56,
-        medium: 84,
-        full: 160,
+        superCollapsed: 24,
+        small: 49,
+        medium: 72,
+        full: 150,
       },
     },
     mcp: {
-      minHeight: 240,
+      minHeight: 230,
       stripWidth: 120,
-      masterMinHeight: 80,
+      masterMinHeight: 74,
     },
     transport: {
-      height: 52,
+      height: 48,
     },
     arrange: {
-      rulerHeight: 36,
+      rulerHeight: 32,
     },
     spacing: {
-      xs: 3,
-      sm: 6,
-      md: 10,
-      lg: 18,
+      xs: 4,
+      sm: 4,
+      md: 8,
+      lg: 12,
     },
     radius: {
       none: 0,
-      sm: 3,
+      sm: 4,
       md: 6,
-      lg: 10,
+      lg: 8,
     },
     shadow: {
-      sm: '0 2px 4px rgba(0, 0, 0, 1)',
-      md: '0 6px 12px rgba(0, 0, 0, 1)',
-      lg: '0 12px 24px rgba(0, 0, 0, 1)',
+      sm: '0 1px 2px rgba(0, 0, 0, 0.5)',
+      md: '0 4px 6px rgba(0, 0, 0, 0.6)',
+      lg: '0 10px 15px rgba(0, 0, 0, 0.8)',
     },
   },
 };
+
+/**
+ * Codette Neon Theme - Magenta/cyan accents on very dark background
+ */
+export const codette_neon: Theme = {
+  id: 'codette-neon',
+  name: 'Codette Neon',
+  description: 'Codette neon theme with magenta/cyan accents for extreme contrast',
+  version: '1.0',
+  author: 'CoreLogic Studio',
+  category: 'dark',
+  isCustom: false,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+
+  colors: {
+    bg: {
+      primary: '#0a0a0f',
+      secondary: '#151522',
+      tertiary: '#1f1f30',
+      alt: '#050508',
+      hover: '#2a2a40',
+      selected: '#3a3a60',
+    },
+    text: {
+      primary: '#f0f0f0',
+      secondary: '#c0c0c0',
+      tertiary: '#888888',
+      accent: '#ff00ff',
+    },
+    border: {
+      primary: '#4a4a7f',
+      secondary: '#2a2a4f',
+      divider: '#1a1a3a',
+    },
+    ui: {
+      mute: '#00ffff',
+      solo: '#ff33cc',
+      record: '#ff0033',
+      play: '#00ff00',
+      stop: '#c0c0c0',
+      armed: '#ff33cc',
+      success: '#00ff00',
+      warning: '#ffff00',
+      error: '#ff0033',
+    },
+    meter: {
+      background: '#050508',
+      filled: '#00ffff',
+      peak: '#ff00ff',
+      clipping: '#ff0033',
+      rms: '#00ff00',
+    },
+    fader: {
+      background: '#0f0f1a',
+      thumb: '#ff00ff',
+      hover: '#00ffff',
+      zeroLine: '#00ff00',
+    },
+    waveform: {
+      background: '#0a0a0f',
+      foreground: '#00ffff',
+      peak: '#ff00ff',
+      rms: '#00ff00',
+      selection: '#00ffff55',
+    },
+    track: {
+      background: '#151522',
+      backgroundSelected: '#1f1f30',
+      nameBackground: '#050508',
+      border: '#4a4a7f',
+    },
+    automation: {
+      line: '#ff33cc',
+      point: '#00ffff',
+      envelope: '#ff00ff',
+    },
+  },
+
+  fonts: {
+    family: {
+      ui: '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
+      mono: '"Consolas", "Monaco", "Courier New", monospace',
+    },
+    size: {
+      xs: 10,
+      sm: 11,
+      base: 12,
+      lg: 13,
+      xl: 14,
+    },
+    weight: {
+      normal: 400,
+      semibold: 600,
+      bold: 700,
+    },
+  },
+
+  layout: {
+    tcp: {
+      width: 120,
+      minHeight: 74,
+      folderIndent: 22,
+      defaultHeights: {
+        superCollapsed: 24,
+        small: 49,
+        medium: 72,
+        full: 150,
+      },
+    },
+    mcp: {
+      minHeight: 230,
+      stripWidth: 120,
+      masterMinHeight: 74,
+    },
+    transport: {
+      height: 48,
+    },
+    arrange: {
+      rulerHeight: 32,
+    },
+    spacing: {
+      xs: 4,
+      sm: 4,
+      md: 8,
+      lg: 12,
+    },
+    radius: {
+      none: 0,
+      sm: 4,
+      md: 6,
+      lg: 8,
+    },
+    shadow: {
+      sm: '0 1px 2px rgba(0, 0, 0, 0.8)',
+      md: '0 4px 6px rgba(0, 0, 0, 0.9)',
+      lg: '0 10px 15px rgba(0, 0, 0, 1)',
+    },
+  },
+};
+
+// Export all Codette themes as default theme list
+export const CODETTE_THEMES = [codette_dark, codette_light, codette_graphite, codette_neon];
+
+// Maintain backward compatibility - export old REAPER theme names too
+export const reaper_default = codette_graphite; // Default theme
+export const reaper_light = codette_light;
+export const high_contrast = codette_neon;

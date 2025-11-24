@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { DAWProvider, useDAW } from './contexts/DAWContext';
-import { ThemeProvider } from './themes/ThemeContext';
 import MenuBar from './components/MenuBar';
 import TopBar from './components/TopBar';
 import TrackList from './components/TrackList';
 import Timeline from './components/Timeline';
 import Mixer from './components/Mixer';
+import EnhancedSidebar from './components/EnhancedSidebar';
 import WelcomeModal from './components/WelcomeModal';
 import ModalsContainer from './components/ModalsContainer';
-import ThemeSwitcher from './components/ThemeSwitcher';
 
 function AppContent() {
   const [showWelcome, setShowWelcome] = useState(true);
@@ -39,21 +38,6 @@ function AppContent() {
     if (e.currentTarget === e.target) {
       setIsDraggingGlobal(false);
     }
-  };
-
-  // Handle mixer resize
-  const handleMixerResizeStart = () => {
-    setIsResizingMixer(true);
-  };
-
-  const handleMixerResize = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isResizingMixer) return;
-    const newHeight = Math.max(240, Math.min(800, window.innerHeight - e.clientY));
-    setMixerHeight(newHeight);
-  };
-
-  const handleMixerResizeEnd = () => {
-    setIsResizingMixer(false);
   };
 
   const handleGlobalDrop = async (e: React.DragEvent<HTMLDivElement>) => {
@@ -88,6 +72,20 @@ function AppContent() {
     }
   };
 
+  const handleMixerResizeStart = () => {
+    setIsResizingMixer(true);
+  };
+
+  const handleMixerResize = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isResizingMixer) return;
+    const newHeight = Math.max(120, Math.min(600, window.innerHeight - e.clientY));
+    setMixerHeight(newHeight);
+  };
+
+  const handleMixerResizeEnd = () => {
+    setIsResizingMixer(false);
+  };
+
   return (
     <div 
       className={`h-screen flex flex-col bg-gray-950 overflow-hidden transition-colors ${
@@ -104,37 +102,39 @@ function AppContent() {
       {/* Menu Bar */}
       <MenuBar />
 
-      {/* Reaper-style Layout: Transport on top, then timeline, then mixer */}
+      {/* SECTION 1: TOP - Arrangement/Timeline View with Tracks */}
+      <div className="flex-1 flex overflow-hidden gap-0 min-h-0">
+        {/* Left Sidebar - Track List */}
+        <div className="w-56 bg-gray-900 border-r border-gray-700 flex flex-col overflow-hidden text-xs">
+          <TrackList />
+        </div>
+
+        {/* Main Timeline View */}
+        <div className="flex-1 overflow-hidden bg-gray-950">
+          <Timeline />
+        </div>
+
+        {/* Right Sidebar - Enhanced Multi-Tab Browser & Controls */}
+        <div className="w-80 bg-gray-900 border-l border-gray-700 flex flex-col overflow-hidden text-xs">
+          <EnhancedSidebar />
+        </div>
+      </div>
+
+      {/* SECTION 2: MIDDLE - Transport Controls (TopBar) */}
       <TopBar />
-      
-      {/* Main Content: Timeline and Mixer */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Arrangement/Timeline View */}
-        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-          <div className="flex-1 flex overflow-hidden">
-            {/* Track List */}
-            <div className="w-72 bg-gray-900 border-r border-gray-700 flex flex-col overflow-hidden text-xs">
-              <TrackList />
-            </div>
-            {/* Timeline */}
-            <div className="flex-1 overflow-hidden bg-gray-950">
-              <Timeline />
-            </div>
-          </div>
-           {/* Mixer View */}
-          <div 
-            className="bg-gray-900 border-t-2 border-gray-700 flex flex-col overflow-hidden group relative"
-            style={{ height: `${mixerHeight}px` }}
-          >
-            {/* Resize Handle */}
-            <div
-              className="h-1.5 bg-gray-700 hover:bg-blue-500 cursor-ns-resize transition-all"
-              onMouseDown={handleMixerResizeStart}
-            />
-            <div className="flex-1 overflow-hidden">
-              <Mixer mixerHeight={mixerHeight} />
-            </div>
-          </div>
+
+      {/* SECTION 3: BOTTOM - Mixer View with Channel Strips */}
+      <div 
+        className="bg-gray-900 border-t border-gray-700 flex flex-col overflow-hidden group relative"
+        style={{ height: `${mixerHeight}px` }}
+      >
+        {/* Resize Handle - Top Edge */}
+        <div
+          className="h-1.5 bg-gray-700 hover:bg-blue-500 cursor-ns-resize transition-all"
+          onMouseDown={handleMixerResizeStart}
+        />
+        <div className="flex-1 overflow-hidden">
+          <Mixer />
         </div>
       </div>
 
@@ -150,18 +150,15 @@ function AppContent() {
 
       {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
       <ModalsContainer />
-      <ThemeSwitcher />
     </div>
   );
 }
 
 function App() {
   return (
-    <ThemeProvider>
-      <DAWProvider>
-        <AppContent />
-      </DAWProvider>
-    </ThemeProvider>
+    <DAWProvider>
+      <AppContent />
+    </DAWProvider>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDAW } from "../contexts/DAWContext";
+import { normalizeCanvasDimensions } from "../lib/windowScaling";
 
 interface WaveformDisplayProps {
   trackId: string;
@@ -40,11 +41,9 @@ export default function WaveformDisplay({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Set canvas size
+    // Set canvas size with DPI normalization
     const width = canvas.offsetWidth;
-    canvas.width = width * window.devicePixelRatio;
-    canvas.height = height * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    normalizeCanvasDimensions(canvas, width, height);
 
     // Clear canvas
     ctx.fillStyle = "#1f2937";

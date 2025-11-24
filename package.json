@@ -1,7 +1,8 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "corelogic-studio",
+  "description": "Professional Audio Workstation - CoreLogic Studio v7.0",
   "private": true,
-  "version": "0.0.0",
+  "version": "7.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -3,6 +3,8 @@
  * Provides core audio functionality for CoreLogic Studio
  */
 
+import { APP_CONFIG } from '../config/appConfig';
+
 interface LoopConfig {
   enabled: boolean;
   startTime: number;
@@ -49,6 +51,9 @@ export class AudioEngine {
     if (this.isInitialized) return;
 
     try {
+      // Load configuration at initialization time (not class definition time)
+      this.metronomeSettings.enabled = APP_CONFIG.transport.METRONOME_ENABLED;
+
       const AudioContextClass =
         window.AudioContext ||
         ((window as unknown as Record<string, unknown>)

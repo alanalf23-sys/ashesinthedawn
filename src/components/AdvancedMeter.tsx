@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { normalizeCanvasDimensions } from '../lib/windowScaling';
 
 interface MeteringData {
   rms: number; // 0-1
@@ -113,8 +114,8 @@ export const AdvancedMeter: React.FC<AdvancedMeterProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    canvas.width = canvas.parentElement?.clientWidth || 300;
-    canvas.height = 200;
+    const displayWidth = canvas.parentElement?.clientWidth || 300;
+    normalizeCanvasDimensions(canvas, displayWidth, 200);
 
     const width = canvas.width;
     const height = canvas.height;

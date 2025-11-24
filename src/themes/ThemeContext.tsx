@@ -5,7 +5,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Theme, ThemeConfig } from './types';
-import { reaper_default, reaper_light, high_contrast } from './presets';
+import { codette_dark, codette_light, codette_graphite, codette_neon } from './presets';
 
 interface ThemeContextType {
   currentTheme: Theme;
@@ -21,9 +21,10 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const DEFAULT_THEMES = {
-  'reaper-default': reaper_default,
-  'reaper-light': reaper_light,
-  'high-contrast': high_contrast,
+  'codette-dark': codette_dark,
+  'codette-light': codette_light,
+  'codette-graphite': codette_graphite,
+  'codette-neon': codette_neon,
 };
 
 const STORAGE_KEY = 'corelogic_theme_config';
@@ -33,7 +34,7 @@ interface ThemeProviderProps {
   initialTheme?: string;
 }
 
-export function ThemeProvider({ children, initialTheme = 'reaper-default' }: ThemeProviderProps) {
+export function ThemeProvider({ children, initialTheme = 'codette-graphite' }: ThemeProviderProps) {
   const [themes, setThemes] = useState<Record<string, Theme>>(DEFAULT_THEMES);
   const [currentThemeId, setCurrentThemeId] = useState(initialTheme);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -86,11 +87,11 @@ export function ThemeProvider({ children, initialTheme = 'reaper-default' }: The
 
   // Apply theme CSS variables to root
   useEffect(() => {
-    const theme = themes[currentThemeId] || reaper_default;
+    const theme = themes[currentThemeId] || codette_graphite;
     applyThemeToDOM(theme);
   }, [currentThemeId, themes]);
 
-  const currentTheme = themes[currentThemeId] || reaper_default;
+  const currentTheme = themes[currentThemeId] || codette_graphite;
 
   const switchTheme = (themeId: string) => {
     if (themes[themeId]) {

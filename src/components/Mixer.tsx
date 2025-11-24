@@ -1,6 +1,7 @@
 import { useDAW } from '../contexts/DAWContext';
 import { Sliders } from 'lucide-react';
 import { useState, useRef, useEffect, memo } from 'react';
+import { APP_CONFIG } from '../config/appConfig';
 import MixerTile from './MixerTile';
 import DetachablePluginRack from './DetachablePluginRack';
 import MixerOptionsTile from './MixerOptionsTile';
@@ -11,34 +12,37 @@ interface DetachedTileState {
   size: { width: number; height: number };
 }
 
-// Define mixer constants based on Pro Tools & Reaper
-const MIN_STRIP_HEIGHT = 240; // Compact view
-const PRO_TOOLS_DEFAULT_WIDTH = 104;
+// Define mixer constants with safe defaults (config accessed in component)
+const DEFAULT_STRIP_WIDTH = 120; // Default channel strip width
+const DEFAULT_STRIP_HEIGHT = 400;
+const MIN_STRIP_WIDTH = 100;
+const MAX_STRIP_WIDTH = 160;
 
-interface MixerProps {
-  mixerHeight?: number;
-}
-
-const MixerComponent = ({ mixerHeight = 288 }: MixerProps) => {
+const MixerComponent = () => {
   const { tracks, selectedTrack, updateTrack, deleteTrack, selectTrack, addPluginToTrack, removePluginFromTrack, togglePluginEnabled, addTrack } = useDAW();
+  
+  // Access configuration values inside component (at runtime)
+  const stripWidth = APP_CONFIG.display.CHANNEL_WIDTH || DEFAULT_STRIP_WIDTH;
+  const stripHeight = DEFAULT_STRIP_HEIGHT; // Fixed height for channel strips
+  const maxTracks = APP_CONFIG.audio.MAX_TRACKS; // Use configured maximum tracks
+  
+  // Warn if track count exceeds configuration maximum
+  if (tracks.length > maxTracks) {
+    console.warn(`Track count (${tracks.length}) exceeds MAX_TRACKS configuration (${maxTracks})`);
+  }
+  
   const [detachedTiles, setDetachedTiles] = useState<DetachedTileState[]>([]);
   const [detachedOptionsTile, setDetachedOptionsTile] = useState(false);
   const [detachedPluginRacks, setDetachedPluginRacks] = useState<Record<string, boolean>>({});
   const [levels, setLevels] = useState<Record<string, number>>({}); // live RMS values
   const [masterFader, setMasterFader] = useState(0.7); // Master fader state (0-1)
+  const [scaledStripWidth, setScaledStripWidth] = useState(DEFAULT_STRIP_WIDTH);
+  const [isHoveringMixer, setIsHoveringMixer] = useState(false);
 
   const animationRef = useRef<number | null>(null);
   const faderDraggingRef = useRef(false);
   const faderContainerRef = useRef<HTMLDivElement>(null);
-
-  // Use Pro Tools default width for a professional feel
-  const effectiveStripWidth = PRO_TOOLS_DEFAULT_WIDTH;
-  
-  // Calculate dynamic strip height based on mixer container height (account for resize handle and padding)
-  const resizeHandleHeight = 4; // h-1 = 4px
-  const containerPadding = 12; // p-3 = 12px top + bottom
-  const availableMixerHeight = mixerHeight - resizeHandleHeight - containerPadding;
-  const effectiveStripHeight = Math.max(MIN_STRIP_HEIGHT, availableMixerHeight);
+  const mixerTracksRef = useRef<HTMLDivElement>(null);
 
   // --- Global Drag Handler for Master Fader ---
   useEffect(() => {
@@ -65,6 +69,27 @@ const MixerComponent = ({ mixerHeight = 288 }: MixerProps) => {
       document.removeEventListener("mouseup", handleMouseUp);
     };
   }, []);
+
+  // --- Smart Scaling Handler ---
+  useEffect(() => {
+    const handleResize = () => {
+      if (!mixerTracksRef.current?.parentElement) return;
+      const containerWidth = mixerTracksRef.current.parentElement.clientWidth;
+      const totalTracks = tracks.length + 1; // +1 for master
+      const availableWidth = containerWidth - 12; // subtract padding
+      
+      if (totalTracks > 0 && containerWidth > 0) {
+        // Calculate optimal strip width based on available space
+        const optimalWidth = Math.floor((availableWidth - (totalTracks * 8)) / totalTracks);
+        const boundedWidth = Math.max(MIN_STRIP_WIDTH, Math.min(MAX_STRIP_WIDTH, optimalWidth));
+        setScaledStripWidth(boundedWidth);
+      }
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [tracks.length]);
 
   // Helper Functions ---
   const getMeterColor = (db: number) => {
@@ -121,7 +146,7 @@ const MixerComponent = ({ mixerHeight = 288 }: MixerProps) => {
             x: 200 + Math.random() * 100,
             y: 150 + Math.random() * 100,
           },
-          size: { width: effectiveStripWidth, height: effectiveStripHeight },
+          size: { width: scaledStripWidth, height: stripHeight },
         },
       ]);
     }
@@ -143,24 +168,62 @@ const MixerComponent = ({ mixerHeight = 288 }: MixerProps) => {
               {detachedTiles.length > 0 && `• ${detachedTiles.length} floating`}
             </span>
           </div>
-          <div className="text-xs text-gray-500">
-            Drag mixer edge to resize • Double-click to add tracks
-          </div>
+          <span className="text-xs text-gray-500">Drag top edge to resize • Settings: Options menu</span>
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col">
-          {/* Mixer Strips */}
-          <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-950">
+          {/* Mixer Strips Container with Smart Scrollbar */}
+          <div 
+            className="flex-1 overflow-y-hidden bg-gray-950 group/scroller"
+            style={{
+              overflowX: 'auto',
+              scrollBehavior: 'smooth',
+              scrollbarWidth: 'thin',
+              scrollbarColor: isHoveringMixer ? '#3b82f6 #1f2937' : '#4b5563 #111827',
+            }}
+            onMouseEnter={() => setIsHoveringMixer(true)}
+            onMouseLeave={() => setIsHoveringMixer(false)}
+            ref={mixerTracksRef}
+          >
+            {/* Custom scrollbar styles via CSS */}
+            <style>{`
+              .group\\/scroller::-webkit-scrollbar {
+                height: 8px;
+              }
+              .group\\/scroller::-webkit-scrollbar-track {
+                background: #111827;
+                border-radius: 4px;
+                margin: 2px;
+              }
+              .group\\/scroller::-webkit-scrollbar-thumb {
+                background: #4b5563;
+                border-radius: 4px;
+                border: 2px solid #111827;
+                transition: all 0.2s ease;
+              }
+              .group\\/scroller::-webkit-scrollbar-thumb:hover {
+                background: #3b82f6;
+                border-color: #1e3a8a;
+              }
+              .group\\/scroller::-webkit-scrollbar-corner {
+                background: #111827;
+              }
+            `}</style>
             <div
-              className="flex h-full gap-2 p-3 min-w-max"
-              onDoubleClick={() => addTrack("audio")}
+              className="flex h-full gap-2 p-3 min-w-max transition-all duration-300"
+              onDoubleClick={(e) => {
+                // Only add track if double-clicking on empty space (not on tracks)
+                if (e.target === e.currentTarget) {
+                  addTrack("audio");
+                }
+              }}
             >
               {/* Master Strip */}
               <div
-                className="flex-shrink-0 select-none"
+                className="flex-shrink-0 select-none transition-all duration-300 hover:shadow-lg"
                 style={{
-                  width: `${effectiveStripWidth}px`,
-                  height: `${effectiveStripHeight}px`,
+                  width: `${scaledStripWidth}px`,
+                  height: `${stripHeight}px`,
                   border: "2px solid rgb(202, 138, 4)",
                   backgroundColor: "rgb(30, 24, 15)",
                   borderRadius: "4px",
@@ -168,6 +231,8 @@ const MixerComponent = ({ mixerHeight = 288 }: MixerProps) => {
                   flexDirection: "column",
                   justifyContent: "space-between",
                   padding: "4px",
+                  boxShadow: "0 0 0 rgba(202, 138, 4, 0.3) inset",
+                  transition: "all 0.3s ease",
                 }}
               >
                 <div
@@ -247,8 +312,8 @@ const MixerComponent = ({ mixerHeight = 288 }: MixerProps) => {
                       onAddPlugin={addPluginToTrack}
                       onRemovePlugin={removePluginFromTrack}
                       levels={levels}
-                      stripWidth={effectiveStripWidth}
-                      stripHeight={effectiveStripHeight}
+                      stripWidth={scaledStripWidth}
+                      stripHeight={stripHeight}
                       isDetached={false}
                       onDetach={() => handleDetachTile(track.id)}
                     />
@@ -284,8 +349,8 @@ const MixerComponent = ({ mixerHeight = 288 }: MixerProps) => {
               tracks={tracks}
               onUpdateTrack={updateTrack}
               onRemovePlugin={removePluginFromTrack}
-              stripWidth={effectiveStripWidth}
-              stripHeight={effectiveStripHeight}
+              stripWidth={scaledStripWidth}
+              stripHeight={stripHeight}
               position={{ x: 400, y: 150 }}
               onDock={() => setDetachedOptionsTile(false)}
               isDetached={true}
@@ -340,8 +405,8 @@ const MixerComponent = ({ mixerHeight = 288 }: MixerProps) => {
                 }}
                 onUpdate={updateTrack}
                 levels={levels}
-                stripWidth={effectiveStripWidth}
-                stripHeight={effectiveStripHeight}
+                stripWidth={scaledStripWidth}
+                stripHeight={stripHeight}
                 isDetached={true}
                 onDock={() => handleDockTile(track.id)}
               />

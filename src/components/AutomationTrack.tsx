@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { AutomationCurve, AutomationPoint } from '../types';
 import { AutomationEngine } from '../lib/automationEngine';
 import { Trash2, Copy } from 'lucide-react';
+import { normalizeCanvasDimensions } from '../lib/windowScaling';
 
 interface AutomationTrackProps {
   curve: AutomationCurve;
@@ -46,7 +47,8 @@ export const AutomationTrack: React.FC<AutomationTrackProps> = ({
     if (!ctx) return;
 
     const width = duration * pixelsPerSecond;
-    canvas.width = Math.max(width, canvas.parentElement?.clientWidth || 0);
+    const displayWidth = Math.max(width, canvas.parentElement?.clientWidth || 0);
+    normalizeCanvasDimensions(canvas, displayWidth, canvasHeight);
 
     // Background
     ctx.fillStyle = '#1f2937';

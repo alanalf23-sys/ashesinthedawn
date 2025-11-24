@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useDAW } from '../contexts/DAWContext';
+import { normalizeCanvasDimensions } from '../lib/windowScaling';
 
 interface CanvasWaveformProps {
   trackId: string;
@@ -93,8 +94,8 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = React.memo(({
     if (!ctx) return;
 
     const width = duration * pixelsPerSecond;
-    canvas.width = Math.max(width, canvas.parentElement?.clientWidth || 400);
-    canvas.height = height;
+    const displayWidth = Math.max(width, canvas.parentElement?.clientWidth || 400);
+    normalizeCanvasDimensions(canvas, displayWidth, height);
 
     // Background
     ctx.fillStyle = '#111827';

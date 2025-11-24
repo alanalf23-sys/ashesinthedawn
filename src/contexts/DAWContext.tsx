@@ -769,8 +769,9 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      // Validate file size (100MB max)
-      if (file.size > 100 * 1024 * 1024) {
+      // Validate file size (max 100MB - configurable via APP_CONFIG if needed)
+      const maxFileSize = 100 * 1024 * 1024; // 100MB limit
+      if (file.size > maxFileSize) {
         setUploadError("File size exceeds 100MB limit");
         setIsUploadingFile(false);
         return false;
