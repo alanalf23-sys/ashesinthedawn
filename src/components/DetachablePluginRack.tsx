@@ -71,10 +71,10 @@ export default function DetachablePluginRack({
           <span>Inserts - {trackName}</span>
           <button
             onClick={onDock}
-            className="p-1 hover:bg-blue-500 rounded transition"
+            className="p-1.5 hover:bg-blue-500 rounded transition hover:scale-110 active:scale-95"
             title="Dock"
           >
-            <X className="w-3 h-3" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -112,10 +112,10 @@ export default function DetachablePluginRack({
       {onDock && (
         <button
           onClick={onDock}
-          className="absolute top-1 right-8 p-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white transition opacity-0 hover:opacity-100 z-10"
+          className="absolute top-1 right-8 p-1.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white transition opacity-0 hover:opacity-100 z-10 hover:scale-110 active:scale-95"
           title="Detach into floating window"
         >
-          <ChevronDown className="w-3 h-3" />
+          <ChevronDown className="w-4 h-4" />
         </button>
       )}
     </div>

@@ -52,6 +52,12 @@ export default function MixerTile({
   const [showPluginMenu, setShowPluginMenu] = useState(false);
   const tileRef = useRef<HTMLDivElement>(null);
 
+  // Calculate responsive button sizing based on track width
+  const buttonScale = Math.max(0.8, Math.min(1, stripWidth / 100));
+  const buttonPadding = Math.max(2, Math.floor(stripWidth * 0.08));
+  const buttonFontSize = Math.max(9, Math.floor(stripWidth * 0.12));
+  const iconSize = Math.max(12, Math.floor(stripWidth * 0.2));
+
   const AVAILABLE_PLUGINS = [
     { id: "eq", name: "Parametric EQ", type: "eq" as const, icon: "🎚️" },
     { id: "comp", name: "Compressor", type: "compressor" as const, icon: "⚙️" },
@@ -204,9 +210,10 @@ export default function MixerTile({
               e.stopPropagation();
               onDetach?.();
             }}
-            className="absolute top-1 right-1 p-1 rounded bg-blue-600/0 hover:bg-blue-600/80 text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-all duration-150 hover:scale-110 active:scale-95 z-10"
+            style={{ padding: `${buttonPadding}px` }}
+            className="absolute top-1 right-1 rounded bg-blue-600/0 hover:bg-blue-600/80 text-blue-300 hover:text-white opacity-0 group-hover:opacity-100 transition-all duration-150 hover:scale-110 active:scale-95 z-10"
           >
-            <Maximize2 className="w-4 h-4" />
+            <Maximize2 style={{ width: `${iconSize}px`, height: `${iconSize}px` }} />
           </button>
         </Tooltip>
 
@@ -242,7 +249,8 @@ export default function MixerTile({
                   e.stopPropagation();
                   onUpdate(track.id, { muted: !track.muted });
                 }}
-                className={`px-1 rounded text-xs font-bold transition-all duration-150 hover:scale-110 active:scale-95 ${
+                style={{ padding: `${buttonPadding}px`, fontSize: `${buttonFontSize}px` }}
+                className={`rounded font-bold transition-all duration-150 hover:scale-110 active:scale-95 ${
                   track.muted
                     ? "bg-red-600 text-white hover:shadow-lg hover:shadow-red-500/50"
                     : "bg-gray-900/50 text-gray-900 hover:bg-gray-900/70 hover:shadow-md hover:shadow-gray-400/30"
@@ -262,7 +270,8 @@ export default function MixerTile({
                   e.stopPropagation();
                   onUpdate(track.id, { soloed: !track.soloed });
                 }}
-                className={`px-1 rounded text-xs font-bold transition-all duration-150 hover:scale-110 active:scale-95 ${
+                style={{ padding: `${buttonPadding}px`, fontSize: `${buttonFontSize}px` }}
+                className={`rounded font-bold transition-all duration-150 hover:scale-110 active:scale-95 ${
                   track.soloed
                     ? "bg-yellow-500 text-gray-900 hover:shadow-lg hover:shadow-yellow-500/50"
                     : "bg-gray-900/50 text-gray-900 hover:bg-gray-900/70 hover:shadow-md hover:shadow-gray-400/30"
@@ -282,7 +291,8 @@ export default function MixerTile({
                   e.stopPropagation();
                   onUpdate(track.id, { armed: !track.armed });
                 }}
-                className={`px-1 rounded text-xs font-bold transition-all duration-150 hover:scale-110 active:scale-95 ${
+                style={{ padding: `${buttonPadding}px`, fontSize: `${buttonFontSize}px` }}
+                className={`rounded font-bold transition-all duration-150 hover:scale-110 active:scale-95 ${
                   track.armed
                     ? "bg-red-700 text-white hover:shadow-lg hover:shadow-red-500/50"
                     : "bg-gray-900/50 text-gray-900 hover:bg-gray-900/70 hover:shadow-md hover:shadow-gray-400/30"
@@ -298,7 +308,8 @@ export default function MixerTile({
         <div className="flex gap-1 w-full flex-shrink-0">
           <button
             onClick={() => setActiveTab("controls")}
-            className={`flex-1 py-1 text-xs rounded font-semibold transition ${
+            style={{ padding: `${buttonPadding}px`, fontSize: `${buttonFontSize}px` }}
+            className={`flex-1 rounded font-semibold transition ${
               activeTab === "controls"
                 ? "bg-blue-600 text-white"
                 : "bg-gray-700 text-gray-300 hover:bg-gray-600"
@@ -308,7 +319,8 @@ export default function MixerTile({
           </button>
           <button
             onClick={() => setActiveTab("plugins")}
-            className={`flex-1 py-1 text-xs rounded font-semibold transition relative ${
+            style={{ padding: `${buttonPadding}px`, fontSize: `${buttonFontSize}px` }}
+            className={`flex-1 rounded font-semibold transition relative ${
               activeTab === "plugins"
                 ? "bg-blue-600 text-white"
                 : "bg-gray-700 text-gray-300 hover:bg-gray-600"
@@ -316,7 +328,7 @@ export default function MixerTile({
           >
             FX{" "}
             {track.inserts?.length > 0 && (
-              <span className="ml-1 text-xs">({track.inserts.length})</span>
+              <span style={{ fontSize: `${buttonFontSize}px` }}>({track.inserts.length})</span>
             )}
           </button>
         </div>
