@@ -1,7 +1,7 @@
 # CoreLogic Studio - AI Coding Agent Instructions
 
-**Last Updated**: November 22, 2025 (23:52 UTC)
-**Session**: Audio System Stabilization & Documentation Refresh
+**Last Updated**: November 23, 2025 (UTC)
+**Focus**: Dual-platform DAW with federated mono-repo architecture
 
 ## Project Overview
 
@@ -14,48 +14,51 @@ CoreLogic Studio is a **dual-platform DAW** (Digital Audio Workstation):
 
 ## Architecture Essentials
 
-### Dual-Stack Architecture
+### Dual-Stack Federated Mono-Repo
 
-This is a **federated mono-repo** with separate frontend and backend concerns:
+This project maintains **intentional separation** between frontend and backend:
 
 1. **React Frontend** (`src/`)
-
-   - Handles UI, state management, user interactions
-   - Uses Web Audio API for real-time playback/mixing
-   - Does NOT perform audio DSP - all effects processing would eventually call Python backend
+   - Handles all UI, state management, user interactions
+   - Uses Web Audio API for real-time playback/mixing through `AudioEngine`
+   - **Does NOT perform audio DSP** - all effect processing delegates to Python backend (future integration)
+   - 15 React components consuming `useDAW()` hook for centralized state
 
 2. **Python DSP Backend** (`daw_core/`)
-   - 19 audio effects across 5 categories (EQ, Dynamics, Saturation, Delays, Reverb)
+   - 19+ professional audio effects (EQ, Dynamics, Saturation, Delays, Reverb)
    - Automation framework (AutomationCurve, LFO, Envelope, AutomatedParameter)
    - Metering tools (LevelMeter, SpectrumAnalyzer, VUMeter, Correlometer)
-   - Currently **not integrated** with React frontend (separate development phase)
-   - All effects tested via pytest (197 tests passing)
+   - Comprehensive pytest test suite (197 passing tests)
+   - **Status**: Not yet integrated with React frontend (separate development phase)
 
-### Frontend Three-Layer Design (React Only)
+**Why the separation?** Each stack can be developed, tested, and deployed independently. Python effects are tested in isolation before eventual Web Audio/WebWorker integration.
 
-1. **Context Layer** (`src/contexts/DAWContext.tsx` - 639 lines)
+### Frontend Architecture (3 Critical Layers)
 
-   - Single source of truth for all DAW state (tracks, playback, recording, time)
-   - Audio engine reference held here (singleton pattern via `getAudioEngine()`)
-   - Branching functions for track creation by type (audio/instrument/midi/aux/vca)
-   - **Critical insight**: Volume sync effect (lines 100-115) keeps audio parameters in sync during playback
+1. **State Management Layer** (`src/contexts/DAWContext.tsx` - 2,781 lines)
+   - **Single source of truth** for all DAW state: tracks, playback, recording, time, selection
+   - Exports `useDAW()` hook - all components consume through this
+   - Audio engine reference held here (singleton via `getAudioEngine()`)
+   - **Volume sync effect** (lines 100-115): Keeps UI slider values in sync with actual playing volume
+   - 13 state properties + 20+ context functions
+   - Track factory pattern: `createAudioTrack()`, `createInstrumentTrack()`, etc. before `addTrack()`
 
-2. **Audio Engine** (`src/lib/audioEngine.ts` - 500 lines)
-
+2. **Audio Engine Layer** (`src/lib/audioEngine.ts` - 931 lines)
    - Wrapper around Web Audio API with methods: `playAudio()`, `stopAudio()`, `setTrackVolume()`, `seek()`
-   - **Key pattern**: dB ↔ Linear conversion via `dbToLinear()` (private method, line 475)
-   - Waveform caching in `waveformCache` Map for performance
-   - Source nodes stored per-track to enable resumable playback
+   - **Key conversion**: dB ↔ Linear via `dbToLinear()` private method
+   - Waveform pre-computed on file load and cached in `waveformCache` Map
+   - `playingTracksState` Map tracks `{isPlaying, currentOffset}` per track
+   - Native Web Audio looping (`source.loop = true`) handles continuous playback
+   - Source nodes stored per-track for resumable playback
 
-3. **UI Components** (15 components, all consume `useDAW()` hook)
-   - TopBar: Transport controls + time display + CPU/settings
-   - TrackList: Add/select/delete tracks with sequential numbering per type
-   - Timeline: Waveform visualization + playhead + click-to-seek
-   - Mixer: Volume/pan/input-gain sliders for selected track + plugin rack
-   - Sidebar: Multi-tab browser for files/plugins
-   - WelcomeModal: Project creation
-   - DraggableWindow, ResizableWindow: Detachable mixer UI
-   - PluginRack, AudioMeter: Effects and metering displays
+3. **Component Layer** (`src/components/` - 15 components)
+   - All consume `useDAW()` hook for context access
+   - TopBar: Transport, time display, CPU/settings
+   - TrackList: Add/select/delete tracks with type-specific numbering
+   - Timeline: Waveform visualization, playhead, click-to-seek
+   - Mixer: Volume/pan/input-gain sliders for selected track only
+   - Sidebar: File/plugin browser
+   - PluginRack, AudioMeter: Effect and metering displays
 
 ### Data Flow
 
@@ -67,26 +70,37 @@ User Action → Component → useDAW() → DAWContext method → AudioEngine →
 
 ## Component Communication Patterns
 
-### Context Hook Usage
+### Context Hook Usage (The Only Way to Access State)
 
 ```typescript
 import { useDAW } from "../contexts/DAWContext";
 
 export default function MyComponent() {
   const { tracks, selectedTrack, togglePlay, seek } = useDAW();
-  // Use values and methods directly
+  // Use values and methods directly - never import DAWContext directly
 }
 ```
 
-### Track Selection Model
+**Critical rule**: Always use `useDAW()` hook in components. Never import `DAWContext` directly or bypass the context API.
 
-- Single selected track at a time (`selectedTrack` state)
-- All track modifications flow through `updateTrack(trackId, updates)`
-- Mixer component shows controls for `selectedTrack` only
+### Track Selection & Modification Pattern
 
-### Branching Functions (Anti-pattern to avoid)
+- **Single selected track** at a time (`selectedTrack` state)
+- **All track modifications** flow through `updateTrack(trackId, updates)` 
+- **Mixer component shows controls for `selectedTrack` only** (null state shows "Select a track")
+- Volume changes during playback trigger sync effect in DAWContext (lines 100-115)
 
-`DAWContext` uses branching factory functions (`createAudioTrack()`, `createInstrumentTrack()`, etc.) before calling `addTrack()`. This pattern is **already in place** - follow it for consistency if adding new track types.
+### Track Factory Pattern (Preserve This Structure)
+
+DAWContext uses branching factory functions before calling `addTrack()`:
+
+```typescript
+// Pattern: Create specific track type, then call generic addTrack()
+const trackData = createAudioTrack();
+addTrack(trackData);
+```
+
+**Follow this pattern for new track types** - don't call `addTrack()` directly from components.
 
 ## Styling Conventions
 
@@ -105,35 +119,36 @@ export default function MyComponent() {
 - Bottom mixer: `h-48` (fixed height for controls)
 - Right sidebar: `w-64` (browser panel)
 
-## Critical Functions & Their Behavior
-
 ### Critical Functions & Their Behavior
 
-### `togglePlay()`
+#### `togglePlay()`
 
-- **Status**: FIXED (native looping now handles continuous playback)
-- **Implementation** (DAWContext): Starts playback or stops it based on `isPlaying` state
+- **Status**: FIXED (native looping handles continuous playback)
+- **What it does**: Starts playback or stops it based on `isPlaying` state
 - **Audio wiring**: Plays all non-muted audio/instrument tracks from `currentTime`
-- **Key detail**: Relies on native `source.loop = true` in Web Audio API (audioEngine.ts:106)
+- **Key implementation detail**: Relies on Web Audio native `source.loop = true` (audioEngine.ts line 106)
+- **Pattern**: If playing, creates audio sources; if stopped, disconnects sources and stops audio
 
-### `seek(timeSeconds)`
+#### `seek(timeSeconds)`
 
-- Stops existing sources and creates new ones from seek time to enable resumable playback
-- **Not just updating currentTime**: Must restart audio from new position if playing
+- **Not just updating currentTime** - must restart audio from new position if playing
+- **Implementation**: Stops existing sources and creates new ones from seek time
+- **Enables resumable playback** - preserves state while jumping to new position
 
-### `uploadAudioFile(file)`
+#### `uploadAudioFile(file)` 
 
-- Validates MIME type + file size (100MB max, lines 406-418)
-- Calls `audioEngine.loadAudioFile()` which:
-  - Decodes audio file
-  - Caches AudioBuffer
-  - Pre-generates waveform data in `waveformCache`
+- **Validates MIME type** + **file size (100MB max)** (lines 406-418 in DAWContext)
+- **Calls `audioEngine.loadAudioFile()`** which:
+  - Decodes audio file into AudioBuffer
+  - Caches AudioBuffer in `audioBuffers` Map
+  - Pre-generates waveform data into `waveformCache` for instant rendering
 
-### `setTrackInputGain()` vs `updateTrack({volume})`
+#### `setTrackInputGain()` vs `updateTrack({volume})`
 
-- **Input Gain** (pre-fader): Set via `setTrackInputGain()` - affects only audio engine pre-pan node
+- **Input Gain** (pre-fader): Set via `setTrackInputGain()` - affects audio engine pre-pan node only
 - **Volume** (fader): Set via `updateTrack({volume})` - affects post-pan gain node
-- Both convert dB values to linear in audio engine
+- **Both convert dB to linear** in audio engine via private `dbToLinear()` method
+- **Key difference**: Input gain is preprocessing; volume is final level
 
 ## Common Development Tasks
 
