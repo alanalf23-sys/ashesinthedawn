@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useCodette } from '@/hooks/useCodette';
+import { useCodette } from '../hooks/useCodette';
 import { MessageCircle, Send, Loader, AlertCircle, Settings } from 'lucide-react';
 
 type Perspective = 'neuralnets' | 'newtonian' | 'davinci' | 'quantum';
@@ -160,7 +160,7 @@ export function CodettePanel({ isVisible, onClose }: CodettePanelProps) {
             </div>
           </div>
         ) : (
-          chatHistory.map((msg, idx) => (
+          chatHistory.map((msg: { role: string; perspective?: string; content: string; timestamp: number }, idx: number) => (
             <div
               key={idx}
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}

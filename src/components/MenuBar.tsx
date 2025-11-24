@@ -96,14 +96,12 @@ export default function MenuBar() {
     addTrack, 
     deleteTrack,
     selectedTrack,
-    currentTime,
     undo,
     redo,
     updateTrack,
     saveProject,
     openNewProjectModal,
     openExportModal,
-    openAudioSettingsModal,
   } = useDAW();
 
   const menuSections: MenuSection = {

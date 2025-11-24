@@ -42,7 +42,7 @@ export default function MIDISettings() {
         state: 'connected' as const,
         channel: 1,
       };
-      createMIDIRoute(selectedTrack.id, midiDevice, 1);
+      createMIDIRoute(device, selectedTrack.id);
     }
   };
 

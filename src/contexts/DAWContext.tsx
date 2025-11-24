@@ -39,6 +39,13 @@ interface DAWContextType {
   markers: Marker[];
   loopRegion: LoopRegion;
   metronomeSettings: MetronomeSettings;
+  inputLevel: number;
+  latencyMs: number;
+  bufferUnderruns: number;
+  bufferOverruns: number;
+  isAudioIOActive: boolean;
+  audioIOError: string | null;
+  selectedInputDevice: { label: string } | null;
   setCurrentProject: (project: Project | null) => void;
   addTrack: (type: Track["type"]) => void;
   selectTrack: (trackId: string) => void;
@@ -182,6 +189,14 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   // MIDI State
   const [midiDevices, setMidiDevices] = useState<MidiDevice[]>([]);
   const [midiRoutes, setMidiRoutes] = useState<MidiRoute[]>([]);
+  // Audio I/O State
+  const [inputLevel, setInputLevel] = useState(0);
+  const [latencyMs, setLatencyMs] = useState(5);
+  const [bufferUnderruns, setBufferUnderruns] = useState(0);
+  const [bufferOverruns, setBufferOverruns] = useState(0);
+  const [isAudioIOActive, setIsAudioIOActive] = useState(false);
+  const [audioIOError, setAudioIOError] = useState<string | null>(null);
+  const [selectedInputDevice, setSelectedInputDevice] = useState<{ label: string } | null>(null);
   // CPU usage detailed
   const [cpuUsageDetailedState] = useState<Record<string, number>>({
     audio: 2,
@@ -1202,6 +1217,14 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         createMIDIRoute,
         deleteMIDIRoute,
         getMIDIRoutesForTrack,
+        // Audio I/O
+        inputLevel,
+        latencyMs,
+        bufferUnderruns,
+        bufferOverruns,
+        isAudioIOActive,
+        audioIOError,
+        selectedInputDevice,
         // CPU Usage
         cpuUsageDetailed: cpuUsageDetailedState,
       }}
