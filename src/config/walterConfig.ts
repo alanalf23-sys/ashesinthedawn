@@ -133,7 +133,7 @@ export class WalterExpressionEngine {
       { op: '>', fn: (a: number, b: number) => a > b },
     ];
 
-    let expr = condition;
+    const expr = condition;
 
     // Handle bitwise AND
     if (expr.includes('&')) {

@@ -242,10 +242,14 @@ export const APP_CONFIG = {
  */
 export function getConfig<T = unknown>(path: string): T | undefined {
   const keys = path.split('.');
-  let value: any = APP_CONFIG;
+  let value: unknown = APP_CONFIG;
   
   for (const key of keys) {
-    value = value?.[key];
+    if (typeof value === 'object' && value !== null && key in value) {
+      value = (value as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
     if (value === undefined) return undefined;
   }
   
@@ -273,7 +277,7 @@ export function validateConfig(): string[] {
   }
   
   // Validate theme
-  if (!THEME_CONFIG.AVAILABLE_THEMES.includes(THEME_CONFIG.DEFAULT_THEME as any)) {
+  if (!THEME_CONFIG.AVAILABLE_THEMES.includes(THEME_CONFIG.DEFAULT_THEME)) {
     errors.push(`DEFAULT_THEME (${THEME_CONFIG.DEFAULT_THEME}) must be one of: ${THEME_CONFIG.AVAILABLE_THEMES.join(', ')}`);
   }
   

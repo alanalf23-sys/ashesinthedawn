@@ -229,13 +229,14 @@ export function formatTime(
       return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     case 'MM:SS':
       return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    case 'Measures':
+    case 'Measures': {
       // Simplified: assumes 4/4 time signature and 120 BPM
       const measureDuration = (60 / 120) * 4;
       const measures = Math.floor(seconds / measureDuration);
       const remaining = seconds % measureDuration;
       const beats = Math.floor(remaining / (measureDuration / 4));
       return `${String(measures + 1).padStart(3, '0')}.${String(beats).padStart(2, '0')}.000`;
+    }
     default:
       return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
