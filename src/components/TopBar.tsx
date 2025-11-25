@@ -16,11 +16,17 @@ import {
   Music,
   Flag,
   Volume2,
+  Sparkles,
+  BookOpen,
+  Lightbulb,
+  RotateCcw,
+  Wrench,
 } from "lucide-react";
 import { useDAW } from "../contexts/DAWContext";
 import { useTransportClock } from "../hooks/useTransportClock";
 import { useState } from "react";
 import CodetteStatus from "./CodetteStatus";
+import CodetteAdvancedTools from "./CodetteAdvancedTools";
 
 export default function TopBar() {
   const {
@@ -55,6 +61,9 @@ export default function TopBar() {
 
   const [showViewMenu, setShowViewMenu] = useState(false);
   const [showMetronomeMenu, setShowMetronomeMenu] = useState(false);
+  const [showCodetteMenu, setShowCodetteMenu] = useState(false);
+  const [showAdvancedTools, setShowAdvancedTools] = useState(false);
+  const [codetteFeature, setCodetteFeature] = useState<"suggestions" | "theory" | "composition">("suggestions");
   const [viewOptions, setViewOptions] = useState({
     showWaveform: true,
     showMixer: true,
@@ -473,7 +482,116 @@ export default function TopBar() {
           )}
         </div>
 
+        {/* Codette Music Theory & Composition Menu */}
+        <div className="relative">
+          <button
+            onClick={() => setShowCodetteMenu(!showCodetteMenu)}
+            className="flex items-center gap-1 px-2 py-1.5 rounded hover:bg-purple-800/30 text-purple-400 transition border border-purple-600/50"
+            title="Codette Music Tools (Theory, Composition, Analysis)"
+          >
+            <Sparkles className="w-4 h-4" />
+            <ChevronDown className="w-3 h-3" />
+          </button>
+
+          {showCodetteMenu && (
+            <div className="absolute right-0 top-full mt-1 bg-gradient-to-b from-gray-900 to-purple-900/20 border border-purple-600 rounded shadow-lg z-50 min-w-56">
+              <div className="p-2 space-y-2">
+                {/* Music Theory */}
+                <button
+                  onClick={() => {
+                    setCodetteFeature("theory");
+                    setShowCodetteMenu(false);
+                  }}
+                  className={`w-full px-3 py-2 rounded text-left text-xs flex items-center gap-2 transition ${
+                    codetteFeature === "theory"
+                      ? "bg-purple-600 text-white"
+                      : "hover:bg-gray-800 text-gray-300"
+                  }`}
+                  title="Scales, chords, intervals, microtonality"
+                >
+                  <BookOpen className="w-3 h-3" />
+                  <span>Music Theory</span>
+                </button>
+
+                {/* Composition Helper */}
+                <button
+                  onClick={() => {
+                    setCodetteFeature("composition");
+                    setShowCodetteMenu(false);
+                  }}
+                  className={`w-full px-3 py-2 rounded text-left text-xs flex items-center gap-2 transition ${
+                    codetteFeature === "composition"
+                      ? "bg-purple-600 text-white"
+                      : "hover:bg-gray-800 text-gray-300"
+                  }`}
+                  title="Chord progressions, melodies, arrangements"
+                >
+                  <Lightbulb className="w-3 h-3" />
+                  <span>Composition Helper</span>
+                </button>
+
+                {/* AI Suggestions */}
+                <button
+                  onClick={() => {
+                    setCodetteFeature("suggestions");
+                    setShowCodetteMenu(false);
+                  }}
+                  className={`w-full px-3 py-2 rounded text-left text-xs flex items-center gap-2 transition ${
+                    codetteFeature === "suggestions"
+                      ? "bg-purple-600 text-white"
+                      : "hover:bg-gray-800 text-gray-300"
+                  }`}
+                  title="Real-time mixing, production, and arrangement tips"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>AI Suggestions</span>
+                </button>
+
+                <div className="h-px bg-purple-700/50 my-1" />
+
+                {/* Tempo Sync Helper */}
+                <button
+                  className="w-full px-3 py-2 rounded text-left text-xs hover:bg-gray-800 text-gray-300 flex items-center gap-2 transition"
+                  title="Calculate tempo-synced delay times"
+                  onClick={() => {
+                    const bpm = transport.bpm || 120;
+                    const quarterNote = (60000 / bpm) / 0.25;
+                    alert(`Delay Sync at ${bpm.toFixed(1)} BPM:\n• Quarter: ${(quarterNote/1000).toFixed(2)}s\n• Eighth: ${(quarterNote*2/1000).toFixed(2)}s\n• Triplet: ${(quarterNote/1.5/1000).toFixed(2)}s`);
+                    setShowCodetteMenu(false);
+                  }}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Delay Sync Calculator</span>
+                </button>
+
+                {/* Genre Analysis */}
+                <button
+                  className="w-full px-3 py-2 rounded text-left text-xs hover:bg-gray-800 text-gray-300 flex items-center gap-2 transition"
+                  title="Analyze production for genre conformance"
+                >
+                  <Music className="w-3 h-3" />
+                  <span>Genre Analysis</span>
+                </button>
+
+                <div className="h-px bg-purple-700/50 my-1" />
+
+                <div className="px-3 py-1 text-xs text-purple-400 font-semibold">
+                  Current Feature: {codetteFeature === "theory" ? "Theory" : codetteFeature === "composition" ? "Composition" : "Suggestions"}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         <CodetteStatus />
+
+        <button
+          onClick={() => setShowAdvancedTools(!showAdvancedTools)}
+          className="p-1.5 rounded hover:bg-purple-800/30 text-purple-400 transition border border-purple-600/50"
+          title="Advanced Codette Tools (Production, Ear Training, Instruments)"
+        >
+          <Wrench className="w-4 h-4" />
+        </button>
 
         <button
           onClick={handleSettings}
@@ -483,6 +601,19 @@ export default function TopBar() {
           <Settings className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Advanced Tools Panel */}
+      {showAdvancedTools && (
+        <div className="fixed bottom-16 right-4 z-40 max-w-md max-h-96 shadow-2xl rounded-lg border border-purple-600">
+          <CodetteAdvancedTools 
+            bpm={transport.bpm || 120}
+            selectedTrackName={selectedTrack?.name || "Master"}
+            onDelayTimeCalculated={(delayMs) => {
+              console.log(`Delay sync calculated: ${delayMs}ms`);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
