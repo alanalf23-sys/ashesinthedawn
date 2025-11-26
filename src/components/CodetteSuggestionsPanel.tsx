@@ -107,7 +107,7 @@ export function CodetteSuggestionsPanel({
   }
 
   return (
-    <div className="flex flex-col gap-3 w-full h-full">
+    <div className="flex flex-col gap-3 w-full h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <h3 className="text-sm font-semibold text-gray-100">
@@ -137,14 +137,14 @@ export function CodetteSuggestionsPanel({
       )}
 
       {/* Suggestions List */}
-      <div className="flex-1 overflow-y-auto min-h-0 pr-2">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {!loading && codetteSuggestions.length === 0 && (
           <div className="p-3 bg-gray-800 rounded text-center">
             <p className="text-xs text-gray-400">No suggestions at this time</p>
           </div>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-3 pr-2">
           {codetteSuggestions.map((suggestion) => (
             <div
               key={suggestion.id}

@@ -42,6 +42,7 @@ const MixerComponent = () => {
   const [isHoveringMixer, setIsHoveringMixer] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [codetteTab, setCodetteTab] = useState<'suggestions' | 'analysis' | 'control'>('suggestions');
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   const animationRef = useRef<number | null>(null);
   const faderDraggingRef = useRef(false);
@@ -79,12 +80,24 @@ const MixerComponent = () => {
     const handleResize = () => {
       if (!mixerTracksRef.current?.parentElement) return;
       const containerWidth = mixerTracksRef.current.parentElement.clientWidth;
+      const containerHeight = mixerTracksRef.current.parentElement.clientHeight;
+      
+      setContainerSize({ width: containerWidth, height: containerHeight });
+      
       const totalTracks = tracks.length + 1; // +1 for master
       const availableWidth = containerWidth - 12; // subtract padding
       
       if (totalTracks > 0 && containerWidth > 0) {
-        // Calculate optimal strip width based on available space
-        const optimalWidth = Math.floor((availableWidth - (totalTracks * 8)) / totalTracks);
+        // Intelligent scaling based on container dimensions
+        let optimalWidth = Math.floor((availableWidth - (totalTracks * 8)) / totalTracks);
+        
+        // Scale down if container is small (mobile/tablet view)
+        if (containerWidth < 600) {
+          optimalWidth = Math.floor(optimalWidth * 0.8);
+        } else if (containerWidth < 800) {
+          optimalWidth = Math.floor(optimalWidth * 0.9);
+        }
+        
         const boundedWidth = Math.max(MIN_STRIP_WIDTH, Math.min(MAX_STRIP_WIDTH, optimalWidth));
         setScaledStripWidth(boundedWidth);
       }
@@ -92,8 +105,21 @@ const MixerComponent = () => {
     
     handleResize();
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [tracks.length]);
+    
+    // Also listen for container size changes
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    
+    if (mixerTracksRef.current?.parentElement) {
+      resizeObserver.observe(mixerTracksRef.current.parentElement);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
+    };
+  }, [tracks.length, stripHeight]);
 
   // Helper Functions ---
   const getMeterColor = (db: number) => {
@@ -171,6 +197,11 @@ const MixerComponent = () => {
               Mixer{" "}
               {detachedTiles.length > 0 && `(${detachedTiles.length})`}
             </span>
+            {containerSize.width > 0 && (
+              <span className="text-xs text-gray-500 ml-2 whitespace-nowrap">
+                {containerSize.width}w × {containerSize.height}h
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 ml-auto flex-shrink-0">
             <span className="text-xs text-gray-500 hidden sm:inline">Drag • +Track</span>
@@ -371,12 +402,12 @@ const MixerComponent = () => {
           )}
 
           {/* Codette AI Panels */}
-          <div className="border-t border-gray-700 bg-gray-800 flex flex-col flex-1 min-h-0">
+          <div className="border-t border-gray-700 bg-gray-800 flex flex-col flex-1 min-h-0 overflow-hidden">
             {/* Tab Headers */}
-            <div className="flex items-center gap-2 p-2 border-b border-gray-700 flex-shrink-0">
+            <div className="flex items-center gap-2 p-2 border-b border-gray-700 flex-shrink-0 overflow-x-auto">
               <button
                 onClick={() => setCodetteTab('suggestions')}
-                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors flex-shrink-0 ${
                   codetteTab === 'suggestions'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -386,7 +417,7 @@ const MixerComponent = () => {
               </button>
               <button
                 onClick={() => setCodetteTab('analysis')}
-                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors flex-shrink-0 ${
                   codetteTab === 'analysis'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -396,7 +427,7 @@ const MixerComponent = () => {
               </button>
               <button
                 onClick={() => setCodetteTab('control')}
-                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors flex-shrink-0 ${
                   codetteTab === 'control'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -407,7 +438,7 @@ const MixerComponent = () => {
             </div>
 
             {/* Tab Content - Dynamic height with scroll */}
-            <div className="flex-1 overflow-y-auto p-4 bg-gray-800 min-h-0">
+            <div className="flex-1 overflow-hidden bg-gray-800 min-h-0">
               {codetteTab === 'suggestions' && (
                 <div className="w-full h-full">
                   <CodetteSuggestionsPanel

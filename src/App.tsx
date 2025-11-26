@@ -15,6 +15,7 @@ import FunctionExecutionLog from './components/FunctionExecutionLog';
 function AppContent() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
+  const [mixerDocked, setMixerDocked] = useState(false);
   const { uploadAudioFile, addTrack, selectTrack, tracks } = useDAW();
 
   // Debug: Verify MenuBar and AIPanel are imported
@@ -109,9 +110,17 @@ function AppContent() {
       </div>
 
       {/* SECTION 3: BOTTOM - Mixer View with Channel Strips */}
-      <SmartMixerContainer>
-        <Mixer />
-      </SmartMixerContainer>
+      {mixerDocked ? (
+        <div className="flex-1 overflow-hidden bg-gray-900">
+          <SmartMixerContainer onDockChange={setMixerDocked}>
+            <Mixer />
+          </SmartMixerContainer>
+        </div>
+      ) : (
+        <SmartMixerContainer onDockChange={setMixerDocked}>
+          <Mixer />
+        </SmartMixerContainer>
+      )}
 
       {/* Global Drag Overlay */}
       {isDraggingGlobal && (

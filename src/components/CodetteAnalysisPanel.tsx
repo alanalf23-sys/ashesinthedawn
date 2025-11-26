@@ -67,7 +67,7 @@ export function CodetteAnalysisPanel({
   }
 
   return (
-    <div className="flex flex-col gap-3 w-full h-full">
+    <div className="flex flex-col gap-3 w-full h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <h3 className="text-sm font-semibold text-gray-100">
@@ -99,9 +99,9 @@ export function CodetteAnalysisPanel({
       </button>
 
       {/* Analysis Results */}
-      <div className="flex-1 overflow-y-auto min-h-0 pr-2">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {analysis && (
-          <div className="p-3 bg-gray-800 border border-gray-700 rounded space-y-3">
+          <div className="p-3 bg-gray-800 border border-gray-700 rounded space-y-3 mr-2">
             {/* Quality Score */}
             {analysis.quality_score !== undefined && (
               <div>

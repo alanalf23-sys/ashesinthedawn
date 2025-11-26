@@ -172,9 +172,9 @@ export default function CodetteControlPanel() {
   };
 
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg space-y-4 w-full h-full overflow-y-auto flex flex-col">
+    <div className="bg-gray-900 border border-gray-700 rounded-lg w-full h-full overflow-hidden flex flex-col">
       {/* Connection Status */}
-      <div className="bg-gray-800 rounded p-3 space-y-2 flex-shrink-0">
+      <div className="bg-gray-800 rounded p-3 space-y-2 flex-shrink-0 m-4 mt-0">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-200">Connection Status</h3>
           <div className="flex gap-2">
@@ -199,7 +199,7 @@ export default function CodetteControlPanel() {
       </div>
 
       {/* Production Checklist */}
-      <div className="bg-gray-800 rounded overflow-hidden flex-shrink-0">
+      <div className="bg-gray-800 rounded overflow-hidden flex-shrink-0 mx-4">
         <button
           onClick={() => setExpandedSection(expandedSection === "checklist" ? null : "checklist")}
           className="w-full flex items-center justify-between p-3 hover:bg-gray-700 transition"
@@ -256,7 +256,7 @@ export default function CodetteControlPanel() {
       </div>
 
       {/* Perspectives */}
-      <div className="bg-gray-800 rounded overflow-hidden flex-shrink-0">
+      <div className="bg-gray-800 rounded overflow-hidden flex-shrink-0 mx-4">
         <button
           onClick={() => setExpandedSection(expandedSection === "perspectives" ? null : "perspectives")}
           className="w-full flex items-center justify-between p-3 hover:bg-gray-700 transition"
@@ -289,7 +289,7 @@ export default function CodetteControlPanel() {
       </div>
 
       {/* Conversation History */}
-      <div className="bg-gray-800 rounded overflow-hidden flex-1 min-h-0 flex flex-col">
+      <div className="bg-gray-800 rounded overflow-hidden flex-1 min-h-0 flex flex-col m-4 mt-2">
         <button
           onClick={() => setExpandedSection(expandedSection === "conversation" ? null : "conversation")}
           className="w-full flex items-center justify-between p-3 hover:bg-gray-700 transition flex-shrink-0"
