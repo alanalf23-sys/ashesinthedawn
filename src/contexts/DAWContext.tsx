@@ -19,6 +19,7 @@ import {
 } from "../types";
 import { supabase } from "../lib/supabase";
 import { getAudioEngine } from "../lib/audioEngine";
+import { getCodetteBridge, CodetteSuggestion } from "../lib/codetteBridge";
 
 interface DAWContextType {
   currentProject: Project | null;
@@ -136,6 +137,20 @@ interface DAWContextType {
   createMIDIRoute: (sourceDeviceId: string, targetTrackId: string) => void;
   deleteMIDIRoute: (routeId: string) => void;
   getMIDIRoutesForTrack: (trackId: string) => MidiRoute[];
+  // Codette AI Integration (Phase 1)
+  codetteConnected: boolean;
+  codetteLoading: boolean;
+  codetteSuggestions: CodetteSuggestion[];
+  getSuggestionsForTrack: (
+    trackId: string,
+    context?: string
+  ) => Promise<CodetteSuggestion[]>;
+  applyCodetteSuggestion: (
+    trackId: string,
+    suggestion: CodetteSuggestion
+  ) => Promise<boolean>;
+  analyzeTrackWithCodette: (trackId: string) => Promise<any>;
+  syncDAWStateToCodette: () => Promise<boolean>;
   // Utility
   cpuUsageDetailed: Record<string, number>;
 }
@@ -156,6 +171,13 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const [voiceControlActive, setVoiceControlActive] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Codette AI Integration (Phase 1)
+  const [codetteConnected, setCodetteConnected] = useState(false);
+  const [codetteLoading, setCodetteLoading] = useState(false);
+  const [codetteSuggestions, setCodetteSuggestions] = useState<
+    CodetteSuggestion[]
+  >([]);
+  const codetteRef = useRef(getCodetteBridge());
   // Phase 3: New state
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [loopRegion, setLoopRegion] = useState<LoopRegion>({
@@ -242,6 +264,43 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       setTracks(tracksToSet);
     }
   }, [currentProject]);
+
+  // Initialize Codette connection (Phase 1)
+  useEffect(() => {
+    const bridge = codetteRef.current;
+
+    const handleConnected = () => setCodetteConnected(true);
+    const handleDisconnected = () => setCodetteConnected(false);
+
+    bridge.on("connected", handleConnected);
+    bridge.on("disconnected", handleDisconnected);
+
+    // Initial health check
+    bridge.healthCheck().then((connected) => {
+      setCodetteConnected(connected);
+    });
+
+    return () => {
+      bridge.off("connected", handleConnected);
+      bridge.off("disconnected", handleDisconnected);
+    };
+  }, []);
+
+  // Sync DAW state to Codette periodically (Phase 1)
+  useEffect(() => {
+    if (!codetteConnected || !isPlaying) return;
+
+    const syncInterval = setInterval(() => {
+      const bridge = codetteRef.current;
+      bridge
+        .syncState(tracks, currentTime, isPlaying, 120) // Default to 120 BPM for now
+        .catch((err) => {
+          console.debug("[DAWContext] Sync failed:", err);
+        });
+    }, 5000); // Sync every 5 seconds during playback
+
+    return () => clearInterval(syncInterval);
+  }, [codetteConnected, tracks, currentTime, isPlaying]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -1112,6 +1171,122 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     return midiRoutes.filter(r => r.targetTrackId === trackId);
   };
 
+  // Codette AI Integration Methods (Phase 1)
+  const getSuggestionsForTrack = async (
+    trackId: string,
+    context?: string
+  ): Promise<CodetteSuggestion[]> => {
+    if (!codetteConnected) {
+      console.warn("[DAWContext] Codette not connected");
+      return [];
+    }
+
+    setCodetteLoading(true);
+    try {
+      const track = tracks.find((t) => t.id === trackId);
+      if (!track) return [];
+
+      const suggestions = await codetteRef.current.getSuggestions({
+        type: context || "mixing",
+        track_type: track.type,
+        mood: "professional",
+      });
+
+      setCodetteSuggestions(suggestions.suggestions);
+      return suggestions.suggestions;
+    } catch (error) {
+      console.error("[DAWContext] Failed to get suggestions:", error);
+      return [];
+    } finally {
+      setCodetteLoading(false);
+    }
+  };
+
+  const applyCodetteSuggestion = async (
+    trackId: string,
+    suggestion: CodetteSuggestion
+  ): Promise<boolean> => {
+    if (!codetteConnected) {
+      console.warn("[DAWContext] Codette not connected");
+      return false;
+    }
+
+    try {
+      // Apply suggestion parameters to track
+      const updatedParams = suggestion.parameters || {};
+
+      updateTrack(trackId, {
+        // Apply parameters based on suggestion type
+        volume: updatedParams.volume !== undefined ? updatedParams.volume : undefined,
+        pan: updatedParams.pan !== undefined ? updatedParams.pan : undefined,
+        inputGain:
+          updatedParams.inputGain !== undefined
+            ? updatedParams.inputGain
+            : undefined,
+      });
+
+      // If suggestion includes plugins/effects, add them
+      if (updatedParams.plugin) {
+        addPluginToTrack(trackId, {
+          id: `plugin-${Date.now()}`,
+          name: updatedParams.plugin,
+          type: "eq",
+          enabled: true,
+          parameters: updatedParams.pluginParams || {},
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.error("[DAWContext] Failed to apply suggestion:", error);
+      return false;
+    }
+  };
+
+  const analyzeTrackWithCodette = async (trackId: string): Promise<any> => {
+    if (!codetteConnected) {
+      console.warn("[DAWContext] Codette not connected");
+      return null;
+    }
+
+    try {
+      const track = tracks.find((t) => t.id === trackId);
+      if (!track) return null;
+
+      const analysis = await codetteRef.current.analyzeAudio({
+        duration: 10, // Placeholder
+        sample_rate: 44100,
+        peak_level: track.volume,
+        rms_level: track.volume - 6, // Rough estimate
+      });
+
+      return analysis;
+    } catch (error) {
+      console.error("[DAWContext] Failed to analyze track:", error);
+      return null;
+    }
+  };
+
+  const syncDAWStateToCodette = async (): Promise<boolean> => {
+    if (!codetteConnected) {
+      console.warn("[DAWContext] Codette not connected");
+      return false;
+    }
+
+    try {
+      const result = await codetteRef.current.syncState(
+        tracks,
+        currentTime,
+        isPlaying,
+        120 // Default to 120 BPM for now
+      );
+      return result.synced;
+    } catch (error) {
+      console.error("[DAWContext] Failed to sync state:", error);
+      return false;
+    }
+  };
+
   return (
     <DAWContext.Provider
       value={{
@@ -1227,6 +1402,14 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         selectedInputDevice,
         // CPU Usage
         cpuUsageDetailed: cpuUsageDetailedState,
+        // Codette AI Integration (Phase 1)
+        codetteConnected,
+        codetteLoading,
+        codetteSuggestions,
+        getSuggestionsForTrack,
+        applyCodetteSuggestion,
+        analyzeTrackWithCodette,
+        syncDAWStateToCodette,
       }}
     >
       {children}
