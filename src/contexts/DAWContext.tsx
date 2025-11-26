@@ -161,6 +161,13 @@ interface DAWContextType {
     startTime?: number,
     endTime?: number
   ) => Promise<any>;
+  // WebSocket Status (Phase 4)
+  getWebSocketStatus: () => { connected: boolean; reconnectAttempts: number };
+  getCodetteBridgeStatus: () => {
+    connected: boolean;
+    reconnectCount: number;
+    isReconnecting: boolean;
+  };
   // Utility
   cpuUsageDetailed: Record<string, number>;
 }
@@ -275,15 +282,43 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentProject]);
 
-  // Initialize Codette connection (Phase 1)
+  // Initialize Codette connection (Phase 1 & Phase 4: WebSocket)
   useEffect(() => {
     const bridge = codetteRef.current;
 
     const handleConnected = () => setCodetteConnected(true);
     const handleDisconnected = () => setCodetteConnected(false);
 
+    // WebSocket event handlers (Phase 4)
+    const handleTransportChanged = (transportState: any) => {
+      console.debug("[DAWContext] Received transport update from WebSocket:", transportState);
+      // Sync seek position if different
+      if (transportState.current_time && Math.abs(transportState.current_time - currentTime) > 0.5) {
+        seek(transportState.current_time);
+      }
+    };
+
+    const handleSuggestionReceived = (suggestion: any) => {
+      console.debug("[DAWContext] Received suggestion from WebSocket:", suggestion);
+      setCodetteSuggestions((prev) => [suggestion, ...prev].slice(0, 5)); // Keep latest 5
+    };
+
+    const handleAnalysisComplete = (analysis: any) => {
+      console.debug("[DAWContext] Analysis complete from WebSocket:", analysis);
+      // Analysis data received, UI handles this via component re-renders
+    };
+
+    const handleWsConnected = (connected: boolean) => {
+      console.debug("[DAWContext] WebSocket status changed:", connected);
+      // Could trigger additional sync when WS connects
+    };
+
     bridge.on("connected", handleConnected);
     bridge.on("disconnected", handleDisconnected);
+    bridge.on("transport_changed", handleTransportChanged);
+    bridge.on("suggestion_received", handleSuggestionReceived);
+    bridge.on("analysis_complete", handleAnalysisComplete);
+    bridge.on("ws_connected", handleWsConnected);
 
     // Initial health check
     bridge.healthCheck().then((connected) => {
@@ -293,6 +328,10 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     return () => {
       bridge.off("connected", handleConnected);
       bridge.off("disconnected", handleDisconnected);
+      bridge.off("transport_changed", handleTransportChanged);
+      bridge.off("suggestion_received", handleSuggestionReceived);
+      bridge.off("analysis_complete", handleAnalysisComplete);
+      bridge.off("ws_connected", handleWsConnected);
     };
   }, []);
 
@@ -1437,6 +1476,15 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // WebSocket Status Methods (Phase 4)
+  const getWebSocketStatus = () => {
+    return codetteRef.current.getWebSocketStatus();
+  };
+
+  const getCodetteBridgeStatus = () => {
+    return codetteRef.current.getState();
+  };
+
   return (
     <DAWContext.Provider
       value={{
@@ -1565,6 +1613,8 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         codetteTransportSeek,
         codetteSetTempo,
         codetteSetLoop,
+        getWebSocketStatus,
+        getCodetteBridgeStatus,
       }}
     >
       {children}
