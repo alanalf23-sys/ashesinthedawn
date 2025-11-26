@@ -115,13 +115,13 @@ export default function TimelineWithLoopMarkers() {
       {/* Playhead */}
       <div
         style={{ transform: `translateX(${time * scale}px)` }}
-        className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20 transition-transform duration-[30ms] ease-linear"
+        className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20 transition-transform duration-50 ease-linear"
       />
 
       {/* Playhead cap */}
       <div
         style={{ transform: `translateX(${time * scale - 6}px)` }}
-        className="absolute top-0 w-3 h-6 bg-red-500 rounded-b z-20 pointer-events-none transition-transform duration-[30ms] ease-linear"
+        className="absolute top-0 w-3 h-6 bg-red-500 rounded-b z-20 pointer-events-none transition-transform duration-50 ease-linear"
       />
 
       {/* Time labels */}

@@ -487,9 +487,500 @@ class CodetteAnalyzer:
             },
             reasoning="Analyzed creative enhancement opportunities"
         )
+    
+    # ==================== MUSICAL KNOWLEDGE METHODS ====================
+    
+    def get_musical_context(self, genre: str = None, tempo_bpm: int = None, 
+                           time_signature: str = None) -> Dict[str, Any]:
+        """Get musical context information"""
+        context = {
+            "genre": genre,
+            "tempo": tempo_bpm,
+            "time_signature": time_signature,
+            "recommendations": []
+        }
+        
+        # Add tempo-specific recommendations
+        if tempo_bpm:
+            context["tempo_info"] = self.training_data.get_tempo_info(
+                self._get_tempo_marking(tempo_bpm)
+            )
+            # Suggest delay sync times
+            context["delay_sync_suggestions"] = {
+                "quarter_note": self.training_data.get_delay_sync_time(tempo_bpm, "quarter_note"),
+                "eighth_note": self.training_data.get_delay_sync_time(tempo_bpm, "eighth_note"),
+                "triplet_eighth": self.training_data.get_delay_sync_time(tempo_bpm, "triplet_eighth"),
+                "dotted_eighth": self.training_data.get_delay_sync_time(tempo_bpm, "dotted_eighth")
+            }
+        
+        # Add genre-specific recommendations
+        if genre:
+            genre_info = self.training_data.get_genre_knowledge(genre)
+            context["genre_info"] = genre_info
+            if genre_info:
+                context["recommendations"].append(f"Genre: {genre}")
+                if "tempo_range" in genre_info:
+                    context["recommendations"].append(
+                        f"Typical tempo: {genre_info['tempo_range'][0]}-{genre_info['tempo_range'][1]} BPM"
+                    )
+                if "instrumentation" in genre_info:
+                    context["recommendations"].append(
+                        f"Key instruments: {', '.join(genre_info['instrumentation'])}"
+                    )
+        
+        # Add time signature info
+        if time_signature:
+            context["time_signature_info"] = self.training_data.get_time_signature_info(
+                time_signature
+            )
+        
+        return context
+    
+    def _get_tempo_marking(self, bpm: int) -> str:
+        """Convert BPM to tempo marking"""
+        tempo_markings = self.training_data.tempo_knowledge["tempo_markings"]
+        for marking, (min_bpm, max_bpm) in tempo_markings.items():
+            if min_bpm <= bpm <= max_bpm:
+                return marking
+        return "moderato"
+    
+    def suggest_effects_for_genre(self, genre: str, track_type: str) -> List[Dict[str, Any]]:
+        """Suggest effects based on genre and track type"""
+        genre_info = self.training_data.get_genre_knowledge(genre)
+        track_suggestions = self.training_data.get_plugin_suggestion(track_type, [])
+        
+        recommendations = []
+        if genre_info and track_suggestions:
+            recommendations.extend(track_suggestions)
+        
+        # Add genre-specific effects
+        genre_effects = {
+            "pop": ["EQ", "Compressor", "Reverb"],
+            "rock": ["Distortion", "Compressor", "Delay"],
+            "jazz": ["Reverb", "Compression", "Saturation"],
+            "electronic": ["Delay", "Reverb", "Filter"],
+            "classical": ["Reverb", "Light Compression", "EQ"],
+            "hip_hop": ["Compressor", "EQ", "Saturation"]
+        }
+        
+        if genre.lower() in genre_effects:
+            for effect in genre_effects[genre.lower()]:
+                recommendations.append({
+                    "category": "Genre-specific",
+                    "suggestion": effect,
+                    "reason": f"Common effect in {genre}"
+                })
+        
+        return recommendations
+    
+    def analyze_chord_compatibility(self, scale: str, chord: str) -> Dict[str, Any]:
+        """Analyze if chord is compatible with scale"""
+        scale_info = self.training_data.get_scale_info(scale)
+        chord_info = self.training_data.get_chord_info(chord)
+        
+        if not scale_info or not chord_info:
+            return {"compatible": False, "reason": "Invalid scale or chord"}
+        
+        # Simple compatibility check (in real implementation, would compare degrees)
+        return {
+            "scale": scale,
+            "chord": chord,
+            "compatible": True,
+            "scale_degrees": scale_info.get("degrees"),
+            "chord_degrees": chord_info.get("degrees")
+        }
+    
+    def get_musical_intervals(self) -> Dict[str, float]:
+        """Get all musical intervals with frequency ratios"""
+        return self.training_data.musical_knowledge["intervals"]
+    
+    def get_chromatic_scale(self) -> List[str]:
+        """Get chromatic scale"""
+        return self.training_data.get_chromatic_scale()
+    
+    def get_genre_instrumentation(self, genre: str) -> List[str]:
+        """Get typical instrumentation for genre"""
+        genre_info = self.training_data.get_genre_knowledge(genre)
+        return genre_info.get("instrumentation", [])
+    
+    def analyze_mix_for_genre(self, genre: str, track_count: int, 
+                             avg_track_type: str) -> AnalysisResult:
+        """Analyze if mix matches genre conventions"""
+        genre_info = self.training_data.get_genre_knowledge(genre)
+        findings = []
+        recommendations = []
+        score = 85
+        
+        if not genre_info:
+            return AnalysisResult(
+                analysis_type="genre_mix",
+                status="warning",
+                score=50,
+                findings=["Unknown genre"],
+                recommendations=[],
+                metrics={},
+                reasoning="Cannot analyze unknown genre"
+            )
+        
+        # Check track count
+        if "instrumentation" in genre_info:
+            expected_instruments = len(genre_info["instrumentation"])
+            if track_count < expected_instruments - 2:
+                findings.append(f"Track count low for {genre} ({track_count} vs typical {expected_instruments})")
+                score -= 10
+            elif track_count > expected_instruments + 5:
+                findings.append(f"Mix has many tracks for {genre} (may be over-produced)")
+                score -= 5
+        
+        # Check tempo
+        if "tempo_range" in genre_info:
+            findings.append(f"{genre} typical tempo: {genre_info['tempo_range'][0]}-{genre_info['tempo_range'][1]} BPM")
+        
+        # Check structure
+        if "song_structure" in genre_info:
+            findings.append(f"Typical structure: {genre_info['song_structure']}")
+            recommendations.append({
+                "action": "follow_genre_structure",
+                "structure": genre_info["song_structure"]
+            })
+        
+        if not findings:
+            findings.append(f"Mix follows {genre} conventions")
+        
+        return AnalysisResult(
+            analysis_type="genre_mix",
+            status="good" if score >= 80 else "warning",
+            score=score,
+            findings=findings,
+            recommendations=recommendations,
+            metrics={"genre": genre, "track_count": track_count},
+            reasoning=f"Analyzed mix conformance to {genre} conventions"
+        )
+    
+    # ==================== EXTENDED GENRE ANALYSIS ====================
+    
+    def analyze_extended_genre(self, genre: str, metadata: Dict[str, Any]) -> AnalysisResult:
+        """Analyze music for extended genres (Funk, Soul, Country, Latin, Reggae)"""
+        extended_genres = ["funk", "soul", "country", "latin", "reggae"]
+        genre_lower = genre.lower()
+        
+        if genre_lower not in extended_genres:
+            return AnalysisResult(
+                analysis_type="extended_genre",
+                status="error",
+                score=0,
+                findings=["Genre not in extended genres list"],
+                recommendations=[],
+                metrics={"genre": genre},
+                reasoning="Extended genre analysis requires funk, soul, country, latin, or reggae"
+            )
+        
+        genre_specs = self.training_data.get_extended_genre_knowledge(genre)
+        findings = []
+        recommendations = []
+        score = 50  # Starting baseline
+        
+        # Check tempo
+        if "bpm" in metadata and "tempo_range" in genre_specs:
+            bpm = metadata["bpm"]
+            min_bpm, max_bpm = genre_specs["tempo_range"]
+            if min_bpm <= bpm <= max_bpm:
+                score += 15
+                findings.append(f"✓ Tempo {bpm} BPM is ideal for {genre}")
+            else:
+                findings.append(f"⚠ Tempo {bpm} BPM is outside {genre} range ({min_bpm}-{max_bpm})")
+                recommendations.append(f"Consider adjusting to {(min_bpm + max_bpm) // 2} BPM")
+        
+        # Genre-specific characteristics
+        if genre_lower == "funk":
+            if metadata.get("groove_tightness", 50) > 70:
+                score += 10
+                findings.append("✓ Tight groove detected - good for funk")
+            if metadata.get("syncopation_level", 0) > 60:
+                score += 10
+                findings.append("✓ Strong syncopation - typical for funk")
+        
+        elif genre_lower == "soul":
+            if metadata.get("vocal_emotion", 0) > 70:
+                score += 15
+                findings.append("✓ Emotional vocal quality detected")
+            if metadata.get("harmonic_complexity", 0) > 50:
+                score += 10
+                findings.append("✓ Complex harmonies - soulful characteristic")
+        
+        elif genre_lower == "country":
+            if metadata.get("storytelling_score", 0) > 60:
+                score += 10
+                findings.append("✓ Narrative quality detected")
+            findings.append("✓ Acoustic elements recommended")
+        
+        elif genre_lower == "latin":
+            if metadata.get("percussion_prominence", 0) > 70:
+                score += 15
+                findings.append("✓ Prominent percussion - essential for Latin")
+            if metadata.get("clave_pattern_detected", False):
+                score += 15
+                findings.append("✓ Clave pattern detected")
+        
+        elif genre_lower == "reggae":
+            if metadata.get("one_drop_rhythm", False):
+                score += 20
+                findings.append("✓ One-drop rhythm pattern detected")
+            if metadata.get("laid_back_feel", False):
+                score += 10
+                findings.append("✓ Laid-back groove characteristic present")
+        
+        return AnalysisResult(
+            analysis_type="extended_genre",
+            status="good" if score >= 75 else "warning",
+            score=min(100, score),
+            findings=findings,
+            recommendations=recommendations,
+            metrics={"genre": genre, "metadata": metadata},
+            reasoning=f"Analyzed composition for {genre} genre characteristics"
+        )
+    
+    # ==================== HARMONIC ANALYSIS ====================
+    
+    def analyze_harmonic_progression(self, chord_sequence: List[str]) -> Dict[str, Any]:
+        """Analyze harmonic progression for tension and release"""
+        return self.training_data.analyze_harmonic_progression(chord_sequence)
+    
+    # ==================== MELODIC ANALYSIS ====================
+    
+    def analyze_melodic_contour(self, note_sequence: List[str]) -> Dict[str, Any]:
+        """Analyze melodic shape and range"""
+        return self.training_data.analyze_melodic_contour(note_sequence)
+    
+    # ==================== RHYTHM ANALYSIS ====================
+    
+    def identify_rhythm_pattern(self, pattern_name: str) -> Dict[str, Any]:
+        """Identify rhythm pattern characteristics"""
+        return self.training_data.identify_rhythm_pattern(pattern_name)
+    
+    def get_available_rhythm_patterns(self) -> List[str]:
+        """Get all recognized rhythm patterns"""
+        return self.training_data.list_rhythm_patterns()
+    
+    # ==================== MICROTONALITY SUPPORT ====================
+    
+    def get_microtone_analysis(self, microtone_type: str) -> Dict[str, Any]:
+        """Get microtonal division analysis"""
+        return self.training_data.get_microtone_info(microtone_type)
+    
+    def analyze_raga_notes(self, raga_name: str) -> Dict[str, Any]:
+        """Analyze Indian raga note system"""
+        return self.training_data.get_raga_note_variants("any_note")
+    
+    # ==================== SPECTRAL ANALYSIS ====================
+    
+    def analyze_harmonic_content(self) -> Dict[str, Any]:
+        """Get harmonic series alignment info"""
+        return self.training_data.get_harmonic_series_info()
+    
+    def analyze_timbre_brightness(self, brightness_level: str) -> Dict[str, Any]:
+        """Analyze timbral brightness and spectral centroid"""
+        return self.training_data.get_timbral_brightness_classification(brightness_level)
+    
+    # ==================== COMPOSITION ENGINE ====================
+    
+    def suggest_chord_progressions(self, genre: str, style: str = "simple") -> Dict[str, Any]:
+        """Suggest chord progressions for composition"""
+        progressions = self.training_data.suggest_chord_progressions(genre, style)
+        return {
+            "genre": genre,
+            "style": style,
+            "suggested_progressions": progressions,
+            "count": len(progressions),
+            "tips": "Use these as starting points for your composition"
+        }
+    
+    def get_composition_rules(self) -> Dict[str, Any]:
+        """Get melodic construction rules"""
+        return self.training_data.get_melodic_construction_rules()
+    
+    # ==================== EAR TRAINING ENGINE ====================
+    
+    def create_ear_training_session(self, exercise_type: str, level: str = "beginner") -> Dict[str, Any]:
+        """Create an ear training exercise"""
+        exercise = self.training_data.get_ear_training_exercise(exercise_type, level)
+        return {
+            "exercise_type": exercise_type,
+            "level": level,
+            "exercise_data": exercise,
+            "session_id": f"ear_training_{exercise_type}_{level}"
+        }
+    
+    def get_available_exercises(self) -> List[str]:
+        """Get all available ear training exercise types"""
+        return self.training_data.list_ear_training_types()
 
-# Create global analyzer instance
-analyzer = CodetteAnalyzer()
+    # ==================== NEW ADVANCED ANALYSIS METHODS ====================
+
+    def detect_genre_realtime(self, audio_metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Real-time genre detection from audio metadata"""
+        candidates = self.training_data.detect_genre_candidates(audio_metadata)
+        
+        if not candidates:
+            return {
+                "detected_genre": "Unknown",
+                "confidence": 0,
+                "candidates": [],
+                "recommendation": "Add more tempo and instrument metadata"
+            }
+        
+        top_candidate = candidates[0]
+        return {
+            "detected_genre": top_candidate["genre"],
+            "confidence": top_candidate["confidence"],
+            "candidates": candidates[:5],  # Top 5
+            "recommendation": f"Suggested genre: {top_candidate['genre']} ({top_candidate['confidence']:.0f}% confidence)"
+        }
+
+    def validate_chord_progression(self, chords: List[str]) -> Dict[str, Any]:
+        """Validate chord progression against music theory"""
+        validation = self.training_data.validate_harmonic_progression(chords)
+        return {
+            "progression": "-".join(chords),
+            "valid": validation["valid"],
+            "tension_map": validation["tension_map"],
+            "theory_score": validation["score"],
+            "warnings": validation["warnings"],
+            "suggestions": validation["suggestions"]
+        }
+
+    def get_ear_training_visual_data(self, exercise_type: str, interval_or_chord: str) -> Dict[str, Any]:
+        """Get visual feedback data for ear training"""
+        if exercise_type == "interval":
+            visual = self.training_data.get_ear_training_visual(interval_or_chord)
+            return {
+                "exercise_type": "interval",
+                "target": interval_or_chord,
+                "visual": visual.get("visual", "?"),
+                "semitones": visual.get("semitones", 0),
+                "ratio": visual.get("ratio", 1.0),
+                "description": visual.get("description", ""),
+                "feedback": "Watch the visual indicator as you listen"
+            }
+        
+        return {
+            "error": f"Unknown exercise type: {exercise_type}",
+            "supported_types": ["interval", "chord", "rhythm"]
+        }
+
+    def get_production_workflow(self, stage: str = None) -> Dict[str, Any]:
+        """Get production checklist for current stage"""
+        checklist = self.training_data.get_production_checklist(stage)
+        
+        if stage:
+            return {
+                "stage": stage,
+                "tasks": checklist.get("tasks", []),
+                "estimated_time": f"Varies by detail level",
+                "checklist_items": [
+                    {"task": task, "completed": False, "notes": ""}
+                    for task in checklist.get("tasks", [])
+                ]
+            }
+        
+        stages = []
+        for stage_name, stage_data in checklist.items():
+            stages.append({
+                "stage": stage_name,
+                "task_count": len(stage_data.get("tasks", [])),
+                "tasks_preview": stage_data.get("tasks", [])[:3]
+            })
+        
+        return {
+            "all_stages": stages,
+            "total_tasks": sum(len(s.get("tasks", [])) for s in checklist.values())
+        }
+
+    def connect_delay_sync_to_track(self, bpm: float, note_division: str = "quarter") -> Dict[str, Any]:
+        """Calculate delay times for tempo-locked effects"""
+        note_divisions = {
+            "whole": 4,
+            "half": 2,
+            "quarter": 1,
+            "eighth": 0.5,
+            "sixteenth": 0.25,
+            "triplet_quarter": 2/3,
+            "triplet_eighth": 1/3,
+            "dotted_quarter": 1.5,
+            "dotted_eighth": 0.75
+        }
+        
+        if note_division not in note_divisions:
+            return {"error": f"Unknown note division: {note_division}"}
+        
+        beat_value = note_divisions[note_division]
+        delay_ms = (60000 / bpm) * beat_value
+        
+        return {
+            "bpm": bpm,
+            "note_division": note_division,
+            "delay_ms": round(delay_ms, 2),
+            "delay_seconds": round(delay_ms / 1000, 3),
+            "synced_to": f"{note_division} note at {bpm} BPM"
+        }
+
+    def get_instrument_info(self, category: str, instrument: str) -> Dict[str, Any]:
+        """Get detailed instrument information for mixing"""
+        info = self.training_data.get_instrument_info(category, instrument)
+        return {
+            "instrument": instrument,
+            "category": category,
+            "frequency_range": info.get("frequency_range"),
+            "typical_frequencies": info.get("typical_frequencies"),
+            "characteristics": info.get("characteristics"),
+            "processing_chain": info.get("processing"),
+            "mixing_tips": info.get("mixing_tips")
+        }
+
+    def suggest_mixing_chain(self, category: str, instrument: str) -> Dict[str, Any]:
+        """Suggest processing chain for instrument"""
+        chain = self.training_data.suggest_processing_chain(category, instrument)
+        return {
+            "instrument": instrument,
+            "suggested_chain": chain,
+            "order_important": True,
+            "notes": "Follow this order for best results"
+        }
+
+    def get_all_instrument_categories(self) -> Dict[str, Any]:
+        """Get all available instrument categories"""
+        categories = self.training_data.get_all_instruments()
+        return {
+            "categories": list(categories.keys()),
+            "instruments_by_category": categories,
+            "total_instruments": sum(len(inst) for inst in categories.values())
+        }
+
+    def find_instruments_by_frequency(self, frequency_hz: int, tolerance_percent: float = 20) -> Dict[str, Any]:
+        """Find instruments that have typical frequencies near given frequency"""
+        matching_instruments = []
+        tolerance_range = frequency_hz * (tolerance_percent / 100)
+        
+        all_instruments = self.training_data.get_all_instruments()
+        for category, instruments in all_instruments.items():
+            for instrument in instruments:
+                typical_freqs = self.training_data.get_typical_frequencies(category, instrument)
+                for freq in typical_freqs:
+                    if abs(freq - frequency_hz) <= tolerance_range:
+                        matching_instruments.append({
+                            "instrument": instrument,
+                            "category": category,
+                            "frequency": freq,
+                            "deviation_hz": freq - frequency_hz
+                        })
+        
+        return {
+            "target_frequency": frequency_hz,
+            "tolerance_percent": tolerance_percent,
+            "matching_instruments": sorted(matching_instruments, key=lambda x: abs(x["deviation_hz"]))
+        }
+
+
 
 def analyze_session(analysis_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     """Main analysis function"""

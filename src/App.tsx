@@ -10,6 +10,7 @@ import SmartMixerContainer from './components/SmartMixerContainer';
 import EnhancedSidebar from './components/EnhancedSidebar';
 import WelcomeModal from './components/WelcomeModal';
 import ModalsContainer from './components/ModalsContainer';
+import FunctionExecutionLog from './components/FunctionExecutionLog';
 
 function AppContent() {
   const [showWelcome, setShowWelcome] = useState(true);
@@ -81,29 +82,31 @@ function AppContent() {
       onDragLeave={handleGlobalDragLeave}
       onDrop={handleGlobalDrop}
     >
-      {/* Menu Bar */}
+      {/* Menu Bar - Fixed */}
       <MenuBar />
 
-      {/* SECTION 1: TOP - Arrangement/Timeline View with Tracks */}
-      <div className="flex-1 flex overflow-hidden gap-0 min-h-0">
-        {/* Left Sidebar - Track List */}
-        <div className="w-56 bg-gray-900 border-r border-gray-700 flex flex-col overflow-hidden text-xs">
+      {/* SECTION 1: TOP - Arrangement/Timeline View with Tracks (Responsive) */}
+      <div className="flex-1 flex overflow-hidden gap-0 min-h-0 min-w-0">
+        {/* Left Sidebar - Track List (Adaptive width: 12-25% of screen) */}
+        <div className="w-1/6 min-w-40 max-w-64 bg-gray-900 border-r border-gray-700 flex flex-col overflow-hidden text-xs transition-all duration-300 hover:shadow-lg">
           <TrackList />
         </div>
 
-        {/* Main Timeline View */}
-        <div className="flex-1 overflow-hidden bg-gray-950">
+        {/* Main Timeline View (Takes remaining space) */}
+        <div className="flex-1 overflow-auto bg-gray-950 relative">
           <Timeline />
         </div>
 
-        {/* Right Sidebar - Enhanced Multi-Tab Browser & Controls */}
-        <div className="w-80 bg-gray-900 border-l border-gray-700 flex flex-col overflow-hidden text-xs">
+        {/* Right Sidebar - Enhanced Multi-Tab Browser & Controls (Adaptive width: 18-25% of screen) */}
+        <div className="w-1/5 min-w-48 max-w-96 bg-gray-900 border-l border-gray-700 flex flex-col overflow-hidden text-xs transition-all duration-300 hover:shadow-lg">
           <EnhancedSidebar />
         </div>
       </div>
 
-      {/* SECTION 2: MIDDLE - Transport Controls (TopBar) */}
-      <TopBar />
+      {/* SECTION 2: MIDDLE - Transport Controls (TopBar) - Fixed Height */}
+      <div className="h-12 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
+        <TopBar />
+      </div>
 
       {/* SECTION 3: BOTTOM - Mixer View with Channel Strips */}
       <SmartMixerContainer>
@@ -119,6 +122,9 @@ function AppContent() {
           </div>
         </div>
       )}
+
+      {/* Real-time Function Execution Log */}
+      <FunctionExecutionLog />
 
       {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
       <ModalsContainer />

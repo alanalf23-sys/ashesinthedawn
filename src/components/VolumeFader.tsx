@@ -194,7 +194,7 @@ export default function VolumeFader({
             {/* Thumb/Handle */}
             <div
               ref={thumbRef}
-              className="absolute left-1/2 w-6 h-4 -translate-x-1/2 rounded shadow-lg hover:shadow-xl hover:shadow-blue-500/50 cursor-grab active:cursor-grabbing transition-all duration-100 border border-gray-400 hover:border-blue-400 hover:scale-110"
+              className="absolute left-1/2 w-6 h-4 -translate-x-1/2 rounded shadow-lg hover:shadow-xl hover:shadow-blue-500/50 cursor-grab active:cursor-grabbing transition-all duration-75 border border-gray-400 hover:border-blue-400 hover:scale-110"
               style={{
                 bottom: `calc(${thumbPercent}% - 8px)`,
                 backgroundColor: volumeColor,

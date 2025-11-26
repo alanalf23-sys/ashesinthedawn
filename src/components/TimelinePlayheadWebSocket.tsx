@@ -165,13 +165,13 @@ export default function TimelinePlayheadWebSocket() {
         {/* Playhead */}
         <div
           style={{ transform: `translateX(${playheadX}px)` }}
-          className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 pointer-events-none transition-transform duration-[30ms] ease-linear"
+          className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 pointer-events-none transition-transform duration-50 ease-linear"
         />
 
         {/* Playhead cap */}
         <div
           style={{ transform: `translateX(${playheadX - 6}px)` }}
-          className="absolute top-0 w-3 h-6 bg-red-500 rounded-b pointer-events-none z-10 transition-transform duration-[30ms] ease-linear"
+          className="absolute top-0 w-3 h-6 bg-red-500 rounded-b pointer-events-none z-10 transition-transform duration-50 ease-linear"
         />
       </div>
 

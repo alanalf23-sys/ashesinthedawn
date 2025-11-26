@@ -4,6 +4,9 @@ import { useState, useRef, useEffect, memo } from 'react';
 import MixerTile from './MixerTile';
 import DetachablePluginRack from './DetachablePluginRack';
 import MixerOptionsTile from './MixerOptionsTile';
+import { Tooltip, TOOLTIP_LIBRARY } from './TooltipProvider';
+import CodetteSuggestionsPanel from './CodetteSuggestionsPanel';
+import CodetteAnalysisPanel from './CodetteAnalysisPanel';
 
 interface DetachedTileState {
   trackId: string;
@@ -12,10 +15,10 @@ interface DetachedTileState {
 }
 
 // Define mixer constants with safe defaults (config accessed in component)
-const DEFAULT_STRIP_WIDTH = 120; // Default channel strip width
-const DEFAULT_STRIP_HEIGHT = 400;
-const MIN_STRIP_WIDTH = 100;
-const MAX_STRIP_WIDTH = 160;
+const DEFAULT_STRIP_WIDTH = 100; // Default channel strip width
+const DEFAULT_STRIP_HEIGHT = 350;
+const MIN_STRIP_WIDTH = 80;
+const MAX_STRIP_WIDTH = 140;
 
 const MixerComponent = () => {
   const { tracks, selectedTrack, updateTrack, deleteTrack, selectTrack, addPluginToTrack, removePluginFromTrack, togglePluginEnabled, addTrack } = useDAW();
@@ -159,25 +162,25 @@ const MixerComponent = () => {
   return (
     <>
       <div className="h-full w-full flex flex-col bg-gray-900 overflow-hidden">
-        <div className="h-10 bg-gradient-to-r from-gray-800 to-gray-750 border-b-2 border-gray-700 flex items-center justify-between px-4 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <Sliders className="w-4 h-4 text-gray-400" />
-            <span className="text-xs font-semibold text-gray-300">
-              Mixer (Live){" "}
-              {detachedTiles.length > 0 && `• ${detachedTiles.length} floating`}
+        <div className="h-10 bg-gradient-to-r from-gray-800 to-gray-750 border-b-2 border-gray-700 flex items-center justify-between px-3 gap-2 flex-shrink-0 overflow-x-auto">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Sliders className="w-3 h-3 text-gray-400" />
+            <span className="text-xs font-semibold text-gray-300 whitespace-nowrap">
+              Mixer{" "}
+              {detachedTiles.length > 0 && `(${detachedTiles.length})`}
             </span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-500">Drag top edge to resize • Settings: Options menu</span>
+          <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+            <span className="text-xs text-gray-500 hidden sm:inline">Drag • +Track</span>
             <button
               onClick={() => setIsMinimized(!isMinimized)}
-              className="p-1 hover:bg-gray-700 rounded transition-colors"
+              className="p-0.5 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
               title={isMinimized ? "Expand mixer" : "Minimize mixer"}
             >
               {isMinimized ? (
-                <ChevronUp className="w-4 h-4 text-gray-400 hover:text-gray-200" />
+                <ChevronUp className="w-3 h-3 text-gray-400 hover:text-gray-200" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-gray-400 hover:text-gray-200" />
+                <ChevronDown className="w-3 h-3 text-gray-400 hover:text-gray-200" />
               )}
             </button>
           </div>
@@ -223,7 +226,7 @@ const MixerComponent = () => {
               }
             `}</style>
             <div
-              className="flex h-full gap-2 p-3 min-w-max transition-all duration-300"
+              className="flex h-full gap-1 p-2 min-w-max transition-all duration-300"
               onDoubleClick={(e) => {
                 // Only add track if double-clicking on empty space (not on tracks)
                 if (e.target === e.currentTarget) {
@@ -257,47 +260,61 @@ const MixerComponent = () => {
 
                 <div className="flex flex-col items-center justify-between flex-1 gap-3 py-2">
                   {/* Master Fader - Interactive with continuous drag */}
-                  <div
-                    ref={faderContainerRef}
-                    className="flex-1 w-full flex items-end justify-center relative select-none"
-                    style={{ userSelect: "none" }}
-                  >
+                  <Tooltip content={TOOLTIP_LIBRARY['volume']} position="right">
                     <div
-                      className="rounded bg-gradient-to-b from-yellow-500 to-yellow-700 cursor-grab active:cursor-grabbing hover:shadow-lg transition-shadow"
-                      style={{
-                        width: "12px",
-                        height: `${masterFader * 100}%`,
-                        maxHeight: "140px",
-                        minHeight: "20px",
-                        boxShadow: faderDraggingRef.current
-                          ? "0 0 12px rgba(255, 200, 0, 1)"
-                          : "0 0 6px rgba(255, 200, 0, 0.7)",
-                      }}
-                      onMouseDown={() => {
-                        faderDraggingRef.current = true;
-                      }}
-                    />
-                  </div>
+                      ref={faderContainerRef}
+                      className="flex-1 w-full flex items-end justify-center relative select-none"
+                      style={{ userSelect: "none" }}
+                    >
+                      <div
+                        className="rounded bg-gradient-to-b from-yellow-500 to-yellow-700 cursor-grab active:cursor-grabbing hover:shadow-lg transition-shadow"
+                        style={{
+                          width: "12px",
+                          height: `${masterFader * 100}%`,
+                          maxHeight: "140px",
+                          minHeight: "20px",
+                          boxShadow: faderDraggingRef.current
+                            ? "0 0 12px rgba(255, 200, 0, 1)"
+                            : "0 0 6px rgba(255, 200, 0, 0.7)",
+                        }}
+                        onMouseDown={() => {
+                          faderDraggingRef.current = true;
+                        }}
+                      />
+                    </div>
+                  </Tooltip>
 
                   {/* Master Level Meter */}
-                  <div
-                    className="rounded border-2 border-yellow-700 bg-gray-950 flex flex-col-reverse shadow-inner"
-                    style={{
-                      width: "16px",
-                      height: "40px",
-                      minHeight: "40px",
+                  <Tooltip 
+                    content={{
+                      title: 'Level Meter',
+                      description: 'Real-time level display showing current master output level in dB',
+                      category: 'mixer',
+                      relatedFunctions: ['Volume Fader', 'Clipping Detection'],
+                      performanceTip: 'Green (-20 to -8dB) is safe; Yellow (-8 to -3dB) is good; Red (>-3dB) risks clipping',
+                      examples: ['Peak level indicator', 'RMS (Root Mean Square) display'],
                     }}
+                    position="right"
                   >
                     <div
+                      className="rounded border-2 border-yellow-700 bg-gray-950 flex flex-col-reverse shadow-inner"
                       style={{
-                        height: `${(levels.master || 0) * 100}%`,
-                        backgroundColor: getMeterColor(
-                          linearToDb(levels.master || 0.001)
-                        ),
-                        transition: "height 0.1s linear",
+                        width: "16px",
+                        height: "40px",
+                        minHeight: "40px",
                       }}
-                    />
-                  </div>
+                    >
+                      <div
+                        style={{
+                          height: `${(levels.master || 0) * 100}%`,
+                          backgroundColor: getMeterColor(
+                            linearToDb(levels.master || 0.001)
+                          ),
+                          transition: "height 0.1s linear",
+                        }}
+                      />
+                    </div>
+                  </Tooltip>
 
                   {/* dB Display */}
                   <div className="text-yellow-400 font-mono text-xs">

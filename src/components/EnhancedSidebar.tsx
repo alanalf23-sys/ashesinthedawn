@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Music, Plus, Grid, Zap } from 'lucide-react';
+import { Settings, Music, Plus, Grid, Zap, Lightbulb } from 'lucide-react';
 import Sidebar from './Sidebar';
 import AudioMonitor from './AudioMonitor';
 import TrackDetailsPanel from './TrackDetailsPanel';
@@ -8,13 +8,15 @@ import PluginBrowser from './PluginBrowser';
 import MIDISettings from './MIDISettings';
 import SpectrumVisualizerPanel from './SpectrumVisualizerPanel';
 import MarkerPanel from './MarkerPanel';
+import CodettePanel from './CodettePanel';
 
-type SidebarTab = 'files' | 'track' | 'routing' | 'plugins' | 'midi' | 'spectrum' | 'markers' | 'monitor';
+type SidebarTab = 'files' | 'track' | 'routing' | 'plugins' | 'midi' | 'spectrum' | 'markers' | 'monitor' | 'codette';
 
 export default function EnhancedSidebar() {
-  const [activeTab, setActiveTab] = useState<SidebarTab>('track');
+  const [activeTab, setActiveTab] = useState<SidebarTab>('codette');
 
   const tabs: { id: SidebarTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'codette', label: 'AI', icon: <Lightbulb className="w-4 h-4" /> },
     { id: 'track', label: 'Track', icon: <Music className="w-4 h-4" /> },
     { id: 'files', label: 'Files', icon: <Plus className="w-4 h-4" /> },
     { id: 'routing', label: 'Routing', icon: <Grid className="w-4 h-4" /> },
@@ -48,6 +50,7 @@ export default function EnhancedSidebar() {
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto">
+        {activeTab === 'codette' && <CodettePanel isVisible={true} />}
         {activeTab === 'track' && <TrackDetailsPanel />}
         {activeTab === 'files' && <Sidebar />}
         {activeTab === 'routing' && <RoutingMatrix />}

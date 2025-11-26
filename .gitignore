@@ -22,11 +22,44 @@ dist-ssr
 *.sw?
 .env
 
-# Codette ML Models & Training Data (too large for git)
+# Codette Large Files & Artifacts (GitHub 100MB limit)
+# Build artifacts
+Codette/build/
+Codette/build_*/
+Codette/dist/
+Codette/dist_*/
+
+# Test executables & environments
+Codette/arviz_test/
+Codette/test_env/
+Codette/test_*/
+Codette/*.exe
+Codette/**/*.exe
+Codette/*.pkg
+Codette/**/*.pkg
+Codette/*.pyz
+Codette/**/*.pyz
+
+# ML Models & Training Data (too large for git)
 Codette/models/
 Codette/training/
+Codette/training_output/
 Codette/__pycache__/
+Codette/**/__pycache__/
 *.safetensors
 *.bin
 *.pt
 *.pth
+*.pkl
+*.h5
+*.joblib
+
+# Data files
+Codette/data/
+Codette/*.csv
+Codette/*.parquet
+
+# PyInstaller specs
+Codette/*.spec
+Codette/**/*.spec
+

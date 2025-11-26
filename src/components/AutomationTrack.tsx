@@ -3,6 +3,7 @@ import { AutomationCurve, AutomationPoint } from '../types';
 import { AutomationEngine } from '../lib/automationEngine';
 import { Trash2, Copy } from 'lucide-react';
 import { normalizeCanvasDimensions } from '../lib/windowScaling';
+import { Tooltip } from './TooltipProvider';
 
 interface AutomationTrackProps {
   curve: AutomationCurve;
@@ -275,21 +276,47 @@ export const AutomationTrack: React.FC<AutomationTrackProps> = ({
             <option value="latch">Latch</option>
           </select>
 
-          <button
-            onClick={onDuplicateCurve}
-            className="p-1 hover:bg-gray-700 rounded transition-colors"
-            title="Duplicate curve"
+          <Tooltip 
+            content={{
+              title: 'Duplicate Curve',
+              description: 'Create a copy of this automation curve',
+              hotkey: 'Ctrl+D',
+              category: 'automation',
+              relatedFunctions: ['Delete Curve', 'Record', 'Edit Points'],
+              performanceTip: 'Duplicating is faster than manually recreating complex curves',
+              examples: ['Duplicate automation from one track to another', 'Create variations by duplicating then editing'],
+            }}
+            position="top"
           >
-            <Copy size={14} className="text-gray-400" />
-          </button>
+            <button
+              onClick={onDuplicateCurve}
+              className="p-1 hover:bg-gray-700 rounded transition-colors"
+              title="Duplicate curve"
+            >
+              <Copy size={14} className="text-gray-400" />
+            </button>
+          </Tooltip>
 
-          <button
-            onClick={onDeleteCurve}
-            className="p-1 hover:bg-red-900/30 rounded transition-colors"
-            title="Delete curve"
+          <Tooltip 
+            content={{
+              title: 'Delete Curve',
+              description: 'Remove this automation curve from the track',
+              hotkey: 'Delete',
+              category: 'automation',
+              relatedFunctions: ['Add Curve', 'Clear All', 'Remove Point'],
+              performanceTip: 'Deleting automation frees memory and simplifies the mix',
+              examples: ['Delete unused automation', 'Clear and start fresh with a parameter'],
+            }}
+            position="top"
           >
-            <Trash2 size={14} className="text-red-400" />
-          </button>
+            <button
+              onClick={onDeleteCurve}
+              className="p-1 hover:bg-red-900/30 rounded transition-colors"
+              title="Delete curve"
+            >
+              <Trash2 size={14} className="text-red-400" />
+            </button>
+          </Tooltip>
         </div>
       </div>
 

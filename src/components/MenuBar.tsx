@@ -163,9 +163,25 @@ export default function MenuBar() {
       { label: 'Delete Clip', onClick: () => { console.log('Delete clip'); setActiveMenu(null); }, disabled: true },
       { label: 'Split at Cursor', onClick: () => { console.log('Split clip'); setActiveMenu(null); }, disabled: true },
     ],
+    Tools: [
+      {
+        label: 'Codette AI Assistant',
+        submenu: [
+          { label: 'Music Theory Reference', onClick: () => { console.log('Open theory reference'); setActiveMenu(null); } },
+          { label: 'Composition Helper', onClick: () => { console.log('Open composition helper'); setActiveMenu(null); } },
+          { label: 'AI Suggestions Panel', onClick: () => { console.log('Open suggestions'); setActiveMenu(null); } },
+          { divider: true },
+          { label: 'Delay Sync Calculator', onClick: () => { const bpm = prompt('Enter BPM:', '120'); if (bpm) { const quarter = (60000 / parseFloat(bpm)) / 0.25; alert(`Delay times at ${bpm} BPM:\n• Quarter: ${(quarter/1000).toFixed(2)}s\n• Eighth: ${(quarter*2/1000).toFixed(2)}s\n• Triplet: ${(quarter/1.5/1000).toFixed(2)}s`); } setActiveMenu(null); } },
+          { label: 'Genre Analysis', onClick: () => { console.log('Analyze genre'); setActiveMenu(null); } },
+          { label: 'Harmonic Progression Analysis', onClick: () => { console.log('Analyze progression'); setActiveMenu(null); } },
+          { label: 'Ear Training Exercises', onClick: () => { console.log('Start ear training'); setActiveMenu(null); } },
+        ],
+      },
+    ],
     Help: [
       { label: 'Documentation', onClick: () => { window.open('https://github.com/Raiff1982/ashesinthedawn', '_blank'); setActiveMenu(null); } },
       { label: 'Tutorials', onClick: () => { window.open('https://github.com/Raiff1982/ashesinthedawn/wiki', '_blank'); setActiveMenu(null); } },
+      { label: 'Codette Music Knowledge', onClick: () => { alert('Codette has been trained on:\n✓ All music theory (scales, chords, intervals)\n✓ Tempo and rhythm systems\n✓ Musical notation\n✓ 11 genres (Pop, Rock, Jazz, Classical, Electronic, Hip-Hop, Funk, Soul, Country, Latin, Reggae)\n✓ Advanced analysis (harmonic progressions, melodic contour, rhythm patterns)\n✓ Microtonality and spectral analysis\n✓ Composition and ear training'); setActiveMenu(null); } },
       { divider: true },
       { label: 'About CoreLogic Studio', onClick: () => { window.open('https://github.com/Raiff1982/ashesinthedawn', '_blank'); setActiveMenu(null); } },
     ],

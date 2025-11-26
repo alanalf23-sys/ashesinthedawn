@@ -92,7 +92,7 @@ export function TransportBar({
         {/* Stop */}
         <button
           onClick={handleStop}
-          className="p-2 hover:bg-gray-700 rounded transition-all duration-150 text-gray-400 hover:text-red-400 hover:shadow-md hover:shadow-red-500/20 hover:scale-110 transform active:scale-95"
+          className="p-2 hover:bg-gray-700 rounded transition-all duration-150 text-gray-400 hover:text-gray-200 hover:shadow-md hover:shadow-blue-500/20 hover:scale-110 transform active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
           title="Stop (0)"
         >
           <Square className="w-4 h-4" />

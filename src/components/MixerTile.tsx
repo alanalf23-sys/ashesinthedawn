@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Track, Plugin } from "../types";
 import { Trash2, Maximize2, Plus, X, Minimize } from "lucide-react";
-import Tooltip from "./Tooltip";
+import { Tooltip } from "./TooltipProvider";
 import VolumeFader from "./VolumeFader";
 
 interface MixerTileProps {
@@ -198,7 +198,18 @@ export default function MixerTile({
         />
 
         {/* Detach button overlay */}
-        <Tooltip content="Detach to floating window" position="right">
+        <Tooltip 
+          content={{
+            title: 'Detach Tile',
+            description: 'Move this track control to a floating window for flexible workspace layout',
+            hotkey: 'Double-click',
+            category: 'mixer',
+            relatedFunctions: ['Dock Tile', 'Resize', 'Move'],
+            performanceTip: 'Floating tiles stay on top of other windows; useful for multi-monitor setups',
+            examples: ['Detach one track to monitor while editing others', 'Create control surfaces by detaching multiple tracks'],
+          }}
+          position="left"
+        >
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -234,7 +245,15 @@ export default function MixerTile({
           <div className="flex gap-0.5 flex-shrink-0">
             {/* Mute Button */}
             <Tooltip
-              content={track.muted ? "Unmute" : "Mute"}
+              content={{
+                title: 'Mute Track',
+                description: 'Silence this track during playback. Audio is still processed internally.',
+                hotkey: 'M',
+                category: 'mixer',
+                relatedFunctions: ['Solo', 'Record Arm', 'Bypass Plugin'],
+                performanceTip: 'Muted tracks still consume CPU; freeze or delete for true CPU savings',
+                examples: ['Mute to compare different vocals', 'Mute backing track to hear lead clearly'],
+              }}
               position="bottom"
             >
               <button
@@ -254,7 +273,15 @@ export default function MixerTile({
 
             {/* Solo Button */}
             <Tooltip
-              content={track.soloed ? "Unsolo" : "Solo"}
+              content={{
+                title: 'Solo Track',
+                description: 'Isolate this track for listening. Mutes all other non-soloed tracks.',
+                hotkey: 'S',
+                category: 'mixer',
+                relatedFunctions: ['Mute', 'Record Arm', 'Select Track'],
+                performanceTip: 'Soloing does not reduce CPU - processing continues for muted tracks',
+                examples: ['Solo vocals to check for timing issues', 'Solo drums to verify kick/snare blend'],
+              }}
               position="bottom"
             >
               <button
@@ -274,7 +301,15 @@ export default function MixerTile({
 
             {/* Record Arm Button */}
             <Tooltip
-              content={track.armed ? "Disarm" : "Arm for recording"}
+              content={{
+                title: 'Record Arm',
+                description: 'Enable recording on this track. Audio input will be captured to this track.',
+                hotkey: 'R',
+                category: 'mixer',
+                relatedFunctions: ['Mute', 'Solo', 'Input Gain'],
+                performanceTip: 'Only one track can record at a time in mono mode; use aux buses for multi-track recording',
+                examples: ['Arm vocal track before recording vocals', 'Switch between tracks to record different parts'],
+              }}
               position="bottom"
             >
               <button
@@ -346,7 +381,17 @@ export default function MixerTile({
               </div>
 
               {/* dB Display */}
-              <Tooltip content="RMS level in decibels" position="right">
+              <Tooltip 
+                content={{
+                  title: 'Level Display',
+                  description: 'Current track level in decibels (dB). Green is safe, Yellow is good, Red risks clipping.',
+                  category: 'mixer',
+                  relatedFunctions: ['Volume Fader', 'Clipping Detection', 'Input Gain'],
+                  performanceTip: 'Aim for -6dB to -3dB peak to leave headroom for effects and mastering',
+                  examples: ['Vocals: -12dB to -6dB', 'Drums: -9dB to -3dB', 'Bass: -12dB to -6dB'],
+                }}
+                position="left"
+              >
                 <div
                   className="font-mono text-xs text-gray-400 text-center cursor-help"
                   style={{
@@ -442,7 +487,18 @@ export default function MixerTile({
         </div>
 
         {/* Delete Button */}
-        <Tooltip content="Delete track" position="top">
+        <Tooltip 
+          content={{
+            title: 'Delete Track',
+            description: 'Permanently remove this track and all its audio/MIDI data. Cannot be undone.',
+            hotkey: 'Delete',
+            category: 'mixer',
+            relatedFunctions: ['Add Track', 'Undo', 'Archive Track'],
+            performanceTip: 'Deleting unused tracks frees CPU and memory; consider freezing before deleting',
+            examples: ['Delete duplicate vocal takes', 'Remove reference tracks before exporting'],
+          }}
+          position="top"
+        >
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -494,7 +550,18 @@ export default function MixerTile({
         <span className="text-xs font-semibold text-gray-100 truncate flex-1">
           {track.name}
         </span>
-        <Tooltip content="Dock back to mixer" position="left">
+        <Tooltip 
+          content={{
+            title: 'Dock Tile',
+            description: 'Return this floating track control back to the main mixer window',
+            hotkey: 'Double-click title',
+            category: 'mixer',
+            relatedFunctions: ['Detach Tile', 'Minimize', 'Maximize'],
+            performanceTip: 'Docking frees screen space and integrates controls back into the main workspace',
+            examples: ['Dock when done monitoring a specific track', 'Dock all floating tiles before exporting'],
+          }}
+          position="left"
+        >
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -531,7 +598,18 @@ export default function MixerTile({
         {/* Inline Control Buttons */}
         <div className="flex gap-0.5 flex-shrink-0">
           {/* Mute Button */}
-          <Tooltip content={track.muted ? "Unmute" : "Mute"} position="bottom">
+          <Tooltip
+            content={{
+              title: 'Mute Track',
+              description: 'Silence this track during playback. Audio is still processed internally.',
+              hotkey: 'M',
+              category: 'mixer',
+              relatedFunctions: ['Solo', 'Record Arm', 'Bypass Plugin'],
+              performanceTip: 'Muted tracks still consume CPU; freeze or delete for true CPU savings',
+              examples: ['Mute to compare different vocals', 'Mute backing track to hear lead clearly'],
+            }}
+            position="bottom"
+          >
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -548,7 +626,18 @@ export default function MixerTile({
           </Tooltip>
 
           {/* Solo Button */}
-          <Tooltip content={track.soloed ? "Unsolo" : "Solo"} position="bottom">
+          <Tooltip
+            content={{
+              title: 'Solo Track',
+              description: 'Isolate this track for listening. Mutes all other non-soloed tracks.',
+              hotkey: 'S',
+              category: 'mixer',
+              relatedFunctions: ['Mute', 'Record Arm', 'Select Track'],
+              performanceTip: 'Soloing does not reduce CPU - processing continues for muted tracks',
+              examples: ['Solo vocals to check for timing issues', 'Solo drums to verify kick/snare blend'],
+            }}
+            position="bottom"
+          >
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -566,7 +655,15 @@ export default function MixerTile({
 
           {/* Record Arm Button */}
           <Tooltip
-            content={track.armed ? "Disarm" : "Arm for recording"}
+            content={{
+              title: 'Record Arm',
+              description: 'Enable recording on this track. Audio input will be captured to this track.',
+              hotkey: 'R',
+              category: 'mixer',
+              relatedFunctions: ['Mute', 'Solo', 'Input Gain'],
+              performanceTip: 'Only one track can record at a time in mono mode; use aux buses for multi-track recording',
+              examples: ['Arm vocal track before recording vocals', 'Switch between tracks to record different parts'],
+            }}
             position="bottom"
           >
             <button
@@ -608,7 +705,17 @@ export default function MixerTile({
         </div>
 
         {/* dB Display */}
-        <Tooltip content="RMS level in decibels" position="right">
+        <Tooltip 
+          content={{
+            title: 'Level Display',
+            description: 'Current track level in decibels (dB). Green is safe, Yellow is good, Red risks clipping.',
+            category: 'mixer',
+            relatedFunctions: ['Volume Fader', 'Clipping Detection', 'Input Gain'],
+            performanceTip: 'Aim for -6dB to -3dB peak to leave headroom for effects and mastering',
+            examples: ['Vocals: -12dB to -6dB', 'Drums: -9dB to -3dB', 'Bass: -12dB to -6dB'],
+          }}
+          position="right"
+        >
           <div
             className="font-mono text-xs text-gray-400 text-center cursor-help"
             style={{
@@ -633,7 +740,18 @@ export default function MixerTile({
       </div>
 
       {/* Delete */}
-      <Tooltip content="Delete track" position="top">
+      <Tooltip 
+        content={{
+          title: 'Delete Track',
+          description: 'Permanently remove this track and all its audio/MIDI data. Cannot be undone.',
+          hotkey: 'Delete',
+          category: 'mixer',
+          relatedFunctions: ['Add Track', 'Undo', 'Archive Track'],
+          performanceTip: 'Deleting unused tracks frees CPU and memory; consider freezing before deleting',
+          examples: ['Delete duplicate vocal takes', 'Remove reference tracks before exporting'],
+        }}
+        position="top"
+      >
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -651,7 +769,18 @@ export default function MixerTile({
       </Tooltip>
 
       {/* Resize Handle - Bottom Right Corner */}
-      <Tooltip content="Drag to resize window" position="left">
+      <Tooltip 
+        content={{
+          title: 'Resize Window',
+          description: 'Drag to resize this floating track control window',
+          hotkey: 'Drag corner',
+          category: 'mixer',
+          relatedFunctions: ['Dock Tile', 'Move Window', 'Minimize'],
+          performanceTip: 'Resize for better visibility of controls; larger windows show more details',
+          examples: ['Make narrower to fit multiple tracks on screen', 'Make taller for easier fader control'],
+        }}
+        position="left"
+      >
         <div
           onMouseDown={handleMouseDownResize}
           className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize bg-gradient-to-tl from-blue-500/40 to-transparent hover:from-blue-500/80 transition-all"

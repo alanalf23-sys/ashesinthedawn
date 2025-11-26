@@ -23,8 +23,8 @@ export default function SmartMixerContainer({ children, onPositionChange }: Smar
   const [position, setPosition] = useState<MixerPosition>({
     x: 10,
     y: TASKBAR_HEIGHT + 10,
-    width: 800,
-    height: 500,
+    width: Math.min(window.innerWidth - 20, 1200),
+    height: Math.max(200, window.innerHeight - TASKBAR_HEIGHT - 40),
     isMaximized: false,
   });
 
