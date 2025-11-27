@@ -169,6 +169,14 @@ interface DAWContextType {
     reconnectCount: number;
     isReconnecting: boolean;
   };
+  // Clipboard Operations
+  clipboardData: { type: 'track' | 'clip' | null; data: any };
+  cutTrack: (trackId: string) => void;
+  copyTrack: (trackId: string) => void;
+  pasteTrack: () => void;
+  selectAllTracks: () => void;
+  deselectAllTracks: () => void;
+  selectedTracks: Set<string>;
   // Utility
   cpuUsageDetailed: Record<string, number>;
 }
@@ -189,6 +197,9 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const [voiceControlActive, setVoiceControlActive] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Clipboard State
+  const [clipboardData, setClipboardData] = useState<{ type: 'track' | 'clip' | null; data: any }>({ type: null, data: null });
+  const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
   // Codette AI Integration (Phase 1)
   const [codetteConnected, setCodetteConnected] = useState(false);
   const [codetteLoading, setCodetteLoading] = useState(false);
@@ -714,6 +725,48 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       setSelectedTrack(null);
       console.log("Redo performed");
     }
+  };
+
+  // Clipboard Operations
+  const cutTrack = (trackId: string) => {
+    const trackToCut = tracks.find((t) => t.id === trackId);
+    if (trackToCut) {
+      setClipboardData({ type: 'track', data: JSON.parse(JSON.stringify(trackToCut)) });
+      deleteTrack(trackId);
+      console.log(`Track "${trackToCut.name}" cut to clipboard`);
+    }
+  };
+
+  const copyTrack = (trackId: string) => {
+    const trackToCopy = tracks.find((t) => t.id === trackId);
+    if (trackToCopy) {
+      setClipboardData({ type: 'track', data: JSON.parse(JSON.stringify(trackToCopy)) });
+      console.log(`Track "${trackToCopy.name}" copied to clipboard`);
+    }
+  };
+
+  const pasteTrack = () => {
+    if (clipboardData.type === 'track' && clipboardData.data) {
+      const pastedTrack = {
+        ...clipboardData.data,
+        id: `track-${Date.now()}`,
+        name: `${clipboardData.data.name} (Copy)`,
+      };
+      setTracks((prev) => [...prev, pastedTrack]);
+      setSelectedTrack(pastedTrack);
+      console.log(`Track "${pastedTrack.name}" pasted from clipboard`);
+    }
+  };
+
+  const selectAllTracks = () => {
+    const allTrackIds = new Set(tracks.map((t) => t.id));
+    setSelectedTracks(allTrackIds);
+    console.log(`Selected all ${tracks.length} tracks`);
+  };
+
+  const deselectAllTracks = () => {
+    setSelectedTracks(new Set());
+    console.log('Deselected all tracks');
   };
 
   // Set input gain (pre-fader) for a track both in state and audio engine
@@ -1636,6 +1689,14 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         codetteSetLoop,
         getWebSocketStatus,
         getCodetteBridgeStatus,
+        // Clipboard Operations
+        clipboardData,
+        cutTrack,
+        copyTrack,
+        pasteTrack,
+        selectAllTracks,
+        deselectAllTracks,
+        selectedTracks,
       }}
     >
       {children}

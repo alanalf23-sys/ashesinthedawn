@@ -14,7 +14,6 @@ import ModalsContainer from './components/ModalsContainer';
 function AppContent() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
-  const [mixerDocked, setMixerDocked] = useState(true);
   const [mixerHeight, setMixerHeight] = useState(200); // Initial mixer height in pixels
   const [isResizingMixer, setIsResizingMixer] = useState(false);
   const { uploadAudioFile, addTrack, selectTrack, tracks } = useDAW();
@@ -131,18 +130,15 @@ function AppContent() {
           </div>
 
           {/* Resizable Divider */}
-          {mixerDocked && (
-            <div
-              onMouseDown={() => setIsResizingMixer(true)}
-              className="h-1 bg-gradient-to-r from-gray-700 via-blue-600 to-gray-700 hover:from-gray-600 hover:via-blue-500 hover:to-gray-600 cursor-ns-resize transition-colors group flex items-center justify-center"
-              title="Drag to resize mixer"
-            >
-              <div className="w-12 h-0.5 bg-blue-400/50 rounded group-hover:bg-blue-300 transition-colors" />
-            </div>
-          )}
+          <div
+            onMouseDown={() => setIsResizingMixer(true)}
+            className="h-1 bg-gradient-to-r from-gray-700 via-blue-600 to-gray-700 hover:from-gray-600 hover:via-blue-500 hover:to-gray-600 cursor-ns-resize transition-colors group flex items-center justify-center"
+            title="Drag to resize mixer"
+          >
+            <div className="w-12 h-0.5 bg-blue-400/50 rounded group-hover:bg-blue-300 transition-colors" />
+          </div>
 
           {/* Mixer Below Timeline - With Adjustable Height */}
-          {mixerDocked && (
             <div
               id="mixer-container"
               className="border-t border-gray-700 bg-gray-900 flex-shrink-0 overflow-hidden flex flex-col transition-all"
@@ -152,7 +148,6 @@ function AppContent() {
                 <Mixer />
               </div>
             </div>
-          )}
         </div>
 
         {/* Right Sidebar - Browser & Codette */}

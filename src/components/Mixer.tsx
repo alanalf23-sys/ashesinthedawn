@@ -43,6 +43,7 @@ const MixerComponent = () => {
   const [isMinimized, setIsMinimized] = useState(false);
   const [codetteTab, setCodetteTab] = useState<'suggestions' | 'analysis' | 'control'>('suggestions');
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [showPluginRack, setShowPluginRack] = useState(false); // Show/hide plugin rack panel
 
   const animationRef = useRef<number | null>(null);
   const faderDraggingRef = useRef(false);
@@ -380,6 +381,7 @@ const MixerComponent = () => {
                         stripHeight={stripHeight}
                         isDetached={false}
                         onDetach={() => handleDetachTile(track.id)}
+                        onTogglePluginRack={() => setShowPluginRack(!showPluginRack)}
                       />
                     ))
                 )}
@@ -387,7 +389,7 @@ const MixerComponent = () => {
             </div>
 
             {/* Plugin Rack for Selected Track */}
-            {selectedTrack && selectedTrack.type !== 'master' && !detachedPluginRacks[selectedTrack.id] && (
+            {selectedTrack && selectedTrack.type !== 'master' && !detachedPluginRacks[selectedTrack.id] && showPluginRack && (
               <div className="h-32 border-t border-gray-700 bg-gray-800 p-4 overflow-y-auto flex-shrink-0">
                 <DetachablePluginRack
                   plugins={selectedTrack.inserts}
@@ -536,6 +538,7 @@ const MixerComponent = () => {
                 stripHeight={stripHeight}
                 isDetached={true}
                 onDock={() => handleDockTile(track.id)}
+                onTogglePluginRack={() => setShowPluginRack(!showPluginRack)}
               />
             </div>
           );
