@@ -9,10 +9,13 @@ import {
   Music,
   Flag,
   Zap,
+  Check,
+  AlertCircle,
 } from "lucide-react";
 import { useDAW } from "../contexts/DAWContext";
 import { useTransportClock } from "../hooks/useTransportClock";
 import { useCodette } from "../hooks/useCodette";
+import { useSaveStatus } from "../hooks/useSaveStatus";
 import { useState } from "react";
 
 export default function TopBar() {
@@ -39,6 +42,7 @@ export default function TopBar() {
 
   const { state: transport, connected } = useTransportClock();
   const { isConnected } = useCodette({ autoConnect: true });
+  const { isSaving, isSaved, isError } = useSaveStatus();
 
   const [codetteActiveTab, setCodetteActiveTab] = useState<'suggestions' | 'analysis' | 'control'>('suggestions');
 
@@ -205,6 +209,38 @@ export default function TopBar() {
 
       {/* RIGHT: Status */}
       <div className="flex-1" />
+
+      {/* Save Status Indicator */}
+      <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-all duration-200 ${
+        isSaving 
+          ? 'bg-blue-900/40 text-blue-400'
+          : isSaved 
+          ? 'bg-green-900/40 text-green-400'
+          : isError
+          ? 'bg-red-900/40 text-red-400'
+          : 'bg-transparent text-gray-600'
+      }`}
+      title={isSaving ? 'Saving project...' : isSaved ? 'Project saved' : 'Project auto-save'}
+      >
+        {isSaving && (
+          <>
+            <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+            <span className="text-xs font-medium">Saving...</span>
+          </>
+        )}
+        {isSaved && (
+          <>
+            <Check className="w-3 h-3" />
+            <span className="text-xs font-medium">Saved</span>
+          </>
+        )}
+        {isError && (
+          <>
+            <AlertCircle className="w-3 h-3" />
+            <span className="text-xs font-medium">Save error</span>
+          </>
+        )}
+      </div>
 
       {/* Codette Status */}
       <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
