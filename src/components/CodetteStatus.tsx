@@ -14,17 +14,44 @@ export function CodetteStatus() {
   const { selectedTrack, isPlaying, tracks } = useDAW();
   const [status, setStatus] = useState<CodetteConnectionStatus>({
     connected: false,
-    status: 'offline (backend not running)',
+    status: 'checking...',
   });
   const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
-    // Disabled: Python backend not running
-    // Set to offline by default
-    setStatus({
-      connected: false,
-      status: 'offline (backend not running)',
-    });
+    const checkConnection = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/health', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setStatus({
+            connected: true,
+            status: data.status || 'ready',
+            codette_available: data.codette_available,
+            perspectives: data.perspectives || [],
+          });
+        } else {
+          setStatus({
+            connected: false,
+            status: 'offline',
+            error: `HTTP ${response.status}`,
+          });
+        }
+      } catch (err) {
+        setStatus({
+          connected: false,
+          status: 'offline',
+          error: 'Connection refused',
+        });
+      }
+    };
+
+    checkConnection();
+    const interval = setInterval(checkConnection, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Count active effects

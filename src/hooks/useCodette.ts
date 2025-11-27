@@ -86,7 +86,7 @@ const CODETTE_API_URL = import.meta.env.VITE_CODETTE_API_URL || 'http://localhos
 
 export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
   const { 
-    autoConnect = false,  // Disabled by default - Python backend not running
+    autoConnect = true, 
     apiUrl = CODETTE_API_URL,
     onError,
   } = options || {};
