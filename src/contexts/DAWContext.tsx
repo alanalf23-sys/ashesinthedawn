@@ -21,6 +21,12 @@ import {
 import { supabase } from "../lib/supabase";
 import { getAudioEngine } from "../lib/audioEngine";
 import { getCodetteBridge, CodetteSuggestion } from "../lib/codetteBridge";
+import {
+  saveProjectToStorage,
+  loadProjectFromStorage,
+  clearProjectStorage,
+  createAutoSaveInterval,
+} from "../lib/projectStorage";
 
 interface DAWContextType {
   currentProject: Project | null;
@@ -271,6 +277,28 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const zoom = 1;
   const cpuUsage = 12;
   const audioEngineRef = useRef(getAudioEngine());
+
+  // Initialize project from storage on mount
+  useEffect(() => {
+    const savedProject = loadProjectFromStorage();
+    if (savedProject) {
+      setCurrentProject(savedProject);
+      console.log("[DAWContext] Project restored from localStorage");
+    }
+  }, []); // Run only once on mount
+
+  // Auto-save project whenever it changes
+  useEffect(() => {
+    if (!currentProject) return;
+
+    const cleanup = createAutoSaveInterval(currentProject, (success) => {
+      if (success) {
+        console.debug("[DAWContext] Project auto-saved");
+      }
+    });
+
+    return cleanup;
+  }, [currentProject]);
 
   useEffect(() => {
     if (currentProject) {
@@ -1021,7 +1049,7 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       const state = await bridge.setTempo(bpm);
       // Store BPM in current project if available
       if (currentProject) {
-        setCurrentProject({
+        handleSetCurrentProject({
           ...currentProject,
           bpm: bpm,
         });
@@ -1064,6 +1092,16 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
 
   const toggleVoiceControl = () => {
     setVoiceControlActive((prev) => !prev);
+  };
+
+  // Wrapper for setCurrentProject that also saves to localStorage
+  const handleSetCurrentProject = (project: Project | null) => {
+    setCurrentProject(project);
+    if (project) {
+      saveProjectToStorage(project);
+    } else {
+      clearProjectStorage();
+    }
   };
 
   const uploadAudioFile = async (file: File): Promise<boolean> => {
@@ -1152,6 +1190,9 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const saveProject = async () => {
     if (!currentProject) return;
 
+    // Save to localStorage immediately
+    saveProjectToStorage(currentProject);
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -1177,6 +1218,8 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
 
     if (error) {
       console.error("Error saving project:", error);
+    } else {
+      console.log("[DAWContext] Project saved to Supabase");
     }
   };
 
@@ -1574,7 +1617,7 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         cpuUsage,
         isUploadingFile,
         uploadError,
-        setCurrentProject,
+        setCurrentProject: handleSetCurrentProject,
         addTrack,
         selectTrack,
         updateTrack,
