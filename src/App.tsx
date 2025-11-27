@@ -1,13 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DAWProvider, useDAW } from './contexts/DAWContext';
 import { ThemeProvider } from './themes/ThemeContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import MenuBar from './components/MenuBar';
 import TopBar from './components/TopBar';
+import MenuBar from './components/MenuBar';
 import TrackList from './components/TrackList';
 import Timeline from './components/Timeline';
 import Mixer from './components/Mixer';
-import SmartMixerContainer from './components/SmartMixerContainer';
 import EnhancedSidebar from './components/EnhancedSidebar';
 import WelcomeModal from './components/WelcomeModal';
 import ModalsContainer from './components/ModalsContainer';
@@ -15,12 +14,36 @@ import ModalsContainer from './components/ModalsContainer';
 function AppContent() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
-  const [mixerDocked, setMixerDocked] = useState(false);
+  const [mixerDocked, setMixerDocked] = useState(true);
+  const [mixerHeight, setMixerHeight] = useState(200); // Initial mixer height in pixels
+  const [isResizingMixer, setIsResizingMixer] = useState(false);
   const { uploadAudioFile, addTrack, selectTrack, tracks } = useDAW();
 
-  // Debug: Verify MenuBar and AIPanel are imported
-  console.log('AppContent rendered with MenuBar:', MenuBar.name, 'imported from components');
+  // Handle mixer resize
+  useEffect(() => {
+    if (!isResizingMixer) return;
 
+    const handleMouseMove = (e: MouseEvent) => {
+      const container = document.getElementById('mixer-container');
+      if (!container) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const newHeight = Math.max(100, Math.min(500, containerRect.bottom - e.clientY));
+      setMixerHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingMixer(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingMixer]);
 
   const handleGlobalDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -83,44 +106,60 @@ function AppContent() {
       onDragLeave={handleGlobalDragLeave}
       onDrop={handleGlobalDrop}
     >
-      {/* Menu Bar - Fixed */}
-      <MenuBar />
-
-      {/* SECTION 1: TOP - Arrangement/Timeline View with Tracks (Responsive) */}
-      <div className="flex-1 flex overflow-hidden gap-0 min-h-0 min-w-0">
-        {/* Left Sidebar - Track List (Adaptive width: 12-25% of screen) */}
-        <div className="w-1/6 min-w-40 max-w-64 bg-gray-900 border-r border-gray-700 flex flex-col overflow-hidden text-xs transition-all duration-300 hover:shadow-lg">
-          <TrackList />
-        </div>
-
-        {/* Main Timeline View (Takes remaining space) */}
-        <div className="flex-1 overflow-auto bg-gray-950 relative">
-          <Timeline />
-        </div>
-
-        {/* Right Sidebar - Enhanced Multi-Tab Browser & Controls (Adaptive width: 18-25% of screen) */}
-        <div className="w-1/5 min-w-48 max-w-96 bg-gray-900 border-l border-gray-700 flex flex-col overflow-hidden text-xs transition-all duration-300 hover:shadow-lg">
-          <EnhancedSidebar />
-        </div>
+      {/* Menu Bar */}
+      <div className="h-8 flex-shrink-0">
+        <MenuBar />
       </div>
 
-      {/* SECTION 2: MIDDLE - Transport Controls (TopBar) - Fixed Height */}
-      <div className="h-12 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
+      {/* Top Bar - Transport Controls */}
+      <div className="h-12 flex-shrink-0 border-b border-gray-700">
         <TopBar />
       </div>
 
-      {/* SECTION 3: BOTTOM - Mixer View with Channel Strips */}
-      {mixerDocked ? (
-        <div className="flex-1 overflow-hidden bg-gray-900">
-          <SmartMixerContainer onDockChange={setMixerDocked}>
-            <Mixer />
-          </SmartMixerContainer>
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden gap-0 min-h-0 min-w-0">
+        {/* Left Sidebar - Track List */}
+        <div className="w-52 bg-gray-900 border-r border-gray-700 flex flex-col overflow-hidden text-xs">
+          <TrackList />
         </div>
-      ) : (
-        <SmartMixerContainer onDockChange={setMixerDocked}>
-          <Mixer />
-        </SmartMixerContainer>
-      )}
+
+        {/* Main Timeline + Mixer View */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-gray-950">
+          {/* Timeline */}
+          <div className="flex-1 overflow-auto">
+            <Timeline />
+          </div>
+
+          {/* Resizable Divider */}
+          {mixerDocked && (
+            <div
+              onMouseDown={() => setIsResizingMixer(true)}
+              className="h-1 bg-gradient-to-r from-gray-700 via-blue-600 to-gray-700 hover:from-gray-600 hover:via-blue-500 hover:to-gray-600 cursor-ns-resize transition-colors group flex items-center justify-center"
+              title="Drag to resize mixer"
+            >
+              <div className="w-12 h-0.5 bg-blue-400/50 rounded group-hover:bg-blue-300 transition-colors" />
+            </div>
+          )}
+
+          {/* Mixer Below Timeline - With Adjustable Height */}
+          {mixerDocked && (
+            <div
+              id="mixer-container"
+              className="border-t border-gray-700 bg-gray-900 flex-shrink-0 overflow-hidden flex flex-col transition-all"
+              style={{ height: `${mixerHeight}px` }}
+            >
+              <div className="w-full h-full flex flex-col overflow-hidden">
+                <Mixer />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Sidebar - Browser & Codette */}
+        <div className="w-64 bg-gray-900 border-l border-gray-700 flex flex-col overflow-hidden text-xs">
+          <EnhancedSidebar />
+        </div>
+      </div>
 
       {/* Global Drag Overlay */}
       {isDraggingGlobal && (
