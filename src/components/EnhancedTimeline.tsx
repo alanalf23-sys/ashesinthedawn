@@ -141,6 +141,8 @@ export default function Timeline({ onSeek }: TimelineProps) {
           {showTimeInput ? (
             <div className="flex items-center gap-1">
               <input
+                id="timeline-seek-input"
+                name="timeline-seek"
                 type="text"
                 value={timeInput}
                 onChange={(e) => setTimeInput(e.target.value)}

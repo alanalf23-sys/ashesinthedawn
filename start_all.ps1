@@ -1,11 +1,11 @@
-# CoreLogic Studio Complete Startup Manager
+﻿# CoreLogic Studio Complete Startup Manager
 
 $ErrorActionPreference = "Continue"
 
 Write-Host ""
-Write-Host "╔════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║   CoreLogic Studio - Startup Manager   ║" -ForegroundColor Green
-Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "" -ForegroundColor Green
+Write-Host "   CoreLogic Studio - Startup Manager   " -ForegroundColor Green
+Write-Host "" -ForegroundColor Green
 Write-Host ""
 
 # Step 1: Cleanup
@@ -31,7 +31,7 @@ Start-Sleep 5
 
 # Test backend
 try {
-    $health = Invoke-WebRequest -Uri "http://localhost:8000/health" -TimeoutSec 2 -ErrorAction Stop
+    $null = Invoke-WebRequest -Uri "http://localhost:8000/health" -TimeoutSec 2 -ErrorAction Stop
     Write-Host "      [OK] Backend is responding" -ForegroundColor Green
 }
 catch {
@@ -41,7 +41,7 @@ Write-Host ""
 
 # Step 3: Start Frontend
 Write-Host "Step 3: Starting Frontend on port 5173..." -ForegroundColor Yellow
-$frontendJob = Start-Job -ScriptBlock {
+$null = Start-Job -ScriptBlock {
     Set-Location "i:\ashesinthedawn"
     npm run dev
 }
@@ -51,7 +51,7 @@ Start-Sleep 5
 
 # Test frontend
 try {
-    $frontend = Invoke-WebRequest -Uri "http://localhost:5173" -TimeoutSec 2 -ErrorAction Stop
+    $null = Invoke-WebRequest -Uri "http://localhost:5173" -TimeoutSec 2 -ErrorAction Stop
     Write-Host "      [OK] Frontend is running" -ForegroundColor Green
 }
 catch {

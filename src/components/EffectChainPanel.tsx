@@ -98,9 +98,17 @@ export default function EffectChainPanel() {
 
       {/* Output Gain */}
       <div className="border-t border-gray-700 bg-gray-800 p-3">
-        <label className="text-xs font-semibold text-gray-400 block mb-2">Output Gain</label>
+        <label htmlFor="effect-chain-output-gain" className="text-xs font-semibold text-gray-400 block mb-2">Output Gain</label>
         <div className="flex items-center gap-2">
-          <input type="range" min="-12" max="12" defaultValue="0" className="flex-1" />
+          <input 
+            id="effect-chain-output-gain" 
+            name="output-gain" 
+            type="range" 
+            min="-12" 
+            max="12" 
+            defaultValue="0" 
+            className="flex-1" 
+          />
           <span className="text-xs text-gray-400 w-8 text-right">0 dB</span>
         </div>
       </div>

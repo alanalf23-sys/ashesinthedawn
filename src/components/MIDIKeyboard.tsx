@@ -118,8 +118,10 @@ export const MIDIKeyboard: React.FC<MIDIKeyboardProps> = ({
     >
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-xs font-semibold text-gray-300">MIDI Keyboard</h3>
-        <label className="text-xs text-gray-400 flex items-center gap-1">
+        <label htmlFor="enable-mouse-control" className="text-xs text-gray-400 flex items-center gap-1">
           <input
+            id="enable-mouse-control"
+            name="enable-mouse-control"
             type="checkbox"
             checked={enableMouseControl}
             onChange={(e) => setEnableMouseControl(e.target.checked)}

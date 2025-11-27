@@ -135,10 +135,10 @@ class ChatResponse(BaseModel):
     confidence: Optional[float] = None
 
 class AudioAnalysisRequest(BaseModel):
-    trackId: str
-    audioData: List[float]
-    sampleRate: int = 44100
-    contentType: Optional[str] = None
+    """Matches frontend CodetteAnalysisRequest format"""
+    audio_data: Optional[Dict[str, Any]] = None
+    analysis_type: Optional[str] = "spectrum"
+    track_data: Optional[Dict[str, Any]] = None
 
 class AudioAnalysisResponse(BaseModel):
     trackId: str
@@ -453,64 +453,70 @@ What would you like to learn? 🧠"""
 async def analyze_audio(request: AudioAnalysisRequest):
     """Analyze audio and provide real insights using CodetteAnalyzer"""
     try:
-        if not TRAINING_AVAILABLE or analyzer is None:
+        # Handle empty/missing audio data gracefully
+        if not request.audio_data:
             return AudioAnalysisResponse(
-                trackId=request.trackId,
+                trackId=request.track_data.get("track_id", "unknown") if request.track_data else "unknown",
+                analysis={
+                    "quality_score": 0.5,
+                    "findings": ["No audio data provided"],
+                    "recommendations": ["Upload audio data to analyze"],
+                },
+                status="success",
+            )
+        
+        if not TRAINING_AVAILABLE or analyzer is None:
+            track_id = request.track_data.get("track_id", "unknown") if request.track_data else "unknown"
+            return AudioAnalysisResponse(
+                trackId=track_id,
                 analysis={"error": "Training data not available"},
                 status="fallback",
             )
         
-        # Prepare audio metrics for analysis - convert linear to dB
-        audio_data = np.array(request.audioData)
-        
-        # Helper function to convert linear to dB
-        def to_db(value):
-            if value <= 0:
-                return -96.0  # Silence floor
-            return float(20 * np.log10(np.clip(value, 1e-7, 1.0)))
-        
-        level_linear = np.mean(np.abs(audio_data)) if len(audio_data) > 0 else 1e-7
-        peak_linear = np.max(np.abs(audio_data)) if len(audio_data) > 0 else 1e-7
-        rms_linear = float(np.sqrt(np.mean(audio_data**2))) if len(audio_data) > 0 else 1e-7
+        # Extract audio metrics from request
+        audio_metrics = request.audio_data
+        sample_rate = audio_metrics.get("sample_rate", 44100)
+        duration = audio_metrics.get("duration", 0)
+        peak_level = audio_metrics.get("peak_level", -96.0)
+        rms_level = audio_metrics.get("rms_level", -96.0)
         
         track_metrics = [{
-            "name": f"Track_{request.trackId}",
-            "level": to_db(level_linear),
-            "peak": to_db(peak_linear),
-            "rms": to_db(rms_linear),
+            "name": request.track_data.get("track_name", "Unknown") if request.track_data else "Unknown",
+            "level": rms_level,
+            "peak": peak_level,
+            "rms": rms_level,
         }]
         
-        # Perform real analysis based on content type
-        content_type = request.contentType or "mixed"
+        # Perform analysis based on analysis_type
+        analysis_type = request.analysis_type or "spectrum"
         
-        if content_type == "gain-staging":
+        if analysis_type == "dynamic":
             result = analyzer.analyze_gain_staging(track_metrics)
-        elif content_type == "mixing":
-            result = analyzer.analyze_mixing(track_metrics, [])
-        elif content_type == "routing":
-            result = analyzer.analyze_routing(track_metrics, {})
-        elif content_type == "mastering":
+        elif analysis_type == "loudness":
             result = analyzer.analyze_mastering_readiness(track_metrics)
-        elif content_type == "session":
+        elif analysis_type == "quality":
             result = analyzer.analyze_session_health(track_metrics, {})
-        else:
+        else:  # spectrum or default
             result = analyzer.analyze_gain_staging(track_metrics)
         
-        # Return real analysis results
+        track_id = request.track_data.get("track_id", "unknown") if request.track_data else "unknown"
+        
+        # Return analysis results
         analysis = {
-            "trackId": request.trackId,
-            "sampleRate": request.sampleRate,
-            "duration": len(request.audioData) / request.sampleRate if request.sampleRate > 0 else 0,
-            "contentType": content_type,
-            "score": result.score,
+            "analysis_type": analysis_type,
+            "quality_score": result.score,
             "findings": result.findings,
             "recommendations": result.recommendations,
-            "reasoning": result.reasoning,
-            "metrics": result.metrics
+            "metrics": {
+                "duration": duration,
+                "sample_rate": sample_rate,
+                "peak_level": peak_level,
+                "rms_level": rms_level,
+            }
         }
 
         return AudioAnalysisResponse(
-            trackId=request.trackId,
+            trackId=track_id,
             analysis=analysis,
             status="success",
         )
@@ -1099,6 +1105,107 @@ async def analyze_session(request: Dict[str, Any]) -> AnalysisResponse:
 # ============================================================================
 # TRANSPORT CLOCK ENDPOINTS (WebSocket + REST API)
 # ============================================================================
+
+@app.websocket("/ws")
+async def websocket_general(websocket: WebSocket):
+    """General WebSocket endpoint - routes to transport clock"""
+    try:
+        await websocket.accept()
+    except Exception as e:
+        print(f"Failed to accept WebSocket on /ws: {e}")
+        return
+    
+    transport_manager.connected_clients.add(websocket)
+    print(f"WebSocket client connected to /ws. Total clients: {len(transport_manager.connected_clients)}")
+    
+    try:
+        import asyncio
+        import time as time_module
+        
+        last_send = time_module.time()
+        send_interval = 1.0 / 60.0  # 60 FPS update rate
+        
+        # Send initial state
+        try:
+            state = transport_manager.get_state()
+            await websocket.send_json({
+                "type": "state",
+                "data": state.dict()
+            })
+        except Exception as e:
+            print(f"Failed to send initial state on /ws: {e}")
+            return
+        
+        while True:
+            try:
+                # Non-blocking receive with very short timeout
+                try:
+                    data = await asyncio.wait_for(
+                        websocket.receive_text(),
+                        timeout=0.001
+                    )
+                    try:
+                        message = json.loads(data)
+                        
+                        # Handle incoming commands
+                        if message.get("type") == "play":
+                            transport_manager.play()
+                        elif message.get("type") == "stop":
+                            transport_manager.stop()
+                        elif message.get("type") == "pause":
+                            transport_manager.pause()
+                        elif message.get("type") == "resume":
+                            transport_manager.resume()
+                        elif message.get("type") == "seek":
+                            transport_manager.seek(message.get("time_seconds", 0))
+                        elif message.get("type") == "tempo":
+                            transport_manager.set_tempo(message.get("bpm", 120))
+                        elif message.get("type") == "loop":
+                            transport_manager.set_loop(
+                                message.get("enabled", False),
+                                message.get("start_seconds", 0),
+                                message.get("end_seconds", 10)
+                            )
+                    except json.JSONDecodeError:
+                        pass  # Ignore invalid JSON
+                    
+                except asyncio.TimeoutError:
+                    pass  # No message received, continue to send updates
+                
+                # Send state at regular interval
+                current_time = time_module.time()
+                if current_time - last_send >= send_interval:
+                    try:
+                        state = transport_manager.get_state()
+                        await websocket.send_json({
+                            "type": "state",
+                            "data": state.dict()
+                        })
+                        last_send = current_time
+                    except RuntimeError as e:
+                        # Connection closed
+                        print(f"Connection closed on /ws: {e}")
+                        break
+                    except Exception as e:
+                        print(f"Unexpected error in /ws loop: {e}")
+                        break
+                
+                # Small sleep to prevent CPU spinning
+                await asyncio.sleep(0.001)
+                
+            except WebSocketDisconnect:
+                print("WebSocket /ws disconnected")
+                break
+            except Exception as e:
+                print(f"Unexpected error in /ws loop: {e}")
+                break
+    
+    finally:
+        try:
+            transport_manager.connected_clients.discard(websocket)
+            print(f"WebSocket cleanup on /ws. Remaining clients: {len(transport_manager.connected_clients)}")
+        except Exception as e:
+            print(f"Error during /ws cleanup: {e}")
 
 @app.websocket("/ws/transport/clock")
 async def websocket_transport_clock(websocket: WebSocket):

@@ -37,13 +37,15 @@ export default function LoopControl() {
       {/* Loop status */}
       <div className="flex items-center gap-2 bg-gray-800 p-2 rounded text-xs">
         <input
+          id="loop-enabled"
+          name="loop-enabled"
           type="checkbox"
           checked={loopRegion.enabled && loopIsValid}
           onChange={toggleLoop}
           disabled={!loopIsValid}
           className="w-3 h-3 cursor-pointer"
         />
-        <span className="text-gray-400">
+        <label htmlFor="loop-enabled" className="text-gray-400">
           {loopIsValid
             ? `${loopRegion.startTime.toFixed(
                 2
@@ -51,7 +53,7 @@ export default function LoopControl() {
                 2
               )}s)`
             : "Set loop points"}
-        </span>
+        </label>
       </div>
 
       {/* Loop controls */}

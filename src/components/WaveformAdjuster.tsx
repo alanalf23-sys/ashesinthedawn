@@ -394,8 +394,10 @@ export default function WaveformAdjuster({
 
               {/* Resolution */}
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-400 w-16">Resolution:</label>
+                <label htmlFor="waveform-resolution" className="text-xs text-gray-400 w-16\">Resolution:</label>
                 <select
+                  id="waveform-resolution"
+                  name="waveform-resolution"
                   value={resolution}
                   onChange={(e) => setResolution(parseInt(e.target.value))}
                   className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 rounded px-2 py-1 text-gray-300 transition"

@@ -50,7 +50,7 @@ export function CodetteStatus() {
     };
 
     checkConnection();
-    const interval = setInterval(checkConnection, 5000);
+    const interval = setInterval(checkConnection, 30000);
     return () => clearInterval(interval);
   }, []);
 

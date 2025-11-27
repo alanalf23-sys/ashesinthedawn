@@ -162,8 +162,10 @@ export default function WelcomeModal({ onClose }: WelcomeModalProps) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Sample Rate</label>
+                  <label htmlFor="sample-rate" className="block text-sm text-gray-400 mb-1">Sample Rate</label>
                   <select 
+                    id="sample-rate"
+                    name="sample-rate"
                     value={sampleRate}
                     onChange={(e) => setSampleRate(Number(e.target.value))}
                     className="w-full bg-gray-900 text-white px-3 py-2 rounded border border-gray-600"
@@ -174,8 +176,10 @@ export default function WelcomeModal({ onClose }: WelcomeModalProps) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Bit Depth</label>
+                  <label htmlFor="bit-depth" className="block text-sm text-gray-400 mb-1">Bit Depth</label>
                   <select 
+                    id="bit-depth"
+                    name="bit-depth"
                     value={bitDepth}
                     onChange={(e) => setBitDepth(Number(e.target.value))}
                     className="w-full bg-gray-900 text-white px-3 py-2 rounded border border-gray-600"
@@ -197,8 +201,10 @@ export default function WelcomeModal({ onClose }: WelcomeModalProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Time Signature</label>
+                  <label htmlFor="time-signature" className="block text-sm text-gray-400 mb-1">Time Signature</label>
                   <select 
+                    id="time-signature"
+                    name="time-signature"
                     value={timeSignature}
                     onChange={(e) => setTimeSignature(e.target.value)}
                     className="w-full bg-gray-900 text-white px-3 py-2 rounded border border-gray-600"

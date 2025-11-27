@@ -26,26 +26,30 @@ export default function MetronomeControl() {
       {/* Metronome enable toggle */}
       <div className="flex items-center gap-2 bg-gray-800 p-2 rounded">
         <input
+          id="metronome-toggle"
+          name="metronome-enabled"
           type="checkbox"
           checked={metronomeSettings.enabled}
           onChange={toggleMetronome}
           className="w-4 h-4 cursor-pointer"
         />
-        <span className="text-sm text-gray-300">
+        <label htmlFor="metronome-toggle" className="text-sm text-gray-300">
           {metronomeSettings.enabled ? "Enabled" : "Disabled"}
-        </span>
+        </label>
       </div>
 
       {/* Volume control */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Volume2 className="w-4 h-4 text-gray-400" />
-          <span className="text-xs text-gray-400">Volume</span>
+          <label htmlFor="metronome-volume" className="text-xs text-gray-400">Volume</label>
           <span className="ml-auto text-xs text-gray-500">
             {Math.round(metronomeSettings.volume * 100)}%
           </span>
         </div>
         <input
+          id="metronome-volume"
+          name="metronome-volume"
           type="range"
           min="0"
           max="100"
@@ -57,7 +61,7 @@ export default function MetronomeControl() {
 
       {/* Beat sound selector */}
       <div className="space-y-2">
-        <label className="text-xs text-gray-400">Beat Sound</label>
+        <label htmlFor="beat-sound-selector" className="text-xs text-gray-400">Beat Sound</label>
         <div className="flex gap-1">
           {beatSounds.map((sound) => (
             <button
@@ -78,6 +82,8 @@ export default function MetronomeControl() {
       {/* Accent first beat toggle */}
       <div className="flex items-center gap-2 bg-gray-800 p-2 rounded text-xs">
         <input
+          id="accent-first-beat"
+          name="accent-first"
           type="checkbox"
           checked={metronomeSettings.accentFirst}
           onChange={(e) => {
@@ -86,7 +92,7 @@ export default function MetronomeControl() {
           }}
           className="w-3 h-3 cursor-pointer"
         />
-        <span className="text-gray-300">Accent first beat</span>
+        <label htmlFor="accent-first-beat" className="text-gray-300">Accent first beat</label>
       </div>
     </div>
   );

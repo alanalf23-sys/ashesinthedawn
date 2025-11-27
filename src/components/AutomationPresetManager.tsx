@@ -138,6 +138,8 @@ export const AutomationPresetManagerUI: React.FC<AutomationPresetManagerUIProps>
 
       <input
         ref={fileInputRef}
+        id="import-automation-file"
+        name="import-automation"
         type="file"
         accept=".json"
         onChange={handleFileSelect}
@@ -238,19 +240,24 @@ export const AutomationPresetManagerUI: React.FC<AutomationPresetManagerUIProps>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-400 block mb-1">Preset Name</label>
+                <label htmlFor="export-preset-name" className="text-xs text-gray-400 block mb-1">Preset Name</label>
                 <input
+                  id="export-preset-name"
+                  name="preset-name"
                   type="text"
                   value={exportName}
                   onChange={(e) => setExportName(e.target.value)}
+                  autoComplete="off"
                   className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-gray-100 focus:outline-none focus:border-blue-500"
                   placeholder="e.g., Volume Sweep"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-gray-400 block mb-1">Description (optional)</label>
+                <label htmlFor="export-preset-description" className="text-xs text-gray-400 block mb-1">Description (optional)</label>
                 <textarea
+                  id="export-preset-description"
+                  name="preset-description"
                   value={exportDescription}
                   onChange={(e) => setExportDescription(e.target.value)}
                   className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-gray-100 focus:outline-none focus:border-blue-500 h-16 resize-none"

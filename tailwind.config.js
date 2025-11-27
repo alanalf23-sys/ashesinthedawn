@@ -52,6 +52,67 @@ export default {
         'daw-3': '6px',
         'daw-4': '8px',
       },
+      animation: {
+        // Playhead and metering animations
+        'playhead-pulse': 'playhead-pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'meter-glow': 'meter-glow 0.4s ease-out',
+        'level-update': 'level-update 0.15s ease-out',
+        
+        // UI feedback animations
+        'slide-in': 'slide-in 0.3s ease-out',
+        'fade-in': 'fade-in 0.2s ease-out',
+        'scale-in': 'scale-in 0.2s ease-out',
+        
+        // Mixer and transport animations
+        'fader-drag': 'fader-drag 0.1s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'control-highlight': 'control-highlight 0.3s ease-out',
+        'transport-pulse': 'transport-pulse 0.6s ease-in-out infinite',
+      },
+      keyframes: {
+        'playhead-pulse': {
+          '0%, 100%': { boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)' },
+          '50%': { boxShadow: '0 0 16px rgba(239, 68, 68, 0.9)' },
+        },
+        'meter-glow': {
+          'from': { boxShadow: '0 0 4px rgba(59, 130, 246, 0.3)' },
+          'to': { boxShadow: 'none' },
+        },
+        'level-update': {
+          'from': { opacity: '0.8' },
+          'to': { opacity: '1' },
+        },
+        'slide-in': {
+          'from': { transform: 'translateX(-4px)', opacity: '0' },
+          'to': { transform: 'translateX(0)', opacity: '1' },
+        },
+        'fade-in': {
+          'from': { opacity: '0' },
+          'to': { opacity: '1' },
+        },
+        'scale-in': {
+          'from': { transform: 'scale(0.95)', opacity: '0' },
+          'to': { transform: 'scale(1)', opacity: '1' },
+        },
+        'fader-drag': {
+          'from': { filter: 'drop-shadow(0 0 4px rgba(59, 130, 246, 0.4))' },
+          'to': { filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.8))' },
+        },
+        'control-highlight': {
+          'from': { boxShadow: '0 0 8px rgba(59, 130, 246, 0.5)' },
+          'to': { boxShadow: '0 0 0px rgba(59, 130, 246, 0)' },
+        },
+        'transport-pulse': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.7' },
+        },
+      },
+      transitionDuration: {
+        '75': '75ms',
+        '150': '150ms',
+        '200': '200ms',
+        '300': '300ms',
+        '500': '500ms',
+      },
     },
   },
   plugins: [],

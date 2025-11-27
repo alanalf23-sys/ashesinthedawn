@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useRef,
+  useMemo,
 } from "react";
 import {
   Track,
@@ -151,6 +152,31 @@ interface DAWContextType {
   ) => Promise<boolean>;
   analyzeTrackWithCodette: (trackId: string) => Promise<any>;
   syncDAWStateToCodette: () => Promise<boolean>;
+  // Codette Transport Control (Phase 3)
+  codetteTransportPlay: () => Promise<any>;
+  codetteTransportStop: () => Promise<any>;
+  codetteTransportSeek: (timeSeconds: number) => Promise<any>;
+  codetteSetTempo: (bpm: number) => Promise<any>;
+  codetteSetLoop: (
+    enabled: boolean,
+    startTime?: number,
+    endTime?: number
+  ) => Promise<any>;
+  // WebSocket Status (Phase 4)
+  getWebSocketStatus: () => { connected: boolean; reconnectAttempts: number };
+  getCodetteBridgeStatus: () => {
+    connected: boolean;
+    reconnectCount: number;
+    isReconnecting: boolean;
+  };
+  // Clipboard Operations
+  clipboardData: { type: 'track' | 'clip' | null; data: any };
+  cutTrack: (trackId: string) => void;
+  copyTrack: (trackId: string) => void;
+  pasteTrack: () => void;
+  selectAllTracks: () => void;
+  deselectAllTracks: () => void;
+  selectedTracks: Set<string>;
   // Utility
   cpuUsageDetailed: Record<string, number>;
 }
@@ -171,13 +197,28 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const [voiceControlActive, setVoiceControlActive] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Clipboard State
+  const [clipboardData, setClipboardData] = useState<{ type: 'track' | 'clip' | null; data: any }>({ type: null, data: null });
+  const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
   // Codette AI Integration (Phase 1)
   const [codetteConnected, setCodetteConnected] = useState(false);
   const [codetteLoading, setCodetteLoading] = useState(false);
   const [codetteSuggestions, setCodetteSuggestions] = useState<
     CodetteSuggestion[]
   >([]);
-  const codetteRef = useRef(getCodetteBridge());
+  
+  // Initialize CodetteBridge with error handling using useMemo
+  const codetteRef = useRef<any>(null);
+  
+  useMemo(() => {
+    try {
+      const bridgeInstance = getCodetteBridge();
+      codetteRef.current = bridgeInstance;
+    } catch (err) {
+      console.error("[DAWContext] Failed to initialize CodetteBridge:", err);
+      codetteRef.current = null;
+    }
+  }, []);
   // Phase 3: New state
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [loopRegion, setLoopRegion] = useState<LoopRegion>({
@@ -265,36 +306,72 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentProject]);
 
-  // Initialize Codette connection (Phase 1)
+  // Initialize Codette connection (Phase 1 & Phase 4: WebSocket)
   useEffect(() => {
     const bridge = codetteRef.current;
+    
+    if (!bridge) {
+      console.warn("[DAWContext] CodetteBridge not initialized");
+      return;
+    }
 
     const handleConnected = () => setCodetteConnected(true);
     const handleDisconnected = () => setCodetteConnected(false);
 
+    // WebSocket event handlers (Phase 4)
+    const handleTransportChanged = (transportState: any) => {
+      console.debug("[DAWContext] Received transport update from WebSocket:", transportState);
+      // Note: seek() will be defined later in the component, so we can't call it here
+      // The WebSocket sync is primarily for monitoring, not for triggering actions
+    };
+
+    const handleSuggestionReceived = (suggestion: any) => {
+      console.debug("[DAWContext] Received suggestion from WebSocket:", suggestion);
+      setCodetteSuggestions((prev) => [suggestion, ...prev].slice(0, 5)); // Keep latest 5
+    };
+
+    const handleAnalysisComplete = (analysis: any) => {
+      console.debug("[DAWContext] Analysis complete from WebSocket:", analysis);
+      // Analysis data received, UI handles this via component re-renders
+    };
+
+    const handleWsConnected = (connected: boolean) => {
+      console.debug("[DAWContext] WebSocket status changed:", connected);
+      // Could trigger additional sync when WS connects
+    };
+
     bridge.on("connected", handleConnected);
     bridge.on("disconnected", handleDisconnected);
+    bridge.on("transport_changed", handleTransportChanged);
+    bridge.on("suggestion_received", handleSuggestionReceived);
+    bridge.on("analysis_complete", handleAnalysisComplete);
+    bridge.on("ws_connected", handleWsConnected);
 
     // Initial health check
-    bridge.healthCheck().then((connected) => {
+    bridge.healthCheck().then((connected: boolean) => {
       setCodetteConnected(connected);
     });
 
     return () => {
       bridge.off("connected", handleConnected);
       bridge.off("disconnected", handleDisconnected);
+      bridge.off("transport_changed", handleTransportChanged);
+      bridge.off("suggestion_received", handleSuggestionReceived);
+      bridge.off("analysis_complete", handleAnalysisComplete);
+      bridge.off("ws_connected", handleWsConnected);
     };
   }, []);
 
   // Sync DAW state to Codette periodically (Phase 1)
   useEffect(() => {
-    if (!codetteConnected || !isPlaying) return;
+    if (!codetteConnected || !isPlaying || !codetteRef.current) return;
 
     const syncInterval = setInterval(() => {
       const bridge = codetteRef.current;
+      if (!bridge) return;
       bridge
         .syncState(tracks, currentTime, isPlaying, 120) // Default to 120 BPM for now
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.debug("[DAWContext] Sync failed:", err);
         });
     }, 5000); // Sync every 5 seconds during playback
@@ -330,6 +407,66 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       });
     }
   }, [tracks, isPlaying]);
+
+  // Sync transport state to Codette (Phase 3)
+  useEffect(() => {
+    if (!codetteConnected) return;
+
+    const syncTransportInterval = setInterval(async () => {
+      const bridge = codetteRef.current;
+
+      try {
+        // Get current Codette transport state
+        const transportState = await bridge.getTransportState();
+
+        // If Codette's playback state differs from ours, sync it
+        if (transportState.is_playing !== isPlaying) {
+          if (transportState.is_playing && !isPlaying) {
+            // Codette playing, React not - start playback
+            console.debug(
+              "[DAWContext] Transport sync: Starting playback from Codette"
+            );
+            // Call internal play logic
+            const audioEngine = audioEngineRef.current;
+            tracks.forEach((track) => {
+              if (!track.muted && track.type !== "master") {
+                audioEngine.playAudio(
+                  track.id,
+                  currentTime,
+                  track.volume,
+                  track.pan
+                );
+              }
+            });
+            setIsPlaying(true);
+          } else if (!transportState.is_playing && isPlaying) {
+            // React playing, Codette not - stop playback
+            console.debug(
+              "[DAWContext] Transport sync: Stopping playback from Codette"
+            );
+            audioEngineRef.current.stopAllAudio();
+            setIsPlaying(false);
+          }
+        }
+
+        // Sync seek position if they differ significantly (>0.5 seconds)
+        if (
+          Math.abs(transportState.current_time - currentTime) > 0.5 &&
+          transportState.current_time !== currentTime
+        ) {
+          console.debug(
+            "[DAWContext] Transport sync: Seeking to",
+            transportState.current_time
+          );
+          seek(transportState.current_time);
+        }
+      } catch (error) {
+        console.debug("[DAWContext] Transport sync failed:", error);
+      }
+    }, 1000); // Check transport state every 1 second
+
+    return () => clearInterval(syncTransportInterval);
+  }, [codetteConnected, isPlaying, currentTime]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -505,6 +642,8 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     }
 
     setTracks((prev) => [...prev, newTrack]);
+    // Auto-select the newly added track
+    setSelectedTrack(newTrack);
   };
 
   const selectTrack = (trackId: string) => {
@@ -586,6 +725,48 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       setSelectedTrack(null);
       console.log("Redo performed");
     }
+  };
+
+  // Clipboard Operations
+  const cutTrack = (trackId: string) => {
+    const trackToCut = tracks.find((t) => t.id === trackId);
+    if (trackToCut) {
+      setClipboardData({ type: 'track', data: JSON.parse(JSON.stringify(trackToCut)) });
+      deleteTrack(trackId);
+      console.log(`Track "${trackToCut.name}" cut to clipboard`);
+    }
+  };
+
+  const copyTrack = (trackId: string) => {
+    const trackToCopy = tracks.find((t) => t.id === trackId);
+    if (trackToCopy) {
+      setClipboardData({ type: 'track', data: JSON.parse(JSON.stringify(trackToCopy)) });
+      console.log(`Track "${trackToCopy.name}" copied to clipboard`);
+    }
+  };
+
+  const pasteTrack = () => {
+    if (clipboardData.type === 'track' && clipboardData.data) {
+      const pastedTrack = {
+        ...clipboardData.data,
+        id: `track-${Date.now()}`,
+        name: `${clipboardData.data.name} (Copy)`,
+      };
+      setTracks((prev) => [...prev, pastedTrack]);
+      setSelectedTrack(pastedTrack);
+      console.log(`Track "${pastedTrack.name}" pasted from clipboard`);
+    }
+  };
+
+  const selectAllTracks = () => {
+    const allTrackIds = new Set(tracks.map((t) => t.id));
+    setSelectedTracks(allTrackIds);
+    console.log(`Selected all ${tracks.length} tracks`);
+  };
+
+  const deselectAllTracks = () => {
+    setSelectedTracks(new Set());
+    console.log('Deselected all tracks');
   };
 
   // Set input gain (pre-fader) for a track both in state and audio engine
@@ -791,6 +972,86 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       });
     }
     // If not playing, just update currentTime - playback will start from this position when play is pressed
+  };
+
+  // Codette transport control methods (Phase 3)
+  const codetteTransportPlay = async () => {
+    try {
+      const bridge = codetteRef.current;
+      const state = await bridge.transportPlay();
+      if (state.is_playing && !isPlaying) {
+        togglePlay();
+      }
+      return state;
+    } catch (error) {
+      console.error("[DAWContext] Codette transport play failed:", error);
+      throw error;
+    }
+  };
+
+  const codetteTransportStop = async () => {
+    try {
+      const bridge = codetteRef.current;
+      const state = await bridge.transportStop();
+      if (!state.is_playing && isPlaying) {
+        stop();
+      }
+      return state;
+    } catch (error) {
+      console.error("[DAWContext] Codette transport stop failed:", error);
+      throw error;
+    }
+  };
+
+  const codetteTransportSeek = async (timeSeconds: number) => {
+    try {
+      const bridge = codetteRef.current;
+      const state = await bridge.transportSeek(timeSeconds);
+      seek(timeSeconds);
+      return state;
+    } catch (error) {
+      console.error("[DAWContext] Codette transport seek failed:", error);
+      throw error;
+    }
+  };
+
+  const codetteSetTempo = async (bpm: number) => {
+    try {
+      const bridge = codetteRef.current;
+      const state = await bridge.setTempo(bpm);
+      // Store BPM in current project if available
+      if (currentProject) {
+        setCurrentProject({
+          ...currentProject,
+          bpm: bpm,
+        });
+      }
+      return state;
+    } catch (error) {
+      console.error("[DAWContext] Codette set tempo failed:", error);
+      throw error;
+    }
+  };
+
+  const codetteSetLoop = async (
+    enabled: boolean,
+    startTime: number = 0,
+    endTime: number = 10
+  ) => {
+    try {
+      const bridge = codetteRef.current;
+      const state = await bridge.setLoop(enabled, startTime, endTime);
+      // Update local loop region
+      setLoopRegion({
+        enabled: enabled,
+        startTime: startTime,
+        endTime: endTime,
+      });
+      return state;
+    } catch (error) {
+      console.error("[DAWContext] Codette set loop failed:", error);
+      throw error;
+    }
   };
 
   const getWaveformData = (trackId: string): number[] => {
@@ -1176,8 +1437,8 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     trackId: string,
     context?: string
   ): Promise<CodetteSuggestion[]> => {
-    if (!codetteConnected) {
-      console.warn("[DAWContext] Codette not connected");
+    if (!codetteConnected || !codetteRef.current) {
+      console.warn("[DAWContext] Codette not connected or bridge not initialized");
       return [];
     }
 
@@ -1244,8 +1505,8 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   };
 
   const analyzeTrackWithCodette = async (trackId: string): Promise<any> => {
-    if (!codetteConnected) {
-      console.warn("[DAWContext] Codette not connected");
+    if (!codetteConnected || !codetteRef.current) {
+      console.warn("[DAWContext] Codette not connected or bridge not initialized");
       return null;
     }
 
@@ -1268,8 +1529,8 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   };
 
   const syncDAWStateToCodette = async (): Promise<boolean> => {
-    if (!codetteConnected) {
-      console.warn("[DAWContext] Codette not connected");
+    if (!codetteConnected || !codetteRef.current) {
+      console.warn("[DAWContext] Codette not connected or bridge not initialized");
       return false;
     }
 
@@ -1285,6 +1546,17 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       console.error("[DAWContext] Failed to sync state:", error);
       return false;
     }
+  };
+
+  // WebSocket Status Methods (Phase 4)
+  const getWebSocketStatus = () => {
+    if (!codetteRef.current) return null;
+    return codetteRef.current.getWebSocketStatus();
+  };
+
+  const getCodetteBridgeStatus = () => {
+    if (!codetteRef.current) return null;
+    return codetteRef.current.getState();
   };
 
   return (
@@ -1410,6 +1682,21 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         applyCodetteSuggestion,
         analyzeTrackWithCodette,
         syncDAWStateToCodette,
+        codetteTransportPlay,
+        codetteTransportStop,
+        codetteTransportSeek,
+        codetteSetTempo,
+        codetteSetLoop,
+        getWebSocketStatus,
+        getCodetteBridgeStatus,
+        // Clipboard Operations
+        clipboardData,
+        cutTrack,
+        copyTrack,
+        pasteTrack,
+        selectAllTracks,
+        deselectAllTracks,
+        selectedTracks,
       }}
     >
       {children}

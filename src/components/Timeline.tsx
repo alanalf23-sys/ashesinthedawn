@@ -89,11 +89,23 @@ export default function Timeline() {
   // Timeline click handler
   const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!waveformContainerRef.current) return;
+    
+    // Prevent seeking if clicking on tracks (let track click handler take precedence)
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-track-waveform]')) {
+      return;
+    }
+
     const rect = waveformContainerRef.current.getBoundingClientRect();
     const clickX =
       e.clientX - rect.left + waveformContainerRef.current.scrollLeft;
     const clickTime = Math.max(0, clickX / pixelsPerSecond);
-    seek(clickTime);
+    
+    try {
+      seek(clickTime);
+    } catch (error) {
+      console.error('[Timeline] Seek error:', error);
+    }
   };
 
   // Render time ruler
@@ -207,7 +219,12 @@ export default function Timeline() {
     return (
       <div
         key={`waveform-${track.id}`}
-        className="absolute top-1 left-0 overflow-hidden rounded cursor-pointer hover:brightness-110 transition-all"
+        className={`absolute top-1 left-0 overflow-hidden rounded cursor-pointer transition-all duration-200 ${
+          selectedTrackForWaveform === track.id
+            ? "shadow-lg shadow-blue-500/40 brightness-125"
+            : "hover:brightness-110 hover:shadow-md hover:shadow-blue-500/20"
+        }`}
+        data-track-waveform="true"
         style={{
           width: `${width}px`,
           minWidth: "30px",
@@ -216,8 +233,12 @@ export default function Timeline() {
             ? "rgba(107, 114, 128, 0.2)"
             : `${regionColor}20`,
           borderLeft: `3px solid ${regionColor}`,
+          borderRadius: selectedTrackForWaveform === track.id ? "4px" : "0",
         }}
-        onClick={() => setSelectedTrackForWaveform(track.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setSelectedTrackForWaveform(track.id);
+        }}
       >
         {/* Waveform SVG */}
         {peaks && (
@@ -277,16 +298,16 @@ export default function Timeline() {
 
         {/* Track selection indicator */}
         {selectedTrackForWaveform === track.id && (
-          <div className="absolute inset-0 border-2 border-blue-400 rounded" />
+          <div className="absolute inset-0 border-2 border-blue-400 rounded animate-scale-in pointer-events-none" />
         )}
       </div>
     );
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 border-t border-gray-700">
+    <div className="flex flex-col h-full w-full bg-gray-900 border-t border-gray-700 overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 border-b border-gray-700">
+      <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0">
         <button
           onClick={() => setShowTrackHeaders(!showTrackHeaders)}
           className="p-1.5 hover:bg-gray-700 rounded text-gray-400 transition"
@@ -334,7 +355,7 @@ export default function Timeline() {
 
       {/* Time Ruler */}
       <div
-        className="relative h-12 bg-gray-800 border-b border-gray-700 overflow-x-auto overflow-y-hidden"
+        className="relative h-12 bg-gray-800 border-b border-gray-700 overflow-x-auto overflow-y-hidden flex-shrink-0"
         ref={timelineRef}
       >
         <div
@@ -351,7 +372,7 @@ export default function Timeline() {
       {/* Waveform Container */}
       <div
         ref={waveformContainerRef}
-        className="flex-1 overflow-auto bg-gray-950 relative"
+        className="flex-1 overflow-auto bg-gray-950 relative min-h-0"
         onClick={handleTimelineClick}
         style={{ cursor: "crosshair" }}
       >
@@ -392,11 +413,12 @@ export default function Timeline() {
 
           {/* Playhead */}
           <div
-            className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none"
+            className={`absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none transition-all duration-75 ease-linear ${
+              isPlaying ? "animate-playhead-pulse" : ""
+            }`}
             style={{
               left: `${currentTime * pixelsPerSecond}px`,
               zIndex: 20,
-              boxShadow: isPlaying ? "0 0 10px rgba(239, 68, 68, 0.8)" : "none",
             }}
           />
         </div>
@@ -404,17 +426,22 @@ export default function Timeline() {
 
       {/* Detailed Waveform Display for Selected Track */}
       {selectedTrackForWaveform && (
-        <div className="h-32 bg-gray-900 border-t border-gray-700 p-2">
+        <div className="h-32 bg-gray-900 border-t border-gray-700 p-2 flex-shrink-0 w-full overflow-hidden">
           <div className="text-xs text-gray-400 mb-1">
-            {tracks.find((t) => t.id === selectedTrackForWaveform)?.name} -
-            Detailed Waveform
+            {tracks.find((t) => t.id === selectedTrackForWaveform)?.name || 'Unknown Track'} - Detailed Waveform
           </div>
-          <WaveformDisplay
-            trackId={selectedTrackForWaveform}
-            height={100}
-            showPeakMeter={true}
-            interactive={true}
-          />
+          {tracks.find((t) => t.id === selectedTrackForWaveform) ? (
+            <div className="w-full h-24 flex-shrink-0">
+              <WaveformDisplay
+                trackId={selectedTrackForWaveform}
+                height={88}
+                showPeakMeter={true}
+                interactive={true}
+              />
+            </div>
+          ) : (
+            <div className="text-xs text-gray-500">Track not found</div>
+          )}
         </div>
       )}
     </div>

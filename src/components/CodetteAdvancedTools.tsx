@@ -340,10 +340,12 @@ export default function CodetteAdvancedTools({
       {activeTab === "genre_detect" && (
         <div className="space-y-3">
           <div className="bg-gray-900 p-3 rounded-md border border-gray-700">
-            <label className="text-sm text-gray-300 mb-2 block">
+            <label htmlFor="track-details-input" className="text-sm text-gray-300 mb-2 block">
               Track Details
             </label>
             <input
+              id="track-details-input"
+              name="track-details"
               type="text"
               value={selectedTrackName}
               disabled
@@ -407,10 +409,12 @@ export default function CodetteAdvancedTools({
           </div>
 
           <div>
-            <label className="text-sm text-gray-300 mb-2 block">
+            <label htmlFor="exercise-type-select" className="text-sm text-gray-300 mb-2 block">
               Exercise Type
             </label>
             <select
+              id="exercise-type-select"
+              name="exercise-type"
               value={selectedExerciseType}
               onChange={(e) => {
                 setSelectedExerciseType(e.target.value);
@@ -465,10 +469,12 @@ export default function CodetteAdvancedTools({
       {activeTab === "production" && (
         <div className="space-y-3">
           <div>
-            <label className="text-sm text-gray-300 mb-2 block">
+            <label htmlFor="production-stage-select" className="text-sm text-gray-300 mb-2 block">
               Production Stage
             </label>
             <select
+              id="production-stage-select"
+              name="production-stage"
               value={productionStage}
               onChange={(e) => {
                 setProductionStage(e.target.value);
@@ -515,11 +521,13 @@ export default function CodetteAdvancedTools({
                           className="flex items-start gap-2 text-xs text-gray-300 bg-gray-800 p-2 rounded border border-gray-700 hover:border-purple-500 transition-colors"
                         >
                           <input
+                            id={`checklist-${category}-${idx}`}
+                            name={`checklist-${category}-${idx}`}
                             type="checkbox"
                             className="mt-0.5"
                             defaultChecked={false}
                           />
-                          <span>{task}</span>
+                          <label htmlFor={`checklist-${category}-${idx}`} className="flex-1">{task}</label>
                         </div>
                       ))}
                     </div>
@@ -535,10 +543,12 @@ export default function CodetteAdvancedTools({
       {activeTab === "instruments" && (
         <div className="space-y-3">
           <div>
-            <label className="text-sm text-gray-300 mb-2 block">
+            <label htmlFor="instrument-select" className="text-sm text-gray-300 mb-2 block">
               Select Instrument (Real Database)
             </label>
             <select
+              id="instrument-select"
+              name="instrument"
               value={selectedInstrument}
               onChange={(e) => {
                 setSelectedInstrument(e.target.value);

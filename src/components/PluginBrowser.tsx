@@ -76,11 +76,15 @@ export default function PluginBrowser() {
         <h2 className="text-sm font-semibold text-gray-100 mb-3">Plugin Browser</h2>
         <div className="relative">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+          <label htmlFor="plugin-search" className="sr-only">Search plugins</label>
           <input
+            id="plugin-search"
+            name="plugin-search"
             type="text"
             placeholder="Search plugins..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            autoComplete="off"
             className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 pl-9 text-xs text-gray-300 placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
         </div>

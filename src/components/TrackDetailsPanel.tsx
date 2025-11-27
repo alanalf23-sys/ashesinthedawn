@@ -146,11 +146,13 @@ export default function TrackDetailsPanel() {
 
       {/* Automation Mode */}
       <div>
-        <label className="text-gray-400 font-semibold block mb-2 flex items-center gap-2">
+        <label htmlFor="automation-mode" className="text-gray-400 font-semibold block mb-2 flex items-center gap-2">
           <Settings2 className="w-3 h-3" />
           Automation
         </label>
         <select
+          id="automation-mode"
+          name="automation-mode"
           value={selectedTrack.automationMode || 'off'}
           onChange={(e) =>
             updateTrack(selectedTrack.id, {

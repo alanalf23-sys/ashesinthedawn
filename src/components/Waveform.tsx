@@ -104,10 +104,10 @@ export default function Waveform({
         ref={canvasRef}
         width={width}
         height={height}
-        className="bg-gray-900 rounded border border-gray-700 hover:border-gray-600 transition-colors cursor-crosshair"
+        className="bg-gray-900 rounded border border-gray-700 hover:border-blue-500 transition-colors duration-200 cursor-crosshair hover:shadow-lg hover:shadow-blue-500/20"
       />
       {duration > 0 && (
-        <div className="text-xs text-gray-400">
+        <div className="text-xs text-gray-400 animate-fade-in">
           Duration: {duration.toFixed(2)}s | Samples: {waveformData.length}
         </div>
       )}

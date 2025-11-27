@@ -115,12 +115,13 @@ export default function MIDISettings() {
                 {expandedRoute === route.id && (
                   <div className="mt-2 pt-2 border-t border-gray-700 space-y-2">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Channel</p>
+                      <label htmlFor={`midi-channel-${route.id}`} className="text-xs text-gray-500 mb-1 block\">Channel</label>
                       <select
+                        id={`midi-channel-${route.id}`}
+                        name={`midi-channel-${route.id}`}
                         value={route.channel}
                         className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-gray-300"
-                      >
-                        {Array.from({ length: 16 }, (_, i) => (
+                      >\n                        {Array.from({ length: 16 }, (_, i) => (
                           <option key={i + 1} value={i + 1}>
                             Channel {i + 1}
                           </option>

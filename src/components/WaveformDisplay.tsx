@@ -29,9 +29,29 @@ export default function WaveformDisplay({
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1.0);
   const [peakLevel, setPeakLevel] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   const duration = getAudioDuration(trackId);
   const waveformData = getWaveformData(trackId);
+
+  // Track container and watch for size changes
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Set initial width
+    setContainerWidth(container.offsetWidth);
+
+    // Create resize observer to handle container size changes
+    const resizeObserver = new ResizeObserver(() => {
+      if (container) {
+        setContainerWidth(container.offsetWidth);
+      }
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   // Render waveform on canvas
   useEffect(() => {
@@ -43,6 +63,13 @@ export default function WaveformDisplay({
 
     // Set canvas size with DPI normalization
     const width = canvas.offsetWidth;
+    
+    // Ensure width is valid before rendering
+    if (width <= 0) {
+      console.warn("Canvas width is invalid", width);
+      return;
+    }
+
     normalizeCanvasDimensions(canvas, width, height);
 
     // Clear canvas
@@ -151,7 +178,7 @@ export default function WaveformDisplay({
       ctx.arc(posX, centerY, 3, 0, Math.PI * 2);
       ctx.fill();
     }
-  }, [waveformData, height, duration, currentTime, isPlaying, zoom]);
+  }, [waveformData, height, duration, currentTime, isPlaying, zoom, containerWidth]);
 
   // Handle canvas click for seeking
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {

@@ -18,6 +18,7 @@ interface MixerTileProps {
   isDetached?: boolean;
   onDetach?: () => void;
   onDock?: () => void;
+  onTogglePluginRack?: () => void;
 }
 
 export default function MixerTile({
@@ -34,6 +35,7 @@ export default function MixerTile({
   isDetached = false,
   onDetach,
   onDock,
+  onTogglePluginRack,
 }: MixerTileProps) {
   const [position, setPosition] = useState({ x: 100, y: 100 });
   const [size, setSize] = useState({ width: stripWidth, height: stripHeight });
@@ -342,7 +344,10 @@ export default function MixerTile({
             Vol
           </button>
           <button
-            onClick={() => setActiveTab("plugins")}
+            onClick={() => {
+              setActiveTab("plugins");
+              onTogglePluginRack?.();
+            }}
             className={`flex-1 py-1 text-xs rounded font-semibold transition relative ${
               activeTab === "plugins"
                 ? "bg-blue-600 text-white"

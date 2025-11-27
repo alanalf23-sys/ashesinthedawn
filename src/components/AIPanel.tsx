@@ -31,10 +31,12 @@ export default function AIPanel() {
     // Initial connection check
     checkBackendConnection();
 
-    // Check backend connection periodically
+    // Check backend connection periodically (reduced from 5s to 30s to prevent blocking)
     const healthCheckInterval = setInterval(() => {
-      checkBackendConnection();
-    }, 5000);
+      checkBackendConnection().catch(err => {
+        console.debug('[AIPanel] Health check failed:', err);
+      });
+    }, 30000);
 
     return () => clearInterval(healthCheckInterval);
   }, []);

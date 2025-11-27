@@ -46,7 +46,7 @@ export default function AboutModal() {
 
     if (showAboutModal) {
       checkCodette();
-      const interval = setInterval(checkCodette, 3000);
+      const interval = setInterval(checkCodette, 30000);
       return () => clearInterval(interval);
     }
   }, [showAboutModal]);

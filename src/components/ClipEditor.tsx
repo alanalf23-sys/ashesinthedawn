@@ -131,11 +131,13 @@ export const ClipEditor: React.FC<ClipEditorProps> = ({
         <div className="space-y-3 pt-3 border-t border-gray-700">
           {/* Playback Rate */}
           <div>
-            <label className="text-xs text-gray-400 block mb-1">
+            <label htmlFor="playback-rate" className="text-xs text-gray-400 block mb-1">
               Playback Rate: {processingState.playbackRate.toFixed(2)}x
             </label>
             <div className="flex items-center gap-2">
               <input
+                id="playback-rate"
+                name="playback-rate"
                 type="range"
                 min="0.5"
                 max="2.0"
@@ -145,6 +147,8 @@ export const ClipEditor: React.FC<ClipEditorProps> = ({
                 className="flex-1 h-2 bg-gray-700 rounded"
               />
               <input
+                id="playback-rate-value"
+                name="playback-rate-value"
                 type="number"
                 min="0.5"
                 max="2.0"
@@ -158,11 +162,13 @@ export const ClipEditor: React.FC<ClipEditorProps> = ({
 
           {/* Pitch Shift */}
           <div>
-            <label className="text-xs text-gray-400 block mb-1">
+            <label htmlFor="pitch-shift" className="text-xs text-gray-400 block mb-1">
               Pitch Shift: {processingState.pitchShift > 0 ? '+' : ''}{processingState.pitchShift} semitones
             </label>
             <div className="flex items-center gap-2">
               <input
+                id="pitch-shift"
+                name="pitch-shift"
                 type="range"
                 min="-12"
                 max="12"
@@ -172,6 +178,8 @@ export const ClipEditor: React.FC<ClipEditorProps> = ({
                 className="flex-1 h-2 bg-gray-700 rounded"
               />
               <input
+                id="pitch-shift-value"
+                name="pitch-shift-value"
                 type="number"
                 min="-12"
                 max="12"
@@ -185,11 +193,13 @@ export const ClipEditor: React.FC<ClipEditorProps> = ({
 
           {/* Fade In */}
           <div>
-            <label className="text-xs text-gray-400 block mb-1">
+            <label htmlFor="fade-in" className="text-xs text-gray-400 block mb-1">
               Fade In: {(processingState.fadeInMs / 1000).toFixed(2)}s
             </label>
             <div className="flex items-center gap-2">
               <input
+                id="fade-in"
+                name="fade-in"
                 type="range"
                 min="0"
                 max={duration * 500}
@@ -199,6 +209,8 @@ export const ClipEditor: React.FC<ClipEditorProps> = ({
                 className="flex-1 h-2 bg-gray-700 rounded"
               />
               <input
+                id="fade-in-value"
+                name="fade-in-value"
                 type="number"
                 min="0"
                 step="10"
@@ -211,11 +223,13 @@ export const ClipEditor: React.FC<ClipEditorProps> = ({
 
           {/* Fade Out */}
           <div>
-            <label className="text-xs text-gray-400 block mb-1">
+            <label htmlFor="fade-out" className="text-xs text-gray-400 block mb-1">
               Fade Out: {(processingState.fadeOutMs / 1000).toFixed(2)}s
             </label>
             <div className="flex items-center gap-2">
               <input
+                id="fade-out"
+                name="fade-out"
                 type="range"
                 min="0"
                 max={duration * 500}
@@ -225,6 +239,8 @@ export const ClipEditor: React.FC<ClipEditorProps> = ({
                 className="flex-1 h-2 bg-gray-700 rounded"
               />
               <input
+                id="fade-out-value"
+                name="fade-out-value"
                 type="number"
                 min="0"
                 step="10"

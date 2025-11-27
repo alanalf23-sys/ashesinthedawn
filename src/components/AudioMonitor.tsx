@@ -104,14 +104,14 @@ export default function AudioMonitor() {
       {/* Input Level Meter */}
       <div>
         <div className="flex justify-between items-center mb-2">
-          <label className="text-xs font-medium text-gray-300">Input Level</label>
+          <label htmlFor="input-level-meter" className="text-xs font-medium text-gray-300">Input Level</label>
           <span className="text-xs text-gray-400">
             {(inputLevel * 100).toFixed(0)}%
           </span>
         </div>
 
         {/* Meter Background */}
-        <div className="h-6 bg-gray-800 rounded border border-gray-700 overflow-hidden flex items-center">
+        <div id="input-level-meter" className="h-6 bg-gray-800 rounded border border-gray-700 overflow-hidden flex items-center" aria-label="Input level meter">
           {/* RMS Indicator */}
           <div
             className={`h-full transition-all ${getMeterGradient(rmsLevel)}`}

@@ -157,8 +157,10 @@ export const PluginParameterMapper: React.FC<PluginParameterMapperProps> = ({
             <Download size={14} className="text-gray-400" />
           </button>
 
-          <label title="Import mappings from JSON">
+          <label htmlFor="import-mappings" title="Import mappings from JSON">
             <input
+              id="import-mappings"
+              name="import-mappings"
               type="file"
               accept=".json"
               onChange={handleImportMappings}
@@ -193,18 +195,22 @@ export const PluginParameterMapper: React.FC<PluginParameterMapperProps> = ({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <input
+                      id={`mapping-enabled-${mapping.id}`}
+                      name={`mapping-enabled-${mapping.id}`}
                       type="checkbox"
                       checked={mapping.enabled}
                       onChange={() => handleToggleMappingEnabled(mapping.id)}
                       className="w-4 h-4"
                     />
-                    <span className="font-medium text-gray-300">{mapping.name}</span>
+                    <label htmlFor={`mapping-enabled-${mapping.id}`} className="font-medium text-gray-300">{mapping.name}</label>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-gray-400">
                     <div>
-                      <label className="text-gray-500">Channel</label>
+                      <label htmlFor={`mapping-channel-${mapping.id}`} className="text-gray-500">Channel</label>
                       <input
+                        id={`mapping-channel-${mapping.id}`}
+                        name={`mapping-channel-${mapping.id}`}
                         type="number"
                         min="1"
                         max="16"
@@ -219,8 +225,10 @@ export const PluginParameterMapper: React.FC<PluginParameterMapperProps> = ({
                     </div>
 
                     <div>
-                      <label className="text-gray-500">CC</label>
+                      <label htmlFor={`mapping-cc-${mapping.id}`} className="text-gray-500">CC</label>
                       <input
+                        id={`mapping-cc-${mapping.id}`}
+                        name={`mapping-cc-${mapping.id}`}
                         type="number"
                         min="0"
                         max="127"
@@ -235,8 +243,10 @@ export const PluginParameterMapper: React.FC<PluginParameterMapperProps> = ({
                     </div>
 
                     <div>
-                      <label className="text-gray-500">Min Value</label>
+                      <label htmlFor={`mapping-min-${mapping.id}`} className="text-gray-500">Min Value</label>
                       <input
+                        id={`mapping-min-${mapping.id}`}
+                        name={`mapping-min-${mapping.id}`}
                         type="number"
                         step="0.01"
                         value={mapping.minValue}
@@ -250,8 +260,10 @@ export const PluginParameterMapper: React.FC<PluginParameterMapperProps> = ({
                     </div>
 
                     <div>
-                      <label className="text-gray-500">Max Value</label>
+                      <label htmlFor={`mapping-max-${mapping.id}`} className="text-gray-500">Max Value</label>
                       <input
+                        id={`mapping-max-${mapping.id}`}
+                        name={`mapping-max-${mapping.id}`}
                         type="number"
                         step="0.01"
                         value={mapping.maxValue}
@@ -311,19 +323,24 @@ export const PluginParameterMapper: React.FC<PluginParameterMapperProps> = ({
 
           <div className="space-y-2">
             <div>
-              <label className="text-xs text-gray-400">Parameter</label>
+              <label htmlFor="new-param-name" className="text-xs text-gray-400">Parameter</label>
               <input
+                id="new-param-name"
+                name="parameter-name"
                 type="text"
                 placeholder="e.g., Cutoff Frequency"
                 value={newMappingParam}
                 onChange={(e) => setNewMappingParam(e.target.value)}
+                autoComplete="off"
                 className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-xs text-gray-300"
               />
             </div>
 
             <div>
-              <label className="text-xs text-gray-400">MIDI Channel</label>
+              <label htmlFor="new-midi-channel" className="text-xs text-gray-400">MIDI Channel</label>
               <select
+                id="new-midi-channel"
+                name="midi-channel"
                 value={newMappingChannel}
                 onChange={(e) => setNewMappingChannel(parseInt(e.target.value))}
                 className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-xs text-gray-300"

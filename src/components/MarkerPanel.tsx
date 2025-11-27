@@ -31,11 +31,14 @@ export default function MarkerPanel() {
       {/* Add new marker */}
       <div className="flex gap-2">
         <input
+          id="marker-name-input"
+          name="marker-name"
           type="text"
           value={markerName}
           onChange={(e) => setMarkerName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAddMarker()}
           placeholder="Marker name..."
+          autoComplete="off"
           className="flex-1 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-gray-300 placeholder-gray-500"
         />
         <button

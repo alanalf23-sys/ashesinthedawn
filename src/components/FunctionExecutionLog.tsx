@@ -91,7 +91,7 @@ export default function FunctionExecutionLog() {
       }
     };
 
-    const interval = setInterval(checkForChanges, 2000);
+    const interval = setInterval(checkForChanges, 5000);
     return () => clearInterval(interval);
   }, [isPlaying, selectedTrack, events]);
 

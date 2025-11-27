@@ -69,13 +69,15 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, selectedContext]);
 
-  // Poll for suggestion updates every 3 seconds when in suggestions tab
+  // Poll for suggestion updates every 30 seconds when in suggestions tab (reduced from 3s to prevent blocking)
   useEffect(() => {
     if (!isConnected || activeTab !== 'suggestions') return;
 
     const pollInterval = setInterval(() => {
-      handleLoadSuggestions(selectedContext);
-    }, 3000);
+      handleLoadSuggestions(selectedContext).catch(err => {
+        console.debug('[CodettePanel] Suggestion poll failed:', err);
+      });
+    }, 30000);
 
     return () => clearInterval(pollInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -513,11 +515,14 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
             {activeTab === 'chat' ? (
               <form onSubmit={handleSendMessage} className="flex gap-1">
                 <input
+                  id="codette-chat-input"
+                  name="message"
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="Ask Codette..."
                   disabled={isLoading || !isConnected}
+                  autoComplete="off"
                   className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 disabled:opacity-50"
                 />
                 <button

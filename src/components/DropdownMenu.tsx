@@ -43,6 +43,7 @@ export const DropdownMenu = React.forwardRef<HTMLDivElement, DropdownMenuProps>(
     });
 
     const handleItemClick = (onClick: () => void) => {
+      // Prevent event propagation to avoid triggering parent handlers
       onClick();
       setIsOpen(false);
     };
@@ -124,12 +125,13 @@ export const SelectDropdown = React.forwardRef<HTMLDivElement, SelectDropdownPro
     return (
       <div className={`relative ${className}`} ref={ref}>
         {label && (
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label htmlFor={`dropdown-select-${label}`} className="block text-sm font-medium text-gray-300 mb-2">
             {label}
           </label>
         )}
 
         <button
+          id={`dropdown-select-${label}`}
           onClick={() => setIsOpen(!isOpen)}
           className={`w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-left text-gray-300 hover:border-gray-600 transition-colors flex items-center justify-between ${
             isOpen ? 'border-blue-500' : ''

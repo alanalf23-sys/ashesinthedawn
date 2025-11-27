@@ -264,7 +264,10 @@ export const AutomationTrack: React.FC<AutomationTrackProps> = ({
 
         {/* Mode selector */}
         <div className="flex items-center gap-2">
+          <label htmlFor={`automation-mode-${trackId}-${parameter}`} className="text-xs text-gray-400">Mode:</label>
           <select
+            id={`automation-mode-${trackId}-${parameter}`}
+            name={`automation-mode-${trackId}-${parameter}`}
             value={curve.mode}
             onChange={(e) => handleModeChange(e.target.value as 'off' | 'read' | 'write' | 'touch' | 'latch')}
             className="text-xs px-2 py-1 bg-gray-800 border border-gray-700 rounded text-gray-300 hover:border-gray-600"
@@ -348,7 +351,10 @@ export const AutomationTrack: React.FC<AutomationTrackProps> = ({
             </div>
 
             <div className="space-y-1">
+              <label htmlFor={`curve-type-${trackId}-${selectedPointIndex}`} className="text-xs text-gray-400">Curve:</label>
               <select
+                id={`curve-type-${trackId}-${selectedPointIndex}`}
+                name={`curve-type-${trackId}-${selectedPointIndex}`}
                 value={selectedPoint.curveType}
                 onChange={(e) => handleCurveTypeChange(e.target.value as 'linear' | 'exponential' | 'logarithmic')}
                 className="w-full text-xs px-2 py-1 bg-gray-700 border border-gray-600 rounded text-gray-300"

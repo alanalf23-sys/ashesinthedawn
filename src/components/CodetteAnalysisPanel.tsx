@@ -67,22 +67,22 @@ export function CodetteAnalysisPanel({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 w-full h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-200">
+      <div className="flex items-center justify-between flex-shrink-0">
+        <h3 className="text-sm font-semibold text-gray-100">
           📊 Track Analysis
         </h3>
-        {loading && <div className="animate-spin text-xs">⟳</div>}
+        {loading && <div className="animate-spin text-xs text-blue-400">⟳</div>}
       </div>
 
       {/* Error */}
       {error && (
-        <div className="p-2 bg-red-900/20 border border-red-700 rounded text-xs text-red-300">
+        <div className="p-2 bg-red-900/30 border border-red-700 rounded text-xs text-red-300 flex-shrink-0">
           {error}
           <button
             onClick={() => setError(null)}
-            className="ml-2 underline hover:no-underline"
+            className="ml-2 underline hover:no-underline text-red-200"
           >
             Dismiss
           </button>
@@ -93,82 +93,84 @@ export function CodetteAnalysisPanel({
       <button
         onClick={performAnalysis}
         disabled={loading}
-        className="w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white text-sm font-medium rounded transition-colors"
+        className="px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white text-sm font-medium rounded transition-colors flex-shrink-0"
       >
         {loading ? "Analyzing..." : "Analyze Track"}
       </button>
 
       {/* Analysis Results */}
-      {analysis && (
-        <div className="p-3 bg-gray-800 border border-gray-700 rounded space-y-3">
-          {/* Quality Score */}
-          {analysis.quality_score !== undefined && (
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-gray-400">Quality Score</span>
-                <span className="text-sm font-medium text-gray-200">
-                  {(analysis.quality_score * 100).toFixed(1)}%
-                </span>
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {analysis && (
+          <div className="p-3 bg-gray-800 border border-gray-700 rounded space-y-3 mr-2">
+            {/* Quality Score */}
+            {analysis.quality_score !== undefined && (
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-gray-400">Quality Score</span>
+                  <span className="text-sm font-medium text-gray-100">
+                    {(analysis.quality_score * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-900 rounded-full h-2">
+                  <div
+                    className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(analysis.quality_score * 100, 100)}%`,
+                    }}
+                  />
+                </div>
               </div>
-              <div className="w-full bg-gray-900 rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full"
-                  style={{
-                    width: `${Math.min(analysis.quality_score * 100, 100)}%`,
-                  }}
-                />
+            )}
+
+            {/* Recommendations */}
+            {analysis.recommendations && analysis.recommendations.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-300 mb-2 font-medium">Recommendations:</p>
+                <ul className="space-y-2">
+                  {analysis.recommendations.map(
+                    (rec: string, idx: number) => (
+                      <li
+                        key={idx}
+                        className="text-xs text-gray-300 flex items-start gap-2"
+                      >
+                        <span className="text-green-400 flex-shrink-0 mt-0.5">✓</span>
+                        <span className="break-words">{rec}</span>
+                      </li>
+                    )
+                  )}
+                </ul>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Recommendations */}
-          {analysis.recommendations && analysis.recommendations.length > 0 && (
-            <div>
-              <p className="text-xs text-gray-400 mb-2">Recommendations:</p>
-              <ul className="space-y-1">
-                {analysis.recommendations.map(
-                  (rec: string, idx: number) => (
-                    <li
-                      key={idx}
-                      className="text-xs text-gray-300 flex items-start gap-2"
-                    >
-                      <span className="text-green-400 flex-shrink-0">✓</span>
-                      <span>{rec}</span>
-                    </li>
-                  )
-                )}
-              </ul>
-            </div>
-          )}
-
-          {/* Results */}
-          {analysis.results && (
-            <div>
-              <p className="text-xs text-gray-400 mb-2">Analysis Results:</p>
-              <div className="space-y-2">
-                {Object.entries(analysis.results).map(([key, value]) => (
-                  <div key={key} className="flex justify-between text-xs">
-                    <span className="text-gray-400">{key}:</span>
-                    <span className="text-gray-200 font-medium">
-                      {typeof value === "number"
-                        ? value.toFixed(2)
-                        : String(value)}
-                    </span>
-                  </div>
-                ))}
+            {/* Results */}
+            {analysis.results && (
+              <div>
+                <p className="text-xs text-gray-300 mb-2 font-medium">Analysis Results:</p>
+                <div className="space-y-2">
+                  {Object.entries(analysis.results).map(([key, value]) => (
+                    <div key={key} className="flex justify-between text-xs">
+                      <span className="text-gray-400 break-words">{key}:</span>
+                      <span className="text-gray-200 font-medium ml-2">
+                        {typeof value === "number"
+                          ? value.toFixed(2)
+                          : String(value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
 
-      {!analysis && !loading && (
-        <div className="p-3 bg-gray-800 rounded text-center">
-          <p className="text-xs text-gray-500">
-            Click "Analyze Track" to start
-          </p>
-        </div>
-      )}
+        {!analysis && !loading && (
+          <div className="p-3 bg-gray-800 rounded text-center">
+            <p className="text-xs text-gray-500">
+              Click "Analyze Track" to start
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

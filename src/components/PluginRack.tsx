@@ -33,7 +33,7 @@ export default function PluginRack({
   const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
   const [executingPlugins, setExecutingPlugins] = useState<Set<string>>(new Set());
 
-  // Simulate real-time plugin execution indicator
+  // Simulate real-time plugin execution indicator (increased from 300-500ms to 1-1.5s to reduce CPU load)
   useEffect(() => {
     if (plugins.length === 0) return;
 
@@ -44,7 +44,7 @@ export default function PluginRack({
         setExecutingPlugins(new Set([randomPlugin]));
         setTimeout(() => setExecutingPlugins(new Set()), 50);
       }
-    }, 300 + Math.random() * 200);
+    }, 1000 + Math.random() * 500);
 
     return () => clearInterval(interval);
   }, [plugins]);
