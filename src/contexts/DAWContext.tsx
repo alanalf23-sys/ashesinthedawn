@@ -27,6 +27,11 @@ import {
   clearProjectStorage,
   createAutoSaveInterval,
 } from "../lib/projectStorage";
+import {
+  downloadProjectFile,
+  importProjectFromFile,
+  openFileDialog,
+} from "../lib/projectImportExport";
 
 interface DAWContextType {
   currentProject: Project | null;
@@ -128,6 +133,9 @@ interface DAWContextType {
   closeShortcutsModal: () => void;
   // Export
   exportAudio: (format: string, quality: string) => Promise<void>;
+  // Project Import/Export
+  exportProjectAsFile: () => void;
+  importProjectFromFile: () => Promise<void>;
   // Bus/Routing functions
   buses: Bus[];
   createBus: (name: string) => void;
@@ -1370,6 +1378,56 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Export current project as JSON file
+  const exportProjectAsFile = () => {
+    if (!currentProject) {
+      alert('No project to export');
+      return;
+    }
+    
+    try {
+      downloadProjectFile(currentProject);
+      console.log('[DAWContext] Project exported successfully');
+    } catch (error) {
+      console.error('[DAWContext] Failed to export project:', error);
+      alert('Failed to export project');
+    }
+  };
+
+  // Import project from JSON file
+  const importProjectFromFileHandler = async () => {
+    try {
+      const file = await openFileDialog();
+      if (!file) return; // User cancelled
+      
+      const result = await importProjectFromFile(file);
+      
+      if (!result.success) {
+        alert(`Failed to import project: ${result.error}`);
+        return;
+      }
+      
+      if (result.project) {
+        // Set the imported project as current
+        handleSetCurrentProject(result.project);
+        
+        // Auto-select first track if available
+        if (result.project.tracks.length > 0) {
+          const firstTrack = result.project.tracks[0];
+          if (firstTrack) {
+            setSelectedTrack(firstTrack);
+          }
+        }
+        
+        console.log('[DAWContext] Project imported successfully:', result.project.name);
+        alert(`Project imported: ${result.project.name}`);
+      }
+    } catch (error) {
+      console.error('[DAWContext] Failed to import project:', error);
+      alert('Failed to import project');
+    }
+  };
+
   // Bus/Routing functions
   const createBus = (name: string) => {
     const newBus: Bus = {
@@ -1691,6 +1749,8 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
         closeShortcutsModal,
         // Export
         exportAudio,
+        exportProjectAsFile,
+        importProjectFromFile: importProjectFromFileHandler,
         // Bus/Routing
         buses,
         createBus,

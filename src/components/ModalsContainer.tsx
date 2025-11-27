@@ -8,6 +8,7 @@ import MidiSettingsModal from './modals/MidiSettingsModal';
 import ShortcutsModal from './modals/ShortcutsModal';
 import AboutModal from './modals/AboutModal';
 import MixerOptionsModal from './modals/MixerOptionsModal';
+import ProjectImportExportModal from './ProjectImportExportModal';
 
 export default function ModalsContainer() {
   return (
@@ -16,6 +17,7 @@ export default function ModalsContainer() {
       <OpenProjectModal />
       <SaveAsModal />
       <ExportModal />
+      <ProjectImportExportModal />
       <PreferencesModal />
       <AudioSettingsModal />
       <MidiSettingsModal />
