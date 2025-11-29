@@ -16,7 +16,9 @@ import { useDAW } from "../contexts/DAWContext";
 import { useTransportClock } from "../hooks/useTransportClock";
 import { useSaveStatus } from "../hooks/useSaveStatus";
 import { useState } from "react";
-import { CodetteQuickAccess } from "./CodetteQuickAccess";
+import { lazy, Suspense } from "react";
+
+const LazyCodetteSystem = lazy(() => import("./CodetteSystem"));
 
 export default function TopBar() {
   const {
@@ -241,8 +243,10 @@ export default function TopBar() {
         )}
       </div>
 
-      {/* Codette Quick Access Widget */}
-      <CodetteQuickAccess />
+      {/* Codette AI System - Compact Mode */}
+      <Suspense fallback={<div className="w-24 h-8 bg-gray-700 rounded animate-pulse" />}>
+        <LazyCodetteSystem compactMode={true} defaultTab="suggestions" />
+      </Suspense>
 
       {/* CPU Usage */}
       <div className="flex items-center gap-1 text-gray-400">

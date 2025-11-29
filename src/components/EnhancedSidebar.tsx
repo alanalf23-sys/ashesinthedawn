@@ -9,7 +9,7 @@ import {
   LazyRoutingMatrixWrapper,
   LazyPluginBrowserWrapper,
   LazySpectrumVisualizerPanelWrapper,
-  LazyCodettePanelWrapper,
+  LazyCodetteSystemWrapper,
 } from './LazyComponents';
 
 type SidebarTab = 'files' | 'track' | 'routing' | 'plugins' | 'midi' | 'spectrum' | 'markers' | 'monitor' | 'codette';
@@ -52,7 +52,7 @@ export default function EnhancedSidebar() {
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === 'codette' && <LazyCodettePanelWrapper isVisible={true} />}
+        {activeTab === 'codette' && <LazyCodetteSystemWrapper defaultTab="chat" />}
         {activeTab === 'track' && <TrackDetailsPanel />}
         {activeTab === 'files' && <Sidebar />}
         {activeTab === 'routing' && <LazyRoutingMatrixWrapper />}

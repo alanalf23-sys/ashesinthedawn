@@ -12,6 +12,9 @@ const LazyRoutingMatrix = lazy(() => import('./RoutingMatrix'));
 const LazySpectrumVisualizerPanel = lazy(() => import('./SpectrumVisualizerPanel'));
 const LazyEffectChainPanel = lazy(() => import('./EffectChainPanel'));
 
+// Lazy load Codette unified system
+const LazyCodetteSystem = lazy(() => import('./CodetteSystem'));
+
 // Lazy load additional large components for bundle optimization
 const LazyCodettePanelComponent = lazy(() => import('./CodettePanel'));
 const LazyMixerComponent = lazy(() => import('./Mixer'));
@@ -51,6 +54,12 @@ export const LazyEffectChainPanelWrapper = (props: Record<string, unknown>) => (
 );
 
 // Additional lazy-loaded components for bundle optimization
+export const LazyCodetteSystemWrapper = (props: Record<string, unknown>) => (
+  <Suspense fallback={<ComponentLoadingFallback name="Codette AI" />}>
+    <LazyCodetteSystem {...props} />
+  </Suspense>
+);
+
 export const LazyCodettePanelWrapper = (props: Record<string, unknown>) => (
   <Suspense fallback={<ComponentLoadingFallback name="Codette Panel" />}>
     <LazyCodettePanelComponent {...props} />
