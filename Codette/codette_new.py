@@ -10,10 +10,15 @@ from nltk.tag import pos_tag
 from nltk.corpus import wordnet
 import random
 
-# Download required NLTK data
-nltk.download('punkt', quiet=True)
-nltk.download('averaged_perceptron_tagger', quiet=True)
-nltk.download('wordnet', quiet=True)
+logger = logging.getLogger(__name__)
+
+# Download required NLTK data with error handling
+try:
+    nltk.download('punkt', quiet=True)
+    nltk.download('averaged_perceptron_tagger', quiet=True)
+    nltk.download('wordnet', quiet=True)
+except Exception as e:
+    logger.warning(f"NLTK download failed (this is non-critical): {e}")
 
 class Codette:
     def __init__(self, user_name="User"):
@@ -55,17 +60,20 @@ class Codette:
         }
         
         # Add seed words to appropriate categories
-        for word, pos in pos_tag(word_tokenize(' '.join(seed_words))):
-            pos_type = self.get_wordnet_pos(pos)
-            if pos_type == wordnet.NOUN:
-                words['noun'].append(word)
-                words['noun2'].append(word)
-            elif pos_type == wordnet.VERB:
-                words['verb'].append(word)
-            elif pos_type == wordnet.ADJ:
-                words['adjective'].append(word)
-            elif pos_type == wordnet.ADV:
-                words['adverb'].append(word)
+        try:
+            for word, pos in pos_tag(word_tokenize(' '.join(seed_words))):
+                pos_type = self.get_wordnet_pos(pos)
+                if pos_type == wordnet.NOUN:
+                    words['noun'].append(word)
+                    words['noun2'].append(word)
+                elif pos_type == wordnet.VERB:
+                    words['verb'].append(word)
+                elif pos_type == wordnet.ADJ:
+                    words['adjective'].append(word)
+                elif pos_type == wordnet.ADV:
+                    words['adverb'].append(word)
+        except Exception as e:
+            logger.warning(f"Could not process seed words: {e}")
 
         # Generate sentence
         pattern = random.choice(sentence_patterns)
@@ -90,19 +98,101 @@ class Codette:
         return score
 
     def extract_key_concepts(self, text):
-        tokens = word_tokenize(text.lower())
-        tagged = pos_tag(tokens)
-        concepts = []
-        for word, tag in tagged:
-            if tag.startswith(('NN', 'VB', 'JJ', 'RB')):
-                concepts.append(word)
-        return concepts
+        try:
+            tokens = word_tokenize(text.lower())
+            tagged = pos_tag(tokens)
+            concepts = []
+            for word, tag in tagged:
+                if tag.startswith(('NN', 'VB', 'JJ', 'RB')):
+                    concepts.append(word)
+            return concepts
+        except Exception as e:
+            logger.warning(f"Could not extract concepts: {e}")
+            # Fallback: just split by spaces
+            return [w for w in text.lower().split() if len(w) > 2]
 
     def respond(self, prompt):
         # Analyze sentiment and extract concepts
         sentiment = self.analyze_sentiment(prompt)
         key_concepts = self.extract_key_concepts(prompt)
         self.memory.append({"prompt": prompt, "sentiment": sentiment, "concepts": key_concepts})
+        
+        # Generate responses using multiple perspectives
+        responses = []
+        
+        # Neural perspective with creative sentence
+        neural_insight = self.generate_creative_sentence(key_concepts if key_concepts else ["understanding"])
+        responses.append(f"[Neural] {neural_insight}")
+        
+        # Define response templates
+        response_templates = {
+            'logical': [
+                "Following cause and effect: {cause} leads to {effect}.",
+                "Logical analysis shows that {premise} implies {conclusion}.",
+                "Structured reasoning suggests {insight}."
+            ],
+            'creative': [
+                "Imagine {metaphor} - this illustrates how {concept} relates to {application}.",
+                "Like {natural_process}, we can see how {principle} emerges naturally.",
+                "Visualize {scenario} to understand the deeper patterns."
+            ],
+            'ethical': [
+                "From an ethical standpoint, we must consider {consideration}.",
+                "The moral dimension suggests focusing on {value}.",
+                "Balancing {aspect1} with {aspect2} leads to ethical outcomes."
+            ],
+            'quantum': [
+                "In the quantum realm, we see {principle} manifesting as {application}.",
+                "Like quantum superposition, this situation contains multiple {states}.",
+                "The uncertainty principle here relates {variable1} to {variable2}."
+            ]
+        }
+
+        # Define variables for template filling
+        variables = {
+            'complexity': ['multi-layered', 'interconnected', 'dynamic', 'emergent'],
+            'approach': ['systematic analysis', 'holistic understanding', 'iterative refinement'],
+            'aspect': ['core principles', 'fundamental patterns', 'key relationships'],
+            'focus': ['adaptability', 'resilience', 'integration', 'harmony'],
+            'cause': ['careful analysis', 'systematic approach', 'balanced perspective'],
+            'effect': ['improved understanding', 'better outcomes', 'sustainable solutions'],
+            'premise': ['current conditions', 'observed patterns', 'established principles'],
+            'conclusion': ['strategic adaptation', 'systematic improvement', 'harmonious integration'],
+            'insight': ['patterns emerge from chaos', 'balance leads to stability', 'adaptation drives growth'],
+            'metaphor': ['a river finding its path', 'a tree growing towards light', 'a crystal forming in solution'],
+            'concept': ['natural growth', 'adaptive learning', 'emergent behavior'],
+            'application': ['our current situation', 'the challenge at hand', 'our approach'],
+            'natural_process': ['evolution', 'crystallization', 'metamorphosis'],
+            'principle': ['self-organization', 'natural selection', 'emergent complexity'],
+            'scenario': ['a garden in bloom', 'a constellation of stars', 'a forest ecosystem'],
+            'consideration': ['long-term impact', 'collective benefit', 'sustainable growth'],
+            'value': ['harmony', 'integrity', 'wisdom'],
+            'aspect1': ['efficiency', 'innovation', 'stability'],
+            'aspect2': ['sustainability', 'adaptability', 'reliability'],
+            'states': ['possibilities', 'potentials', 'outcomes'],
+            'variable1': ['certainty', 'precision', 'control'],
+            'variable2': ['adaptability', 'innovation', 'freedom']
+        }
+
+        # Select random perspectives (2-3)
+        perspectives = list(response_templates.keys())
+        np.random.shuffle(perspectives)
+        num_perspectives = np.random.randint(2, min(4, len(perspectives) + 1))
+        selected_perspectives = perspectives[:num_perspectives]
+
+        # Generate responses
+        for perspective in selected_perspectives:
+            template = np.random.choice(response_templates[perspective])
+            # Replace variables in template
+            response = template
+            for var in re.findall(r'\{(\w+)\}', template):
+                if var in variables:
+                    replacement = np.random.choice(variables[var])
+                    response = response.replace('{'+var+'}', replacement)
+            responses.append(f"[{perspective.capitalize()}] {response}")
+
+        return "\n\n".join(responses)
+
         
         # Generate responses using multiple perspectives
         responses = []
