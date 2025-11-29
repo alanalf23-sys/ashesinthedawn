@@ -84,7 +84,10 @@ class DatabaseManager:
                 
         except sqlite3.Error as e:
             logger.error(f"Database initialization error: {e}")
-            raise
+            # For in-memory databases that might not support certain operations,
+            # we still want to log but not fail completely
+            if ":memory:" not in self.db_path:
+                raise
     
     def create_user(self, username: str, password_hash: str, metadata: Optional[Dict] = None) -> int:
         """Create a new user

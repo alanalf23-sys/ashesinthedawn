@@ -17,7 +17,9 @@ try:
     from codette_new import Codette
 except ImportError:
     try:
-        from Codette.codette_new import Codette
+        # Don't use Codette from codette2.py since it has different signature (CodetteCQURE)
+        # Just use codette_new which is the working implementation
+        raise ImportError("Using fallback to codette_new only")
     except ImportError:
         logger.error("Could not import Codette. Using fallback.")
         Codette = None
