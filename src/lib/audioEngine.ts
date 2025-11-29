@@ -326,7 +326,8 @@ export class AudioEngine {
   }
 
   /**
-   * Get waveform data from audio buffer
+   * Get waveform data from audio buffer with stereo support
+   * Optimized for real-time rendering with peak-based analysis
    */
   getWaveformData(trackId: string, samples: number = 1024): number[] {
     // Check cache first
@@ -342,26 +343,38 @@ export class AudioEngine {
     }
 
     try {
-      const rawData = buffer.getChannelData(0);
-      const blockSize = Math.floor(rawData.length / samples);
+      const blockSize = Math.floor(buffer.length / samples);
 
       if (blockSize < 1) {
-        // If audio is too short, just return raw data
-        return Array.from(rawData)
+        // If audio is too short, return raw data
+        return Array.from(buffer.getChannelData(0))
           .map((v) => Math.abs(v))
           .slice(0, samples);
       }
 
+      // Extract peaks from all channels (mono or stereo)
       const waveform: number[] = [];
+      const channelCount = buffer.numberOfChannels;
+      
       for (let i = 0; i < samples; i++) {
-        let sum = 0;
-        for (let j = 0; j < blockSize; j++) {
-          const idx = i * blockSize + j;
-          if (idx < rawData.length) {
-            sum += Math.abs(rawData[idx]);
+        let maxPeak = 0;
+        
+        // Process each channel and find maximum peak
+        for (let ch = 0; ch < channelCount; ch++) {
+          const channelData = buffer.getChannelData(ch);
+          let blockMax = 0;
+          
+          for (let j = 0; j < blockSize; j++) {
+            const idx = i * blockSize + j;
+            if (idx < channelData.length) {
+              blockMax = Math.max(blockMax, Math.abs(channelData[idx]));
+            }
           }
+          
+          maxPeak = Math.max(maxPeak, blockMax);
         }
-        waveform.push(sum / blockSize);
+        
+        waveform.push(maxPeak);
       }
 
       // Cache the computed waveform

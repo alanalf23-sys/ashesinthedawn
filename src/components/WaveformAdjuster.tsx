@@ -43,7 +43,7 @@ export default function WaveformAdjuster({
   const duration = getAudioDuration(trackId);
   const waveformData = getWaveformData(trackId);
 
-  // High-resolution peak calculation
+  // High-resolution peak calculation with optimized caching
   const calculatePeaks = useCallback(
     (data: number[], pixelWidth: number): Array<{ min: number; max: number }> => {
       if (!data || data.length === 0) return [];
@@ -52,52 +52,56 @@ export default function WaveformAdjuster({
       const peaks: Array<{ min: number; max: number }> = [];
       let globalMax = 0;
 
-      for (let i = 0; i < data.length; i += blockSize) {
-        const block = data.slice(i, Math.min(i + blockSize, data.length));
-        if (block.length === 0) continue;
-
-        let min = Infinity;
-        let max = -Infinity;
-
-        for (const sample of block) {
-          min = Math.min(min, sample);
-          max = Math.max(max, sample);
+      // Optimize for mono waveform data (already contains peaks from audioEngine)
+      for (let i = 0; i < pixelWidth && i * blockSize < data.length; i++) {
+        const startIdx = i * blockSize;
+        const endIdx = Math.min(startIdx + blockSize, data.length);
+        
+        let max = 0;
+        for (let j = startIdx; j < endIdx; j++) {
+          max = Math.max(max, data[j]);
         }
-
-        peaks.push({ min: min === Infinity ? 0 : min, max: max === -Infinity ? 0 : max });
-        globalMax = Math.max(globalMax, Math.abs(max), Math.abs(min));
+        
+        // Store as symmetric peaks around center for visual balance
+        peaks.push({ min: -max, max: max });
+        globalMax = Math.max(globalMax, max);
       }
 
-      setPeakLevel(globalMax);
+      setPeakLevel(Math.min(globalMax, 1.0)); // Clamp to 1.0 for percentage display
       return peaks;
     },
     [zoom]
   );
 
-  // Draw waveform
+  // Draw waveform with optimized rendering
   const drawWaveform = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !waveformData || waveformData.length === 0) return;
 
-    const ctx = canvas.getContext("2d", { alpha: true });
+    const ctx = canvas.getContext("2d", { alpha: true, willReadFrequently: false });
     if (!ctx) return;
 
     const width = canvas.offsetWidth;
     const actualHeight = canvas.offsetHeight;
+    
+    // Validate dimensions
+    if (width <= 0 || actualHeight <= 0) return;
 
     // Set canvas resolution for crisp rendering
-    canvas.width = width * window.devicePixelRatio;
-    canvas.height = actualHeight * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = actualHeight * dpr;
+    ctx.scale(dpr, dpr);
 
     // Clear canvas with dark background
     ctx.fillStyle = "#1f2937";
     ctx.fillRect(0, 0, width, actualHeight);
 
-    // Draw grid
+    // Draw grid with reduced opacity for better visual hierarchy
     if (showGrid) {
       ctx.strokeStyle = "#2d3748";
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 0.5;
+      ctx.globalAlpha = 0.6;
       const gridSpacing = width / 8;
       for (let i = 0; i <= 8; i++) {
         ctx.beginPath();
@@ -105,15 +109,18 @@ export default function WaveformAdjuster({
         ctx.lineTo(i * gridSpacing, actualHeight);
         ctx.stroke();
       }
+      ctx.globalAlpha = 1.0;
     }
 
-    // Draw center line
+    // Draw center line with enhanced visibility
     ctx.strokeStyle = "#374151";
     ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.7;
     ctx.beginPath();
     ctx.moveTo(0, actualHeight / 2);
     ctx.lineTo(width, actualHeight / 2);
     ctx.stroke();
+    ctx.globalAlpha = 1.0;
 
     // Calculate peaks for current view
     const peaks = calculatePeaks(waveformData, width);
@@ -122,22 +129,23 @@ export default function WaveformAdjuster({
     const centerY = actualHeight / 2;
     const scaleY = (actualHeight / 2) * 0.85 * scale;
 
-    // Create gradient for waveform
+    // Create gradient for waveform with enhanced colors
     const gradient = ctx.createLinearGradient(0, 0, 0, actualHeight);
-    gradient.addColorStop(0, waveformColor + "cc");
-    gradient.addColorStop(0.5, waveformColor + "ff");
-    gradient.addColorStop(1, waveformColor + "cc");
+    gradient.addColorStop(0, waveformColor + "99");    // Top: semi-transparent
+    gradient.addColorStop(0.5, waveformColor + "ff");  // Middle: full color
+    gradient.addColorStop(1, waveformColor + "99");    // Bottom: semi-transparent
 
     ctx.strokeStyle = gradient;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+    ctx.globalAlpha = 0.95;
 
     // Draw waveform with anti-aliasing
     const pixelsPerPeak = width / peaks.length;
 
-    // Draw filled area first
-    ctx.fillStyle = waveformColor + "20";
+    // Draw filled area first with lighter color
+    ctx.fillStyle = waveformColor + "15";
     ctx.beginPath();
     ctx.moveTo(0, centerY);
 
@@ -155,10 +163,11 @@ export default function WaveformAdjuster({
 
     ctx.lineTo(width, centerY);
     ctx.fill();
+    ctx.globalAlpha = 1.0;
 
-    // Draw outline
+    // Draw outline with full opacity
     ctx.strokeStyle = gradient;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.moveTo(0, centerY);
 
@@ -176,26 +185,36 @@ export default function WaveformAdjuster({
 
     ctx.stroke();
 
-    // Draw playhead if playing
+    // Draw playhead if playing with enhanced styling
     if (isPlaying && duration > 0) {
       const playheadX = (currentTime / duration) * width;
+      
+      // Playhead shadow for depth
+      ctx.shadowColor = "#10b98144";
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 0;
+      
       ctx.strokeStyle = "#10b981";
-      ctx.lineWidth = 3;
-      ctx.globalAlpha = 0.8;
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha = 0.9;
       ctx.beginPath();
       ctx.moveTo(playheadX, 0);
       ctx.lineTo(playheadX, actualHeight);
       ctx.stroke();
-      ctx.globalAlpha = 1;
+      
+      ctx.shadowColor = "transparent";
+      ctx.globalAlpha = 1.0;
     }
 
-    // Draw current time indicator
+    // Draw current time indicator with better styling
     if (duration > 0) {
       const posX = (currentTime / duration) * width;
       ctx.fillStyle = "#ef4444";
+      ctx.globalAlpha = 0.8;
       ctx.beginPath();
-      ctx.arc(posX, centerY, 4, 0, Math.PI * 2);
+      ctx.arc(posX, centerY, 3, 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalAlpha = 1.0;
     }
   }, [waveformData, height, duration, currentTime, isPlaying, showGrid, waveformColor, scale, smoothing, calculatePeaks]);
 

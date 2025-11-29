@@ -95,31 +95,31 @@ export default function WaveformDisplay({
     ctx.lineTo(width, height / 2);
     ctx.stroke();
 
-    // Calculate peaks for rendering
+    // Calculate peaks for rendering with optimized algorithm
     const blockSize = Math.max(
       1,
       Math.floor(waveformData.length / (width * zoom))
     );
     const peaks = [];
+    let maxPeak = 0;
 
-    for (let i = 0; i < waveformData.length; i += blockSize) {
-      const block = waveformData.slice(
-        i,
-        Math.min(i + blockSize, waveformData.length)
-      );
-      if (block.length === 0) continue;
-      const min = Math.min(...block);
-      const max = Math.max(...block);
-      peaks.push({ min, max });
+    // Process blocks efficiently
+    for (let i = 0; i < width && i * blockSize < waveformData.length; i++) {
+      const startIdx = i * blockSize;
+      const endIdx = Math.min(startIdx + blockSize, waveformData.length);
+      
+      let blockMax = 0;
+      for (let j = startIdx; j < endIdx; j++) {
+        blockMax = Math.max(blockMax, waveformData[j]);
+      }
+      
+      // Store symmetric peaks
+      peaks.push({ min: -blockMax, max: blockMax });
+      maxPeak = Math.max(maxPeak, blockMax);
     }
 
-    // Update peak meter
-    if (peaks.length > 0) {
-      const maxPeak = Math.max(
-        ...peaks.map((p) => Math.abs(Math.max(p.max, Math.abs(p.min))))
-      );
-      setPeakLevel(maxPeak);
-    }
+    // Update peak meter with clamping
+    setPeakLevel(Math.min(maxPeak, 1.0));
 
     // Draw waveform
     const centerY = height / 2;
