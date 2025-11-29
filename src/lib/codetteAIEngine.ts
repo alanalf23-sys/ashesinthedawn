@@ -604,12 +604,20 @@ Keep peaks around -6dB during mixing.
    */
   async sendMessage(message: string): Promise<string> {
     try {
+      // First, add user message to history
+      this.chatHistory.push({
+        role: 'user',
+        content: message,
+        timestamp: Date.now(),
+      });
+
       const response = await fetch(`${this.apiUrl}/codette/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message,
-          history: this.chatHistory.slice(-5),
+          message: message,
+          perspective: 'neuralnets',
+          context: this.chatHistory.slice(-5),
         }),
       });
 
@@ -618,15 +626,9 @@ Keep peaks around -6dB during mixing.
       }
 
       const data = await response.json();
-      const responseText = data.response || 'No response';
+      const responseText = data.response || data.message || 'No response received';
 
-      // Add to history
-      this.chatHistory.push({
-        role: 'user',
-        content: message,
-        timestamp: Date.now(),
-      });
-
+      // Add assistant response to history
       this.chatHistory.push({
         role: 'assistant',
         content: responseText,
@@ -636,7 +638,7 @@ Keep peaks around -6dB during mixing.
       return responseText;
     } catch (error) {
       console.error('Error communicating with Codette:', error);
-      return 'Unable to reach Codette AI server';
+      return 'Unable to reach Codette AI server. Please check if the backend is running on port 8000.';
     }
   }
 

@@ -41,23 +41,23 @@ class Perspectives:
         responses = {
             'technical': [
                 "Pattern analysis suggests a systematic approach would be most effective here.",
-                "The neural pathways indicate this is a multi-layered challenge requiring decomposition.",
-                "Based on similar patterns, we should focus on the core components first."
+                "This exhibits recursive complexity requiring decomposition into core components.",
+                "Multi-layered challenge detected - hierarchical abstraction will help."
             ],
             'emotional': [
-                "Emotional resonance detected. Let's approach this with both logic and empathy.",
-                "The emotional context here adds an important dimension to consider.",
-                "Sentiment analysis reveals underlying concerns we should address."
+                "Emotional context matters here. Let's balance logic with empathy.",
+                "This carries emotional weight worth acknowledging alongside practical concerns.",
+                "I sense deeper motivations - let's explore what's truly important."
             ],
             'creative': [
-                "Creative potential detected. Let's explore unconventional neural pathways.",
-                "This opens up fascinating possibilities for innovative solutions.",
-                "The pattern space here is wide open for creative exploration."
+                "Creative potential here - let's explore unconventional approaches.",
+                "This opens fascinating possibilities beyond obvious solutions.",
+                "Novel synthesis pathways emerging - imagination is key."
             ],
             'problem': [
-                "Analyzing similar problem patterns for optimal solutions.",
-                "Pattern matching with known solutions suggests several approaches.",
-                "Neural analysis indicates this is a variation of a known challenge."
+                "This mirrors known problem patterns - several approaches work.",
+                "Obstacle identified with multiple resolution strategies available.",
+                "Challenge signature suggests proven solutions can be adapted here."
             ]
         }
         
@@ -71,14 +71,14 @@ class Perspectives:
         
         if any(word in words for word in ['why', 'because', 'cause', 'effect']):
             templates = [
-                "Following the chain of causality: {A} leads to {B}, which results in {C}.",
-                "The mechanics are clear: {A} creates {B}, generating {C}.",
-                "Through logical progression: {A} → {B} → {C}."
+                "The causal chain: {A} leads to {B}, which results in {C}.",
+                "Logical progression: {A} → {B} → {C}.",
+                "Sequential causation: when {A}, then {B}, producing {C}."
             ]
             parts = {
-                'A': ['initial conditions', 'given parameters', 'current state'],
-                'B': ['intermediate effects', 'transformative processes', 'dynamic changes'],
-                'C': ['final outcomes', 'observable results', 'measurable impacts']
+                'A': ['initial conditions', 'given parameters', 'current state', 'primary cause', 'root factor'],
+                'B': ['intermediate effects', 'transformative processes', 'dynamic changes', 'secondary reactions', 'propagating influence'],
+                'C': ['final outcomes', 'observable results', 'measurable impacts', 'end states', 'terminal conditions']
             }
             template = np.random.choice(templates)
             return f"[Reason] {template.format(
@@ -88,31 +88,35 @@ class Perspectives:
             )}"
         else:
             templates = [
-                "Applying classical logic: if we assume {premise}, then {conclusion} must follow.",
-                "Through deductive reasoning: {premise} implies {conclusion}.",
-                "The logical framework suggests: given {premise}, we can deduce {conclusion}."
+                "Deductive reasoning: {premise} implies {conclusion}.",
+                "Given {premise}, we can deduce {conclusion}.",
+                "Logic dictates: {premise} therefore {conclusion}."
             ]
+            premises = ['the current conditions', 'this situation', 'the given context', 'these parameters', 'the existing state']
+            conclusions = ['a systematic approach is needed', 'methodical analysis proves essential', 'structured thinking becomes imperative', 
+                          'ordered progression is required', 'step-by-step analysis is mandatory']
+            
             return f"[Reason] {np.random.choice(templates).format(
-                premise=f"the current {np.random.choice(['conditions', 'situation', 'context'])}",
-                conclusion=f"a {np.random.choice(['systematic', 'methodical', 'structured'])} approach is needed"
+                premise=np.random.choice(premises),
+                conclusion=np.random.choice(conclusions)
             )}"
 
     def daVinciSynthesis(self, text):
         analogies = {
             'growth': [
-                "Like a seed growing into a mighty oak, {subject} develops through nurturing and time.",
-                "As water shapes stones over centuries, {subject} is shaped by persistent effort.",
-                "Similar to a butterfly's metamorphosis, {subject} transforms through distinct stages."
+                "Like a seed becoming a mighty oak, {subject} develops through nurturing and time.",
+                "As water shapes stone, {subject} is shaped by persistent effort.",
+                "Similar to metamorphosis, {subject} transforms through distinct stages."
             ],
             'harmony': [
-                "Picture a symphony where {subject} plays in perfect harmony with {context}.",
-                "Like the delicate balance of an ecosystem, {subject} thrives through mutual cooperation.",
-                "Imagine a dance between {subject} and {context}, each movement precisely coordinated."
+                "Like a symphony, {subject} plays in perfect harmony with {context}.",
+                "Like an ecosystem, {subject} thrives through cooperation with {context}.",
+                "As celestial bodies orbit in balance, {subject} maintains equilibrium with {context}."
             ],
             'innovation': [
                 "As Leonardo merged art and science, let's blend {subject} with {context}.",
-                "Like the first birds learning to fly, {subject} breaks conventional boundaries.",
-                "Picture {subject} as a Renaissance workshop, where creativity meets precision."
+                "Like birds learning to fly, {subject} breaks conventional boundaries.",
+                "Like printing transformed civilization, {subject} could revolutionize thinking about {context}."
             ]
         }
         
@@ -125,9 +129,12 @@ class Perspectives:
             theme = 'innovation'
             
         template = np.random.choice(analogies[theme])
+        subjects = ['this concept', 'the solution', 'this approach']
+        contexts = ['the greater whole', 'existing systems', 'future possibilities']
+        
         return f"[Dream] {template.format(
-            subject=np.random.choice(['your vision', 'this concept', 'this challenge']),
-            context=np.random.choice(['the greater whole', 'surrounding elements', 'existing systems'])
+            subject=np.random.choice(subjects),
+            context=np.random.choice(contexts)
         )}"
 
     def resilientKindness(self, text):
@@ -135,21 +142,21 @@ class Perspectives:
         
         if sentiment['compound'] < -0.2:
             templates = [
-                "I sense this is challenging. Let's approach it with patience and understanding.",
-                "Your concerns are valid. We'll work through this together with care.",
-                "Sometimes the hardest problems lead to the most meaningful solutions."
+                "I sense this is challenging. Let's approach it with patience and care.",
+                "Your concerns are valid. We'll work through this together.",
+                "Difficulty often leads to meaningful solutions and growth."
             ]
         elif sentiment['compound'] > 0.2:
             templates = [
                 "Your positive approach is inspiring. Let's build on that energy.",
-                "I appreciate your enthusiasm. It's a great foundation for what we can achieve.",
-                "Your optimism is contagious. Let's channel it into effective action."
+                "Your optimism can illuminate solutions others might miss.",
+                "Let's channel your enthusiasm into effective action."
             ]
         else:
             templates = [
-                "Let's explore this together with both wisdom and compassion.",
-                "Balance is key - we'll consider both practical and human elements.",
-                "Every challenge is an opportunity for growth and understanding."
+                "Let's explore this with both wisdom and compassion.",
+                "Balance matters - we'll consider practical and human elements.",
+                "Clarity emerges when we honor both heart and mind."
             ]
             
         return f"[Ethics] {np.random.choice(templates)}"
@@ -157,25 +164,25 @@ class Perspectives:
     def quantumLogicPerspective(self, text):
         themes = {
             'uncertainty': [
-                "In the quantum realm of possibilities, we see a superposition of {A} and {B}.",
+                "Superposition detected: {A} and {B} coexist in quantum ambiguity.",
                 "Like quantum entanglement, {A} and {B} are intrinsically connected.",
                 "The uncertainty principle suggests a trade-off between {A} and {B}."
             ],
             'observation': [
-                "Observing the system changes it - we must consider how {A} affects {B}.",
-                "The act of measurement reveals {A}, but may influence {B}.",
-                "When we look closely at {A}, we find unexpected connections to {B}."
+                "Observation changes the system: examining {A} influences {B}.",
+                "Measurement reveals {A}, but may subtly shift {B}.",
+                "Heisenberg's principle: precision in {A} trades clarity in {B}."
             ],
             'probability': [
-                "Quantum probability suggests multiple paths: {A} could lead to {B}.",
-                "The wavefunction of possibilities includes both {A} and {B}.",
-                "Like quantum tunneling, there's a non-zero probability of {A} reaching {B}."
+                "Quantum probability: {A} could lead to {B}.",
+                "Wave function shows multiple possibilities: {A} and {B} both possible.",
+                "Many-worlds scenario: {A} branches into parallel {B} outcomes."
             ]
         }
         
         concepts = {
             'A': ['current understanding', 'observable patterns', 'known principles'],
-            'B': ['emerging possibilities', 'hidden connections', 'potential outcomes']
+            'B': ['emerging possibilities', 'potential outcomes', 'hidden connections']
         }
         
         theme = np.random.choice(list(themes.keys()))

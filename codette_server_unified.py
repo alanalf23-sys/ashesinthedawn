@@ -446,11 +446,24 @@ async def chat_endpoint(request: ChatRequest):
                     break
         
         # Try real Codette engine if available
+        perspective_source = "fallback"
         if not response and USE_REAL_ENGINE and codette_engine:
             try:
-                response = codette_engine.process(request.message)
-                if response:
+                result = codette_engine.process_chat_real(request.message, "default")
+                if isinstance(result, dict) and "perspectives" in result:
+                    # Format multi-perspective response
+                    response = "🧠 **Codette's Multi-Perspective Analysis**\n\n"
+                    perspectives_list = result.get("perspectives", [])
+                    for perspective in perspectives_list:
+                        perspective_name = perspective.get('name', 'Insight')
+                        perspective_response = perspective.get('response', '')
+                        response += f"**{perspective_name}**: {perspective_response}\n\n"
+                    confidence = result.get("confidence", 0.88)
+                    perspective_source = "real-engine"
+                elif isinstance(result, str):
+                    response = result
                     confidence = 0.88
+                    perspective_source = "real-engine"
             except Exception as e:
                 logger.warning(f"Real engine error: {e}")
         
@@ -465,10 +478,11 @@ I can help you with:
 
 What would you like to learn?"""
             confidence = 0.75
+            perspective_source = "fallback"
         
         return ChatResponse(
             response=response,
-            perspective=perspective,
+            perspective=perspective_source,
             confidence=min(confidence, 1.0),
             timestamp=get_timestamp(),
         )

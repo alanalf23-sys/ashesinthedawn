@@ -114,22 +114,12 @@ export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
       setError(null);
 
       try {
+        // Engine handles message history internally, just get response
         const response = await codetteEngine.current.sendMessage(message);
         
-        const userMessage: CodetteChatMessage = {
-          role: 'user',
-          content: message,
-          timestamp: Date.now(),
-        };
-
-        const assistantMessage: CodetteChatMessage = {
-          role: 'assistant',
-          content: response,
-          timestamp: Date.now(),
-        };
-
-        const newHistory = [...chatHistory, userMessage, assistantMessage];
-        setChatHistory(newHistory);
+        // Update chat history from engine to ensure consistency
+        const history = codetteEngine.current.getHistory();
+        setChatHistory(history);
 
         return response;
       } catch (err) {
@@ -141,7 +131,7 @@ export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
         setIsLoading(false);
       }
     },
-    [chatHistory, onError]
+    []
   );
 
   // Real implementation: Analyze audio
