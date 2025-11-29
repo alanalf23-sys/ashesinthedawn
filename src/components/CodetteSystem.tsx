@@ -47,6 +47,9 @@ export function CodetteSystem({ defaultTab = 'chat', compactMode = false }: Code
   const [analysis, setAnalysis] = useState<any>(null);
   const [checklist, setChecklist] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [selectedGenre, setSelectedGenre] = useState<string>('pop');
+  const [availableGenres, setAvailableGenres] = useState<any[]>([]);
+  const [wsData, setWsData] = useState<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -92,6 +95,82 @@ export function CodetteSystem({ defaultTab = 'chat', compactMode = false }: Code
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isOpen, isConnected]);
+
+  // Load available genres on mount
+  useEffect(() => {
+    const loadGenres = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_CODETTE_API || 'http://localhost:8000';
+        const response = await fetch(`${apiUrl}/codette/genres`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.genres && Array.isArray(data.genres)) {
+            setAvailableGenres(data.genres);
+          }
+        }
+      } catch (err) {
+        console.error('[CodetteSystem] Failed to load genres:', err);
+      }
+    };
+    
+    loadGenres();
+  }, []);
+
+  // WebSocket listener for real-time analysis streaming
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'analysis') return;
+
+    const apiUrl = import.meta.env.VITE_CODETTE_API || 'http://localhost:8000';
+    const wsUrl = apiUrl.replace('http', 'ws').replace('https', 'wss') + '/ws';
+
+    try {
+      const ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log('[CodetteSystem] WebSocket connected for real-time streaming');
+        // Request real-time analysis
+        ws.send(JSON.stringify({
+          type: 'analyze_stream',
+          analysis_type: 'spectrum',
+          interval_ms: 100,
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'analysis_update') {
+            setWsData(data.payload);
+            // Also update analysis state with streamed data
+            setAnalysis((prev: any) => ({
+              ...prev,
+              ...data.payload,
+              timestamp: new Date().toISOString(),
+            }));
+          }
+        } catch (err) {
+          console.error('[CodetteSystem] WebSocket parse error:', err);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('[CodetteSystem] WebSocket error:', error);
+      };
+
+      ws.onclose = () => {
+        console.log('[CodetteSystem] WebSocket disconnected');
+      };
+
+      return () => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
+      };
+    } catch (err) {
+      console.error('[CodetteSystem] WebSocket connection failed:', err);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, activeTab]);
 
   // Handle sending message
   const handleSendMessage = async () => {
