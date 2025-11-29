@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Codette AI Server Launcher
 Starts the FastAPI/Uvicorn server on port 8001
@@ -16,14 +17,14 @@ sys.path.insert(0, str(codette_path))
 
 def main():
     """Start the Codette AI server"""
-    print("🚀 Starting Codette AI Server...")
-    print("📡 Server will run on: http://localhost:8001")
-    print("🔗 Integration: React DAW will connect to this server")
+    print("[>>] Starting Codette AI Server...")
+    print("[*] Server will run on: http://localhost:8001")
+    print("[+] Integration: React DAW will connect to this server")
     print("-" * 60)
     
-    # Start uvicorn server
+    # Start uvicorn server with the unified server
     uvicorn.run(
-        "codette.codette_interface:app",
+        "codette_server_unified:app",
         host="127.0.0.1",
         port=8001,
         reload=True,

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Codette Server - Simple wrapper
 Keeps the server running and handles restarts
@@ -9,10 +10,10 @@ import time
 
 if __name__ == "__main__":
     print("\n" + "="*70)
-    print("Codette AI Server Launcher")
+    print("[+] Codette AI Server Launcher")
     print("="*70)
-    print("Starting server on http://localhost:8000")
-    print("Press Ctrl+C to stop\n")
+    print("[*] Starting server on http://localhost:8000")
+    print("[!] Press Ctrl+C to stop\n")
     
     while True:
         try:

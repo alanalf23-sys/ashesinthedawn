@@ -1,609 +1,283 @@
+# -*- coding: utf-8 -*-
 """
 Unified Codette Interface
-Combines web API, Gradio UI, and command-line functionality
+Provides clean API for accessing Codette AI with multiple backends
 """
 import logging
 from datetime import datetime
 import json
-import asyncio
 from typing import Dict, Any, Optional
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Try multiple import paths for Codette
+# Import the core Codette
 try:
     from codette_new import Codette
-except ImportError:
-    try:
-        # Don't use Codette from codette2.py since it has different signature (CodetteCQURE)
-        # Just use codette_new which is the working implementation
-        raise ImportError("Using fallback to codette_new only")
-    except ImportError:
-        logger.error("Could not import Codette. Using fallback.")
-        Codette = None
-
-# Optional imports for UI (not critical)
-try:
-    import gradio as gr
-    HAS_GRADIO = True
-except ImportError:
-    HAS_GRADIO = False
-    logger.warning("Gradio not installed. Gradio UI will be unavailable.")
-
-try:
-    from flask import Flask, request, jsonify
-    from flask_cors import CORS
-    HAS_FLASK = True
-except ImportError:
-    HAS_FLASK = False
-    logger.warning("Flask not installed. Flask API will be unavailable.")
+    CODETTE_AVAILABLE = True
+except ImportError as e:
+    logger.error(f"Could not import Codette: {e}")
+    CODETTE_AVAILABLE = False
+    Codette = None
 
 
 class CodetteInterface:
-    def __init__(self):
-        """Initialize Codette with configuration"""
-        try:
-            # Load configuration
-            with open('config.json', 'r') as f:
-                self.config = json.load(f)
-        except Exception as e:
-            logger.warning(f"Could not load config.json, using defaults: {e}")
-            self.config = {
-                "host": "127.0.0.1",
-                "port": 9000,
-                "quantum_fluctuation": 0.07,
-                "spiderweb_dim": 5,
-                "recursion_depth": 4,
-                "perspectives": [
-                    "Newton",
-                    "DaVinci",
-                    "Ethical",
-                    "Quantum",
-                    "Memory"
-                ]
-            }
-
-        # Initialize Codette
-        try:
-            if Codette is None:
-                raise ImportError("Codette class not available")
-                
-            self.codette = Codette(user_name="WebUser")
-            self.response_memory = []
-            self.last_interaction = None
-            logger.info("Codette interface initialized")
-        except Exception as e:
-            logger.error(f"Error initializing interface: {e}")
+    """Clean interface to Codette AI"""
+    
+    def __init__(self, user_name: str = "User"):
+        """
+        Initialize Codette Interface
+        
+        Args:
+            user_name: Name of the user interacting with Codette
+        """
+        self.user_name = user_name
+        self.response_memory = []
+        self.last_interaction = None
+        
+        # Load configuration
+        self.config = self._load_config()
+        
+        # Initialize Codette core
+        if CODETTE_AVAILABLE:
+            try:
+                self.codette = Codette(user_name=user_name)
+                logger.info(f"[OK] Codette AI initialized for user: {user_name}")
+            except Exception as e:
+                logger.error(f"[ERROR] Failed to initialize Codette: {e}")
+                self.codette = None
+        else:
             self.codette = None
 
-    def _is_greeting(self, message: str) -> bool:
-        """Check if the message is a greeting"""
-        greetings = ["hi", "hello", "hey", "good morning", "good afternoon", 
-                    "good evening", "hi codette", "hello codette"]
-        return any(message.lower().startswith(g) for g in greetings)
-    
-    def _is_farewell(self, message: str) -> bool:
-        """Check if the message is a farewell"""
-        farewells = ["bye", "goodbye", "see you", "farewell", "good night",
-                    "thanks bye", "bye codette", "goodbye codette"]
-        return any(message.lower().startswith(f) for f in farewells)
-
-    def process_message(self, message: str, history: Optional[list] = None) -> Dict[str, Any]:
-        """Process a message through Codette's systems"""
+    def _load_config(self) -> Dict[str, Any]:
+        """Load configuration from file or use defaults"""
         try:
-            if self.codette is None:
-                error_msg = "Codette is not initialized"
-                if history is not None:
-                    history.append((message, error_msg))
-                    return {"status": "error", "message": error_msg}
-                return {"error": error_msg}
-                
-            current_time = datetime.now()
-            
-            # Handle rapid repeated messages
-            if self.last_interaction and (current_time - self.last_interaction).total_seconds() < 1:
-                response = "I need a moment to think between responses! 🤔"
-                if history is not None:
-                    history.append((message, response))
-                    return {"status": "throttled", "response": response}
-                return {"response": response}
-            
-            self.last_interaction = current_time
-            
-            # Process through Codette with error handling
-            try:
-                result = self.codette.respond(message)
-                response = result if isinstance(result, str) else str(result)
-                
-                # Store in memory
-                self.response_memory.append({
-                    "query": message,
-                    "response": response,
-                    "timestamp": current_time.isoformat()
-                })
-                
-                # Return appropriate format based on context
-                if history is not None:
-                    history.append((message, response))
-                    return {"status": "success", "response": response}
-                return {"response": response}
-                    
-            except Exception as e:
-                logger.error(f"Error in response processing: {str(e)}")
-                response = f"I encountered an error while processing your request: {str(e)}"
-                if history is not None:
-                    history.append((message, response))
-                    return {"status": "error", "response": response}
-                return {"error": str(e)}
-            
-        except Exception as e:
-            logger.error(f"Error processing message: {e}")
-            error_msg = f"I apologize, but I encountered an error processing your request. Error details: {str(e)}"
-            
-            if history is not None:
-                history.append((message, error_msg))
-                return {"status": "error", "response": error_msg}
-            return {"error": str(e)}
-
-    def clear_history(self):
-        """Clear chat history and reset memory"""
-        self.response_memory = []
-        return [], []
-
-    def search_knowledge(self, query: str) -> str:
-        """Search Codette's knowledge base"""
-        if self.codette is None:
-            return "Codette is not initialized"
-            
-        try:
-            result = self.codette.respond(f"Search: {query}")
-            return result if isinstance(result, str) else str(result)
-        except Exception as e:
-            logger.error(f"Search error: {e}")
-            return f"Error performing search: {str(e)}"
-
-    def get_system_state(self) -> str:
-        """Get current system state information"""
-        try:
-            memory_size = len(self.response_memory)
-            
-            return (
-                f"System State:\n"
-                f"- Status: {'Initialized' if self.codette else 'Not Initialized'}\n"
-                f"- Memory Size: {memory_size} interactions\n"
-                f"- Last Update: {datetime.now().strftime('%H:%M:%S')}"
-            )
-        except Exception as e:
-            logger.error(f"Error getting system state: {e}")
-            return f"Error retrieving system state: {str(e)}"
-
-    def create_gradio_interface(self):
-        """Create and configure the Gradio interface"""
-        if not HAS_GRADIO:
-            logger.error("Gradio not installed - UI interface unavailable")
-            return None
-            
-        try:
-            with gr.Blocks(title="Codette AI Assistant", theme=gr.themes.Soft()) as app:
-                gr.Markdown("# AI Assistant: Codette")
-                
-                with gr.Row():
-                    message_input = gr.Textbox(
-                        label="Your Message",
-                        placeholder="Enter your message here...",
-                        lines=3
-                    )
-                
-                with gr.Row():
-                    submit_btn = gr.Button("Send", variant="primary")
-                    clear_btn = gr.Button("Clear History")
-                
-                output = gr.Textbox(label="Response", lines=10, interactive=False)
-                
-                # Wire up events
-                submit_btn.click(
-                    fn=lambda msg: self.process_message(msg).get("response", "Error"),
-                    inputs=message_input,
-                    outputs=output
-                )
-                
-                clear_btn.click(
-                    fn=self.clear_history,
-                    outputs=[message_input, output]
-                )
-            
-            return app
-        except Exception as e:
-            logger.error(f"Error creating Gradio interface: {e}")
-            return None
-
-    def create_flask_app(self):
-        """Create Flask API"""
-        if not HAS_FLASK:
-            logger.error("Flask not installed - API unavailable")
-            return None
-            
-        try:
-            app = Flask(__name__)
-            if HAS_FLASK:
-                CORS(app)
-            
-            @app.route('/chat', methods=['POST'])
-            def chat():
-                data = request.get_json()
-                message = data.get('message', '')
-                result = self.process_message(message)
-                return jsonify(result)
-            
-            @app.route('/status', methods=['GET'])
-            def status():
-                return jsonify({
-                    'status': 'running',
-                    'codette_initialized': self.codette is not None,
-                    'memory_size': len(self.response_memory)
-                })
-            
-            return app
-        except Exception as e:
-            logger.error(f"Error creating Flask app: {e}")
-            return None
-
-
-# Standalone execution
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    
-    interface = CodetteInterface()
-    
-    # Test the interface
-    print("\n=== Codette Interface Test ===\n")
-    
-    test_message = "What makes a system truly intelligent?"
-    result = interface.process_message(test_message)
-    
-    print(f"Query: {test_message}")
-    print(f"Response: {result.get('response', 'Error')}")
-    print(f"\nSystem State:\n{interface.get_system_state()}")
-
-
-class CodetteInterface:
-    def __init__(self):
-        """Initialize Codette with configuration"""
-        try:
-            # Load configuration
             with open('config.json', 'r') as f:
-                self.config = json.load(f)
+                config = json.load(f)
+                logger.info("[OK] Configuration loaded from config.json")
+                return config
+        except FileNotFoundError:
+            logger.warning("[!] config.json not found, using defaults")
+            return self._default_config()
         except Exception as e:
-            logger.warning(f"Could not load config.json, using defaults: {e}")
-            self.config = {
-                "host": "127.0.0.1",
-                "port": 9000,
-                "quantum_fluctuation": 0.07,
-                "spiderweb_dim": 5,
-                "recursion_depth": 4,
-                "perspectives": [
-                    "Newton",
-                    "DaVinci",
-                    "Ethical",
-                    "Quantum",
-                    "Memory"
-                ]
+            logger.error(f"[ERROR] Error loading config: {e}")
+            return self._default_config()
+
+    @staticmethod
+    def _default_config() -> Dict[str, Any]:
+        """Return default configuration"""
+        return {
+            "host": "127.0.0.1",
+            "port": 8000,
+            "enable_quantum": True,
+            "enable_memory": True,
+            "perspectives": ["Newton", "DaVinci", "Ethical", "Quantum", "Memory"],
+            "max_history": 1000,
+            "response_timeout": 30
+        }
+
+    def process_message(self, message: str) -> Dict[str, Any]:
+        """
+        Process a message through Codette
+        
+        Args:
+            message: User input message
+            
+        Returns:
+            Dict with response, timestamp, and metadata
+        """
+        if not CODETTE_AVAILABLE or self.codette is None:
+            return {
+                "status": "error",
+                "message": "Codette AI is not initialized",
+                "error": "CODETTE_UNAVAILABLE"
             }
 
-        # Initialize Codette
         try:
-            self.codette = Codette(
-                user_name="WebUser",
-                perspectives=self.config["perspectives"],
-                spiderweb_dim=self.config["spiderweb_dim"]
-            )
-            self.response_memory = []
-            self.last_interaction = None
-            logger.info("Codette interface initialized")
-        except Exception as e:
-            logger.error(f"Error initializing interface: {e}")
-            raise
-
-    def _is_greeting(self, message: str) -> bool:
-        """Check if the message is a greeting"""
-        greetings = ["hi", "hello", "hey", "good morning", "good afternoon", 
-                    "good evening", "hi codette", "hello codette"]
-        return any(message.lower().startswith(g) for g in greetings)
-    
-    def _is_farewell(self, message: str) -> bool:
-        """Check if the message is a farewell"""
-        farewells = ["bye", "goodbye", "see you", "farewell", "good night",
-                    "thanks bye", "bye codette", "goodbye codette"]
-        return any(message.lower().startswith(f) for f in farewells)
-
-    def process_message(self, message: str, history: list = None) -> tuple:
-        """Process a message through Codette's systems"""
-        try:
-            current_time = datetime.now()
-            
-            # Handle rapid repeated messages
-            if self.last_interaction and (current_time - self.last_interaction).total_seconds() < 1:
-                response = "I need a moment to think between responses! 😊"
-                if history is not None:
-                    history.append((message, response))
-                    return "", history
-                return {"response": response}
-            
-            self.last_interaction = current_time
-            
-            # Process through Codette with error handling
-            try:
-                result = self.codette.respond(message)
-                response = result["response"]
-                
-                # Add metrics to response if available
-                if "metrics" in result:
-                    metrics = result["metrics"]
-                    response += "\n\n📊 Metrics:"
-                    if "confidence" in metrics:
-                        response += f"\nConfidence: {metrics['confidence']:.1%}"
-                    if "quantum_coherence" in metrics:
-                        response += f"\nQuantum Coherence: {metrics['quantum_coherence']:.1%}"
-                
-                # Add insights if available
-                if "insights" in result and result["insights"]:
-                    response += "\n\n💡 Insights:\n" + "\n".join(f"• {insight}" for insight in result["insights"])
-                    
-            except Exception as e:
-                logger.error(f"Error in response processing: {str(e)}")
-                response = f"I apologize, but I encountered an error while processing your request: {str(e)}"
-            
-            # Format comprehensive response
             timestamp = datetime.now().strftime("%H:%M:%S")
-            formatted_response = f"[{timestamp}]\n\n{response}"
+            
+            # Process through Codette
+            # Note: codette_new.respond() returns a string, not a dict
+            result = self.codette.respond(message)
+            
+            # Extract response text
+            if isinstance(result, dict):
+                response_text = result.get("response", str(result))
+            else:
+                # result is a string
+                response_text = str(result)
             
             # Store in memory
             self.response_memory.append({
                 "query": message,
-                "response": response,
+                "response": response_text,
                 "timestamp": timestamp
             })
             
-            # Return appropriate format based on context
-            if history is not None:
-                history.append((message, formatted_response))
-                return "", history
+            # Keep memory under control
+            if len(self.response_memory) > self.config.get("max_history", 1000):
+                self.response_memory.pop(0)
+            
+            # Return structured response
             return {
-                "response": response,
+                "status": "success",
+                "response": response_text,
                 "timestamp": timestamp,
-                "metrics": result.get("metrics", {}),
-                "insights": result.get("insights", [])
+                "metrics": {},
+                "insights": [],
+                "memory_size": len(self.response_memory)
             }
             
         except Exception as e:
-            logger.error(f"Error processing message: {e}")
-            error_msg = f"I apologize, but I encountered an error processing your request. Error details: {str(e)}"
-            
-            if history is not None:
-                history.append((message, error_msg))
-                return "", history
-            return {"error": str(e)}
+            logger.error(f"[ERROR] Error processing message: {e}")
+            return {
+                "status": "error",
+                "message": f"Error processing request: {str(e)}",
+                "error": type(e).__name__,
+                "timestamp": datetime.now().strftime("%H:%M:%S")
+            }
 
-    def clear_history(self):
-        """Clear chat history and reset memory"""
+    def get_system_state(self) -> Dict[str, Any]:
+        """Get current system state"""
+        if not CODETTE_AVAILABLE or self.codette is None:
+            return {
+                "status": "unavailable",
+                "codette_available": False,
+                "memory_size": 0
+            }
+
+        try:
+            return {
+                "status": "active",
+                "codette_available": True,
+                "memory_size": len(self.response_memory),
+                "user": self.user_name,
+                "timestamp": datetime.now().strftime("%H:%M:%S"),
+                "config": {
+                    "host": self.config.get("host"),
+                    "port": self.config.get("port"),
+                    "quantum_enabled": self.config.get("enable_quantum", True),
+                    "memory_enabled": self.config.get("enable_memory", True)
+                }
+            }
+        except Exception as e:
+            logger.error(f"[ERROR] Error getting system state: {e}")
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+
+    def clear_memory(self) -> Dict[str, Any]:
+        """Clear response memory"""
+        old_size = len(self.response_memory)
         self.response_memory = []
-        return [], []
+        return {
+            "status": "success",
+            "cleared_items": old_size,
+            "message": f"Cleared {old_size} items from memory"
+        }
 
-    def search_knowledge(self, query: str) -> str:
-        """Search Codette's knowledge base"""
-        try:
-            result = self.codette.respond(f"Search: {query}")
-            return result["response"]
-        except Exception as e:
-            logger.error(f"Search error: {e}")
-            return f"Error performing search: {str(e)}"
+    def get_memory(self) -> list:
+        """Get all stored interactions"""
+        return self.response_memory.copy()
 
-    def get_system_state(self) -> str:
-        """Get current system state information"""
-        try:
-            quantum_state = self.codette.quantum_state
-            memory_size = len(self.response_memory)
-            perspectives = ", ".join(self.codette.perspectives)
-            
-            return (
-                f"🧠 System State:\n"
-                f"- Active Perspectives: {perspectives}\n"
-                f"- Memory Size: {memory_size} interactions\n"
-                f"- Quantum Coherence: {quantum_state.get('coherence', 0.5):.2f}\n"
-                f"- Last Update: {datetime.now().strftime('%H:%M:%S')}"
-            )
-        except Exception as e:
-            logger.error(f"Error getting system state: {e}")
-            return f"Error retrieving system state: {str(e)}"
+    def get_memory_summary(self) -> Dict[str, Any]:
+        """Get summary statistics about memory"""
+        if not self.response_memory:
+            return {
+                "total_interactions": 0,
+                "message": "No interactions recorded yet"
+            }
 
-    async def run_quantum_simulation(self, cores: int = 4) -> Dict[str, Any]:
-        """Run quantum simulation"""
-        try:
-            return await self.codette.run_quantum_simulation(cores)
-        except Exception as e:
-            logger.error(f"Quantum simulation error: {e}")
-            return {"error": str(e)}
+        return {
+            "total_interactions": len(self.response_memory),
+            "first_interaction": self.response_memory[0]["timestamp"],
+            "last_interaction": self.response_memory[-1]["timestamp"],
+            "memory_capacity": self.config.get("max_history", 1000)
+        }
 
-    def create_gradio_interface(self):
-        """Create and configure the Gradio interface"""
-        with gr.Blocks(title="Codette AI Assistant", theme=gr.themes.Soft()) as app:
-            gr.Markdown("""# 🤖 Codette AI Assistant
-            Your advanced AI programming assistant with multi-perspective reasoning""")
-            
-            with gr.Tabs():
-                with gr.Tab("Chat"):
-                    chatbot = gr.Chatbot(
-                        [],
-                        elem_id="chatbot",
-                        bubble_full_width=False,
-                        height=450,
-                        show_label=False
-                    )
-                    
-                    with gr.Row():
-                        txt = gr.Textbox(
-                            show_label=False,
-                            placeholder="Ask me anything about programming, AI, or technology...",
-                            container=False,
-                            scale=8
-                        )
-                        submit_btn = gr.Button("Send", scale=1)
-                    
-                    with gr.Row():
-                        clear_btn = gr.Button("Clear Chat")
-                        state_btn = gr.Button("Show System State")
-                    
-                    system_state = gr.Markdown()
-                    
-                with gr.Tab("Knowledge Search"):
-                    gr.Markdown("""### 🔍 Knowledge Base Search
-                    Search through Codette's extensive knowledge base""")
-                    
-                    with gr.Row():
-                        search_input = gr.Textbox(
-                            show_label=False,
-                            placeholder="Enter your search query...",
-                            container=False
-                        )
-                        search_btn = gr.Button("Search")
-                    
-                    search_output = gr.Markdown()
-            
-            # Set up event handlers
-            txt_msg = txt.submit(
-                self.process_message,
-                [txt, chatbot],
-                [txt, chatbot]
-            )
-            
-            btn_msg = submit_btn.click(
-                self.process_message,
-                [txt, chatbot],
-                [txt, chatbot]
-            )
-            
-            clear_btn.click(
-                self.clear_history,
-                None,
-                [chatbot, txt]
-            )
-            
-            state_btn.click(
-                self.get_system_state,
-                None,
-                system_state
-            )
-            
-            search_btn.click(
-                self.search_knowledge,
-                search_input,
-                search_output
-            )
-            
-            search_input.submit(
-                self.search_knowledge,
-                search_input,
-                search_output
-            )
-        
-        return app
 
-    def create_web_app(self):
-        """Create Flask web application"""
-        app = Flask(__name__)
-        app.secret_key = "codette_secret_key_2025"
-        CORS(app)
-        
-        @app.route('/api/query', methods=['POST'])
-        def api_query():
-            try:
-                data = request.get_json()
-                query = data.get('query', '')
-                if not query:
-                    return jsonify({"error": "Query is required"}), 400
-                    
-                response = self.process_message(query)
-                return jsonify(response)
-            except Exception as e:
-                logger.error(f"Query processing error: {e}")
-                return jsonify({"error": str(e)}), 500
-        
-        @app.route('/api/health', methods=['GET'])
-        def api_health():
-            try:
-                return jsonify({
-                    "status": "healthy",
-                    "state": self.get_system_state(),
-                    "timestamp": datetime.now().isoformat()
-                })
-            except Exception as e:
-                logger.error(f"Health check error: {e}")
-                return jsonify({"error": str(e)}), 500
-                
-        @app.route('/api/quantum-simulation', methods=['POST'])
-        def api_quantum_simulation():
-            try:
-                data = request.get_json()
-                cores = min(data.get('cores', 4), 16)  # Safety limit
-                
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                
-                try:
-                    results = loop.run_until_complete(
-                        self.run_quantum_simulation(cores)
-                    )
-                    return jsonify(results)
-                finally:
-                    loop.close()
-                    
-            except Exception as e:
-                logger.error(f"Quantum simulation error: {e}")
-                return jsonify({"error": str(e)}), 500
-        
-        return app
+# Convenience functions
+_interface_instance: Optional[CodetteInterface] = None
 
-def create_interface(interface_type="all"):
-    """
-    Create Codette interface of specified type
+
+def get_interface(user_name: str = "User") -> CodetteInterface:
+    """Get or create singleton interface instance"""
+    global _interface_instance
+    if _interface_instance is None:
+        _interface_instance = CodetteInterface(user_name=user_name)
+    return _interface_instance
+
+
+def reset_interface() -> None:
+    """Reset the singleton interface instance"""
+    global _interface_instance
+    _interface_instance = None
+
+
+# For FastAPI integration
+def create_fastapi_interface():
+    """Create FastAPI app that uses Codette"""
+    from fastapi import FastAPI
+    from fastapi.middleware.cors import CORSMiddleware
+    from pydantic import BaseModel
     
-    Args:
-        interface_type: Type of interface to create ("gradio", "web", or "all")
-    """
-    interface = CodetteInterface()
+    app = FastAPI(
+        title="Codette AI Interface",
+        description="API for interacting with Codette AI",
+        version="1.0.0"
+    )
     
-    if interface_type == "gradio":
-        return interface.create_gradio_interface()
-    elif interface_type == "web":
-        return interface.create_web_app()
-    else:
-        return interface
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"]
+    )
+    
+    # Create interface
+    interface = get_interface()
+    
+    class MessageRequest(BaseModel):
+        message: str
+        user_name: Optional[str] = None
+    
+    @app.get("/health")
+    async def health_check():
+        return {"status": "ok", "service": "codette-interface"}
+    
+    @app.get("/state")
+    async def get_state():
+        return interface.get_system_state()
+    
+    @app.post("/chat")
+    async def chat(request: MessageRequest):
+        return interface.process_message(request.message)
+    
+    @app.get("/memory")
+    async def get_memory():
+        return {"memory": interface.get_memory_summary()}
+    
+    @app.post("/clear-memory")
+    async def clear_memory():
+        return interface.clear_memory()
+    
+    return app
+
 
 if __name__ == "__main__":
-    # Create interface instance
-    interface = CodetteInterface()
+    # Test the interface
+    interface = CodetteInterface("TestUser")
+    print("\n[*] Testing Codette Interface")
+    print("[*] System State:", interface.get_system_state())
     
-    # Create both web and Gradio interfaces
-    web_app = interface.create_web_app()
-    gradio_app = interface.create_gradio_interface()
-    
-    # Start web server in a separate thread
-    from threading import Thread
-    web_thread = Thread(
-        target=web_app.run,
-        kwargs={
-            'host': interface.config.get("host", "127.0.0.1"),
-            'port': 5000,
-            'debug': False
-        }
-    )
-    web_thread.start()
-    
-    # Start Gradio interface
-    gradio_app.launch(
-        server_name=interface.config.get("host", "127.0.0.1"),
-        server_port=interface.config.get("port", 9000),
-        share=False
-    )
+    if interface.codette is not None:
+        print("\n[*] Testing message processing...")
+        result = interface.process_message("Hello Codette, what is 2+2?")
+        print(f"[+] Response: {result['response']}")
+        print(f"[+] Memory size: {result['memory_size']}")
+    else:
+        print("[!] Codette not available - interface in limited mode")

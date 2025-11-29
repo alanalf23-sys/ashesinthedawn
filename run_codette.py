@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Codette AI FastAPI Server Launcher
 Starts the Codette backend service on port 8000
@@ -14,9 +15,7 @@ if __name__ == '__main__':
     import subprocess
     
     print("=" * 67)
-    print("===       ")
-    print("Codette AI FastAPI Server Starting")
-    print("===       ")
+    print("[+] Codette AI FastAPI Server Starting")
     print("=" * 67)
     print("Host: 127.0.0.1")
     print("Port: 8000")
