@@ -14,9 +14,9 @@ import {
 } from "lucide-react";
 import { useDAW } from "../contexts/DAWContext";
 import { useTransportClock } from "../hooks/useTransportClock";
-import { useCodette } from "../hooks/useCodette";
 import { useSaveStatus } from "../hooks/useSaveStatus";
 import { useState } from "react";
+import { CodetteQuickAccess } from "./CodetteQuickAccess";
 
 export default function TopBar() {
   const {
@@ -41,7 +41,6 @@ export default function TopBar() {
   } = useDAW();
 
   const { state: transport, connected } = useTransportClock();
-  const { isConnected } = useCodette({ autoConnect: true });
   const { isSaving, isSaved, isError } = useSaveStatus();
 
   const [codetteActiveTab, setCodetteActiveTab] = useState<'suggestions' | 'analysis' | 'control'>('suggestions');
@@ -242,17 +241,8 @@ export default function TopBar() {
         )}
       </div>
 
-      {/* Codette Status */}
-      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
-        isConnected 
-          ? 'bg-green-900/30 text-green-400'
-          : 'bg-red-900/30 text-red-400'
-      }`}>
-        <div className={`w-2 h-2 rounded-full ${
-          isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'
-        }`} />
-        <span>{isConnected ? 'Codette: Online' : 'Codette: Offline'}</span>
-      </div>
+      {/* Codette Quick Access Widget */}
+      <CodetteQuickAccess />
 
       {/* CPU Usage */}
       <div className="flex items-center gap-1 text-gray-400">
