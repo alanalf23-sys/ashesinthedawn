@@ -104,7 +104,7 @@ print("=" * 70)
 
 # Check if genre_templates is imported in server
 try:
-    with open('codette_server_unified.py', 'r') as f:
+    with open('codette_server_unified.py', 'r', encoding='utf-8', errors='ignore') as f:
         content = f.read()
         
     test("Server: Genre Import", 
@@ -132,7 +132,7 @@ print("FRONTEND INTEGRATION")
 print("=" * 70)
 
 try:
-    with open('src/components/CodetteSystem.tsx', 'r') as f:
+    with open('src/components/CodetteSystem.tsx', 'r', encoding='utf-8', errors='ignore') as f:
         content = f.read()
     
     test("Frontend: Genre State",
