@@ -13,7 +13,7 @@
 import { Track } from "../types";
 
 // Configuration
-const CODETTE_API_BASE = import.meta.env.VITE_CODETTE_API || "http://localhost:8001";
+const CODETTE_API_BASE = import.meta.env.VITE_CODETTE_API || "http://localhost:8000";
 
 // Types
 export interface CodetteChatRequest {
