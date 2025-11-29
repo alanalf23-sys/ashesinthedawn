@@ -1114,10 +1114,11 @@ async def get_status():
 
 # Try to import DSP effects
 try:
-    from daw_core.fx.eq_and_dynamics import EQ3Band, HighLowPass, Compressor, Limiter, Expander, Gate
-    from daw_core.fx.saturation_distortion import Saturation, HardClip, Distortion, WaveShaper
-    from daw_core.fx.delay_effects import SimpleDelay, PingPongDelay, MultiTap, StereoDelay
-    from daw_core.fx.reverb_algorithms import Freeverb, HallReverb, PlateReverb, RoomReverb
+    from daw_core.fx.eq_and_dynamics import EQ3Band, HighLowPass, Compressor
+    from daw_core.fx.dynamics_part2 import Limiter, Expander, Gate, NoiseGate
+    from daw_core.fx.saturation import Saturation, HardClip, Distortion, WaveShaper
+    from daw_core.fx.delays import SimpleDelay, PingPongDelay, MultiTapDelay, StereoDelay
+    from daw_core.fx.reverb import HallReverb, PlateReverb, RoomReverb, Reverb
     from daw_core.fx.modulation_and_utility import Chorus, Flanger, Tremolo, Gain, WidthControl, DynamicEQ
     DSP_EFFECTS_AVAILABLE = True
 except ImportError as e:
@@ -1128,9 +1129,15 @@ except ImportError as e:
 EFFECTS_REGISTRY = {
     "eq_3band": {"class": EQ3Band, "name": "3-Band EQ", "category": "eq"},
     "compressor": {"class": Compressor, "name": "Compressor", "category": "dynamics"},
+    "limiter": {"class": Limiter, "name": "Limiter", "category": "dynamics"},
+    "gate": {"class": Gate, "name": "Gate", "category": "dynamics"},
     "reverb_plate": {"class": PlateReverb, "name": "Plate Reverb", "category": "reverb"},
+    "reverb_hall": {"class": HallReverb, "name": "Hall Reverb", "category": "reverb"},
     "chorus": {"class": Chorus, "name": "Chorus", "category": "modulation"},
     "delay": {"class": SimpleDelay, "name": "Simple Delay", "category": "delay"},
+    "delay_pingpong": {"class": PingPongDelay, "name": "Ping Pong Delay", "category": "delay"},
+    "distortion": {"class": Distortion, "name": "Distortion", "category": "saturation"},
+    "saturation": {"class": Saturation, "name": "Saturation", "category": "saturation"},
     "gain": {"class": Gain, "name": "Gain", "category": "utility"},
 }
 
