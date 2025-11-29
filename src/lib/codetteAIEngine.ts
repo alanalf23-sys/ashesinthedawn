@@ -4,7 +4,7 @@
  * Implements all 10 documented AI abilities
  */
 
-import { Track, Plugin } from '../types';
+import { Track } from '../types';
 
 export interface CodetteSuggestion {
   type: 'optimization' | 'effect' | 'routing' | 'creative' | 'warning' | 'learning';

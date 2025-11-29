@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { getCodetteAIEngine, type CodetteSuggestion, type LearningPath, type LearningStep } from '../lib/codetteAIEngine';
+import { getCodetteAIEngine, type CodetteSuggestion } from '../lib/codetteAIEngine';
 import { useDAW } from '../contexts/DAWContext';
 
 export interface Suggestion extends CodetteSuggestion {
@@ -517,11 +517,7 @@ export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
     [apiUrl]
   );
 
-  // Periodically check connection
-  useEffect(() => {
-    const interval = setInterval(checkConnection, 5000);
-    return () => clearInterval(interval);
-  }, [checkConnection]);
+
 
   return {
     isConnected,

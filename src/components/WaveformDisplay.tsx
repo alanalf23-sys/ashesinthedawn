@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useDAW } from "../contexts/DAWContext";
 import { normalizeCanvasDimensions } from "../lib/windowScaling";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface WaveformDisplayProps {
   trackId: string;
@@ -27,12 +28,28 @@ export default function WaveformDisplay({
     useDAW();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const peakMeterRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1.0);
   const [peakLevel, setPeakLevel] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [isHoveringPeak, setIsHoveringPeak] = useState(false);
 
   const duration = getAudioDuration(trackId);
-  const waveformData = getWaveformData(trackId);
+  let waveformData = getWaveformData(trackId);
+
+  // Generate demo waveform if no data available (for testing)
+  if (!waveformData || waveformData.length === 0) {
+    waveformData = Array.from({ length: 1024 }, (_, i) => {
+      const t = (i / 1024) * Math.PI * 4;
+      // Create a mix of sine waves for visual interest
+      return Math.abs(
+        Math.sin(t) * 0.6 +
+        Math.sin(t * 2) * 0.3 +
+        Math.sin(t * 3) * 0.1 +
+        Math.random() * 0.05
+      );
+    });
+  }
 
   // Track container and watch for size changes
   useEffect(() => {
@@ -217,19 +234,63 @@ export default function WaveformDisplay({
         className="bg-gray-950"
       />
 
-      {/* Peak Meter */}
+      {/* Peak Meter - Scrollable */}
       {showPeakMeter && (
-        <div className="flex items-center gap-2 px-2 py-1 bg-gray-800 border-t border-gray-700">
-          <span className="text-xs text-gray-400 w-10">Peak:</span>
-          <div className="flex-1 bg-gray-700 rounded h-1.5 overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 h-full"
-              style={{ width: `${peakLevel * 100}%`, transition: "width 0.1s" }}
-            />
+        <div 
+          ref={peakMeterRef}
+          className="flex items-center gap-2 px-2 py-1 bg-gray-800 border-t border-gray-700 group"
+          onMouseEnter={() => setIsHoveringPeak(true)}
+          onMouseLeave={() => setIsHoveringPeak(false)}
+        >
+          {/* Left Scroll Button */}
+          <button
+            className="p-0.5 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => {
+              if (peakMeterRef.current) {
+                peakMeterRef.current.scrollBy({ left: -50, behavior: 'smooth' });
+              }
+            }}
+          >
+            <ChevronLeft size={14} />
+          </button>
+
+          {/* Scrollable Peak Meter Container */}
+          <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            <span className="text-xs text-gray-400 w-10 flex-shrink-0">Peak:</span>
+            
+            {/* Peak Meter Bar */}
+            <div className="flex-1 min-w-24 bg-gray-700 rounded h-1.5 overflow-hidden flex-shrink-0 relative group/meter">
+              <div
+                className="bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 h-full transition-all duration-100"
+                style={{ width: `${peakLevel * 100}%` }}
+              />
+              
+              {/* Tooltip on hover */}
+              {isHoveringPeak && (
+                <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-950 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none z-50 border border-gray-700 shadow-lg">
+                  <span className="font-mono">{Math.round(peakLevel * 100)}% Peak</span>
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-950"></div>
+                </div>
+              )}
+            </div>
+
+            {/* Peak Level Percentage */}
+            <span className="text-xs text-gray-400 w-8 text-right flex-shrink-0">
+              {Math.round(peakLevel * 100)}%
+            </span>
           </div>
-          <span className="text-xs text-gray-400 w-8">
-            {Math.round(peakLevel * 100)}%
-          </span>
+
+          {/* Right Scroll Button */}
+          <button
+            className="p-0.5 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => {
+              if (peakMeterRef.current) {
+                peakMeterRef.current.scrollBy({ left: 50, behavior: 'smooth' });
+              }
+            }}
+          >
+            <ChevronRight size={14} />
+          </button>
         </div>
       )}
 
