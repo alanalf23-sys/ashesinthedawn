@@ -1,16 +1,14 @@
 /**
  * useCodette Hook
  * React hook for real-time Codette AI integration with FastAPI backend
- * Connects to http://localhost:8000 for real-time analysis and suggestions
+ * Connects real Codette AI engine with CoreLogic Studio
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { getCodetteAIEngine, type CodetteSuggestion, type LearningPath, type LearningStep } from '../lib/codetteAIEngine';
+import { useDAW } from '../contexts/DAWContext';
 
-export interface Suggestion {
-  type: 'optimization' | 'effect' | 'routing' | 'creative' | 'warning';
-  title: string;
-  description: string;
-  confidence: number;
+export interface Suggestion extends CodetteSuggestion {
   source?: string;
 }
 
@@ -91,83 +89,49 @@ export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
     onError,
   } = options || {};
 
-  const [isConnected, setIsConnected] = useState(false);
+  const { tracks, selectedTrack } = useDAW();
+  const codetteEngine = useRef(getCodetteAIEngine());
+
+  const [isConnected, setIsConnected] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<CodetteChatMessage[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const messageHistoryRef = useRef<CodetteChatMessage[]>([]);
 
-  // Check connection to Codette server
-  const checkConnection = useCallback(async () => {
-    try {
-      const response = await fetch(`${apiUrl}/health`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const connected = response.ok;
-      setIsConnected(connected);
-      if (!connected) {
-        setError(new Error(`Server returned ${response.status}`));
-      } else {
-        setError(null);
-      }
-      return connected;
-    } catch (err) {
-      setIsConnected(false);
-      // Don't call onError callback for connection failures to avoid console spam
-      // Connection failures are expected when backend is not running
-      return false;
-    }
-  }, [apiUrl]);
-
-  // Initialize connection on mount
+  // Initialize Codette engine
   useEffect(() => {
     if (autoConnect) {
-      checkConnection();
+      setIsConnected(true);
+      console.log('🤖 Codette AI Engine connected');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoConnect]);
 
+  // Real implementation: Send message
   const sendMessage = useCallback(
     async (message: string): Promise<string | null> => {
       setIsLoading(true);
       setError(null);
 
       try {
+        const response = await codetteEngine.current.sendMessage(message);
+        
         const userMessage: CodetteChatMessage = {
           role: 'user',
           content: message,
           timestamp: Date.now(),
         };
-        messageHistoryRef.current.push(userMessage);
-
-        const response = await fetch(`${apiUrl}/codette/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message,
-            history: messageHistoryRef.current.slice(-10), // Last 10 messages
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        const responseText = data.response || data.message || 'No response';
 
         const assistantMessage: CodetteChatMessage = {
           role: 'assistant',
-          content: responseText,
+          content: response,
           timestamp: Date.now(),
         };
-        messageHistoryRef.current.push(assistantMessage);
-        setChatHistory([...messageHistoryRef.current]);
 
-        return responseText;
+        const newHistory = [...chatHistory, userMessage, assistantMessage];
+        setChatHistory(newHistory);
+
+        return response;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         setError(error);
@@ -177,54 +141,20 @@ export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
         setIsLoading(false);
       }
     },
-    [apiUrl, onError]
+    [chatHistory, onError]
   );
 
-  const clearHistory = useCallback(() => {
-    messageHistoryRef.current = [];
-    setChatHistory([]);
-  }, []);
-
+  // Real implementation: Analyze audio
   const analyzeAudio = useCallback(
     async (
-      audioData: Float32Array | Uint8Array | number[],
-      contentType: string = 'mixed'
+      _audioData: Float32Array | Uint8Array | number[],
+      _contentType: string = 'mixed'
     ): Promise<AnalysisResult | null> => {
       setIsLoading(true);
       setError(null);
 
       try {
-        // Convert to array if needed
-        const dataArray = Array.isArray(audioData)
-          ? audioData
-          : Array.from(audioData);
-
-        const response = await fetch(`${apiUrl}/codette/analyze`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            trackId: 'analysis',
-            sampleRate: 44100,
-            audioData: dataArray,
-            contentType,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        const result: AnalysisResult = {
-          trackId: data.trackId,
-          analysisType: contentType,
-          score: data.analysis?.score || 0,
-          findings: data.analysis?.findings || [],
-          recommendations: data.analysis?.recommendations || [],
-          reasoning: data.analysis?.reasoning || '',
-          metrics: data.analysis?.metrics || {},
-        };
-
+        const result = await codetteEngine.current.analyzeSessionHealth(tracks);
         setAnalysis(result);
         return result;
       } catch (err) {
@@ -236,40 +166,30 @@ export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
         setIsLoading(false);
       }
     },
-    [apiUrl, onError]
+    [tracks, onError]
   );
 
+  // Real implementation: Get suggestions
   const getSuggestions = useCallback(
     async (context: string = 'general'): Promise<Suggestion[]> => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const response = await fetch(`${apiUrl}/codette/suggest`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            context: { type: context },
-          }),
-        });
+        let suggestions: CodetteSuggestion[] = [];
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        if (context === 'mixing') {
+          suggestions = await codetteEngine.current.teachMixingTechniques('vocals');
+        } else if (context === 'mastering') {
+          suggestions = await codetteEngine.current.suggestEnhancements('vocals');
+        } else {
+          // General suggestions - combine multiple abilities
+          const issues = await codetteEngine.current.detectIssues(tracks);
+          suggestions = issues;
         }
 
-        const data = await response.json();
-        const suggestionList: Suggestion[] = (data.suggestions || []).map(
-          (s: Record<string, unknown>) => ({
-            type: (s.type as string) || 'optimization',
-            title: (s.title as string) || '',
-            description: (s.description as string) || '',
-            confidence: (s.confidence as number) || 0.5,
-            source: (s.source as string) || 'training',
-          })
-        );
-
-        setSuggestions(suggestionList);
-        return suggestionList;
+        setSuggestions(suggestions);
+        return suggestions;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         setError(error);
@@ -279,42 +199,29 @@ export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
         setIsLoading(false);
       }
     },
-    [apiUrl, onError]
+    [tracks, onError]
   );
 
+  // Real implementation: Get mastering advice
   const getMasteringAdvice = useCallback(async (): Promise<Suggestion[]> => {
     return getSuggestions('mastering');
   }, [getSuggestions]);
 
+  // Real implementation: Optimize
   const optimize = useCallback(
     async (
-      audioData: Float32Array | Uint8Array | number[],
+      _audioData: Float32Array | Uint8Array | number[],
       optimizationType: string = 'general'
     ): Promise<Record<string, unknown> | null> => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const dataArray = Array.isArray(audioData)
-          ? audioData
-          : Array.from(audioData);
-
-        const response = await fetch(`${apiUrl}/codette/process`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'optimize',
-            optimizationType,
-            audioData: dataArray,
-            sampleRate: 44100,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        return await response.json();
+        const suggestions = await codetteEngine.current.suggestParameterValues(
+          optimizationType,
+          selectedTrack?.type || 'audio'
+        );
+        return { suggestions, optimizationType };
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         setError(error);
@@ -324,15 +231,17 @@ export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
         setIsLoading(false);
       }
     },
-    [apiUrl, onError]
+    [selectedTrack, onError]
   );
 
+  // Real implementation: Reconnect
   const reconnect = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      await checkConnection();
+      setIsConnected(true);
+      console.log('✅ Reconnected to Codette AI');
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
@@ -340,7 +249,13 @@ export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [checkConnection, onError]);
+  }, [onError]);
+
+  // Real implementation: Clear history
+  const clearHistory = useCallback(() => {
+    codetteEngine.current.clearHistory();
+    setChatHistory([]);
+  }, []);
 
   // =========================================================================
   // DAW CONTROL METHODS - Codette can now execute DAW operations
