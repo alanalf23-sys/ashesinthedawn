@@ -45,13 +45,13 @@ export default function TimelinePlayheadWithLoop() {
   const handleToggleLoop = async () => {
     try {
       if (loopEnabled) {
-        await fetch("http://localhost:8000/transport/loop/disable", {
+        await fetch("http://localhost:8001/transport/loop/disable", {
           method: "POST",
         });
         setLoopEnabled(false);
       } else {
         await fetch(
-          `http://localhost:8000/transport/loop?start=${loopStart}&end=${loopEnd}`,
+          `http://localhost:8001/transport/loop?start=${loopStart}&end=${loopEnd}`,
           { method: "POST" }
         );
         setLoopEnabled(true);
@@ -67,7 +67,7 @@ export default function TimelinePlayheadWithLoop() {
     setLoopEnd(end);
     try {
       await fetch(
-        `http://localhost:8000/transport/loop?start=${start}&end=${end}&enabled=${loopEnabled}`,
+        `http://localhost:8001/transport/loop?start=${start}&end=${end}&enabled=${loopEnabled}`,
         { method: "POST" }
       );
     } catch (err) {

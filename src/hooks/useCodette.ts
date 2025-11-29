@@ -1,7 +1,7 @@
 /**
  * useCodette Hook
  * React hook for real-time Codette AI integration with FastAPI backend
- * Connects to http://localhost:8000 for real-time analysis and suggestions
+ * Connects to http://localhost:8001 for real-time analysis and suggestions
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -82,7 +82,7 @@ export interface UseCodetteReturn {
   executeDawAction: (action: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
 }
 
-const CODETTE_API_URL = import.meta.env.VITE_CODETTE_API_URL || 'http://localhost:8000';
+const CODETTE_API_URL = import.meta.env.VITE_CODETTE_API_URL || 'http://localhost:8001';
 
 export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
   const { 
@@ -116,12 +116,11 @@ export function useCodette(options?: UseCodetteOptions): UseCodetteReturn {
       return connected;
     } catch (err) {
       setIsConnected(false);
-      const error = err instanceof Error ? err : new Error('Cannot connect to Codette server');
-      setError(error);
-      onError?.(error);
+      // Don't call onError callback for connection failures to avoid console spam
+      // Connection failures are expected when backend is not running
       return false;
     }
-  }, [apiUrl, onError]);
+  }, [apiUrl]);
 
   // Initialize connection on mount
   useEffect(() => {

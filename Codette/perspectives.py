@@ -1,5 +1,32 @@
-# Previous content up to perspective methods...
+"""
+Codette Perspectives - Multi-perspective AI reasoning
+"""
 
+import numpy as np
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.sentiment import SentimentIntensityAnalyzer
+import random
+
+# Download required NLTK data
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt', quiet=True)
+
+try:
+    nltk.data.find('sentiment/vader_lexicon')
+except LookupError:
+    nltk.download('vader_lexicon', quiet=True)
+
+
+class Perspectives:
+    """Multi-perspective reasoning engine"""
+    
+    def __init__(self):
+        """Initialize perspectives with sentiment analyzer"""
+        self.analyzer = SentimentIntensityAnalyzer()
+    
     def neuralNetworkPerspective(self, text):
         sentiment = self.analyzer.polarity_scores(text)
         words = nltk.word_tokenize(text.lower())

@@ -18,9 +18,9 @@ import {
   MidiDevice,
   MidiRoute,
 } from "../types";
-import { supabase } from "../lib/supabase";
 import { getAudioEngine } from "../lib/audioEngine";
 import { getCodetteBridge, CodetteSuggestion } from "../lib/codetteBridge";
+import { supabase } from "../lib/supabase";
 import {
   saveProjectToStorage,
   loadProjectFromStorage,
@@ -1198,65 +1198,95 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const saveProject = async () => {
     if (!currentProject) return;
 
-    // Save to localStorage immediately
-    saveProjectToStorage(currentProject);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const sessionData = {
-      tracks,
-      bpm: currentProject.bpm,
-      timeSignature: currentProject.timeSignature,
-    };
-
-    const { error } = await supabase.from("projects").upsert({
-      id: currentProject.id,
-      user_id: user.id,
-      name: currentProject.name,
-      sample_rate: currentProject.sampleRate,
-      bit_depth: currentProject.bitDepth,
-      bpm: currentProject.bpm,
-      time_signature: currentProject.timeSignature,
-      session_data: sessionData,
-      updated_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      console.error("Error saving project:", error);
+    // Save to localStorage (primary storage)
+    const success = saveProjectToStorage(currentProject);
+    
+    if (success) {
+      console.log("[DAWContext] Project saved to localStorage");
     } else {
-      console.log("[DAWContext] Project saved to Supabase");
+      console.error("[DAWContext] Failed to save project to localStorage");
+    }
+
+    // Optional: attempt Supabase save if available, but don't block
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.log("[DAWContext] No Supabase user, skipping cloud save");
+        return;
+      }
+
+      const sessionData = {
+        tracks: currentProject.tracks,
+        bpm: currentProject.bpm,
+        timeSignature: currentProject.timeSignature,
+      };
+
+      const { error } = await supabase.from("projects").upsert({
+        id: currentProject.id,
+        user_id: user.id,
+        name: currentProject.name,
+        sample_rate: currentProject.sampleRate,
+        bit_depth: currentProject.bitDepth,
+        bpm: currentProject.bpm,
+        time_signature: currentProject.timeSignature,
+        session_data: sessionData,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        console.warn("[DAWContext] Supabase save failed (non-critical):", error);
+      } else {
+        console.log("[DAWContext] Project also saved to Supabase");
+      }
+    } catch (error) {
+      console.warn("[DAWContext] Supabase save unavailable (non-critical):", error);
     }
   };
 
   const loadProject = async (projectId: string) => {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("id", projectId)
-      .maybeSingle();
-
-    if (error || !data) {
-      console.error("Error loading project:", error);
+    // Try localStorage first
+    const localProject = loadProjectFromStorage();
+    
+    if (localProject && localProject.id === projectId) {
+      setCurrentProject(localProject);
+      console.log("[DAWContext] Project loaded from localStorage:", projectId);
       return;
     }
 
-    const project: Project = {
-      id: data.id,
-      name: data.name,
-      sampleRate: data.sample_rate,
-      bitDepth: data.bit_depth,
-      bpm: data.bpm,
-      timeSignature: data.time_signature,
-      tracks: data.session_data?.tracks || [],
-      buses: [],
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-    };
+    // Try Supabase as fallback
+    try {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("id", projectId)
+        .maybeSingle();
 
-    setCurrentProject(project);
+      if (error || !data) {
+        console.warn("[DAWContext] Project not found in Supabase:", error);
+        return;
+      }
+
+      const project: Project = {
+        id: data.id,
+        name: data.name,
+        sampleRate: data.sample_rate,
+        bitDepth: data.bit_depth,
+        bpm: data.bpm,
+        timeSignature: data.time_signature,
+        tracks: data.session_data?.tracks || [],
+        buses: [],
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+
+      setCurrentProject(project);
+      console.log("[DAWContext] Project loaded from Supabase:", projectId);
+    } catch (error) {
+      console.warn("[DAWContext] Supabase load unavailable:", error);
+    }
   };
 
   // Phase 3: Marker functions

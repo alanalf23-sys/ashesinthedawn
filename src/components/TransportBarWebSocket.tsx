@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { Play, Square, RotateCcw } from "lucide-react";
 
-const API_BASE = "http://localhost:8000";
-const WS_URL = "ws://localhost:8000/ws/transport/clock";
+const API_BASE = "http://localhost:8001";
+const WS_URL = "ws://localhost:8001/ws/transport/clock";
 
 interface TransportState {
   playing: boolean;

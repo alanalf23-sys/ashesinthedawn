@@ -4,7 +4,7 @@
  * 
  * Backend endpoints:
  * - http://localhost:5000/ (Flask web interface)
- * - http://localhost:8000/ (FastAPI if available)
+ * - http://localhost:8001/ (FastAPI default)
  */
 
 export interface CodetteBridgeConfig {
@@ -42,7 +42,7 @@ class CodetteBridgeService {
 
   constructor(config?: Partial<CodetteBridgeConfig>) {
     this.config = {
-      backendUrl: import.meta.env.VITE_CODETTE_BACKEND || 'http://localhost:8000',
+      backendUrl: import.meta.env.VITE_CODETTE_BACKEND || 'http://localhost:8001',
       timeout: parseInt(import.meta.env.VITE_CODETTE_TIMEOUT || '10000'),
       retryAttempts: parseInt(import.meta.env.VITE_CODETTE_RETRIES || '3'),
       ...config,

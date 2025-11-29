@@ -34,7 +34,7 @@ class CodettePythonIntegration {
   private chatHistory: CodetteChatMessage[] = [];
   private isConnected: boolean = false;
 
-  constructor(baseUrl: string = 'http://localhost:8000', apiKey: string = '') {
+  constructor(baseUrl: string = 'http://localhost:8001', apiKey: string = '') {
     this.baseUrl = baseUrl;
     this.apiKey = apiKey;
     this.initializeConnection();
@@ -317,7 +317,7 @@ let codetteIntegrationInstance: CodettePythonIntegration | null = null;
  */
 export function getCodettePythonIntegration(): CodettePythonIntegration {
   if (!codetteIntegrationInstance) {
-    const baseUrl = import.meta.env.VITE_CODETTE_API_URL || 'http://localhost:8000';
+    const baseUrl = import.meta.env.VITE_CODETTE_API_URL || 'http://localhost:8001';
     const apiKey = import.meta.env.VITE_CODETTE_API_KEY || '';
     codetteIntegrationInstance = new CodettePythonIntegration(baseUrl, apiKey);
   }

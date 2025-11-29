@@ -4,7 +4,7 @@
  * All methods call actual Codette endpoints - no demo data
  */
 
-const API_BASE_URL = import.meta.env.VITE_CODETTE_API_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_CODETTE_API_URL || "http://localhost:8001";
 
 interface GenreDetectionResult {
   detected_genre: string;

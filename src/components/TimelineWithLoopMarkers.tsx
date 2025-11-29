@@ -27,7 +27,7 @@ export default function TimelineWithLoopMarkers() {
     setLoopRange([start, end]);
     try {
       await fetch(
-        `http://localhost:8000/transport/loop?start=${start}&end=${end}`,
+        `http://localhost:8001/transport/loop?start=${start}&end=${end}`,
         { method: "POST" }
       );
     } catch (err) {

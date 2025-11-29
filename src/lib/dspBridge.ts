@@ -14,7 +14,7 @@
 import { errorManager } from "./errorHandling";
 
 // Backend configuration
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8001";
 const RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 1000; // ms
 

@@ -8,7 +8,7 @@ export default function TimelineMinimal() {
     let ws: WebSocket | null = null;
 
     const connect = () => {
-      ws = new WebSocket("ws://localhost:8000/ws/transport/clock");
+      ws = new WebSocket("ws://localhost:8001/ws/transport/clock");
 
       ws.onopen = () => {
         setConnected(true);
