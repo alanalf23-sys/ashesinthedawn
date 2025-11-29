@@ -17,7 +17,7 @@ interface TransportState {
  * Note: WebSocket endpoints currently not implemented on Codette server
  */
 export function useTransportClock(
-  wsUrl: string = "ws://localhost:8001/ws/transport/clock"
+  wsUrl: string = "ws://localhost:8000/ws/transport/clock"
 ) {
   const [state, setState] = useState<TransportState>({
     playing: false,
@@ -144,7 +144,7 @@ export function useTransportClock(
  * Hook for REST API control (play, stop, seek, etc.)
  * Uses Codette API endpoints
  */
-export function useTransportAPI(baseUrl: string = "http://localhost:8001") {
+export function useTransportAPI(baseUrl: string = "http://localhost:8000") {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 

@@ -19,7 +19,7 @@ export default function TimelinePlayheadSimple() {
     const connect = () => {
       try {
         // ✅ CORRECT endpoint
-        ws = new WebSocket("ws://localhost:8001/ws/transport/clock");
+        ws = new WebSocket("ws://localhost:8000/ws/transport/clock");
 
         ws.onopen = () => {
           console.log("✓ Connected to transport clock");

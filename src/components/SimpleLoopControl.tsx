@@ -29,14 +29,14 @@ export default function SimpleLoopControl() {
     try {
       if (looping) {
         // Disable loop
-        await fetch("http://localhost:8001/transport/loop/disable", {
+        await fetch("http://localhost:8000/transport/loop/disable", {
           method: "POST",
         });
         setLooping(false);
       } else {
         // Enable loop
         await fetch(
-          `http://localhost:8001/transport/loop?start=${loopStart}&end=${loopEnd}&enabled=true`,
+          `http://localhost:8000/transport/loop?start=${loopStart}&end=${loopEnd}&enabled=true`,
           { method: "POST" }
         );
         setLooping(true);
@@ -54,7 +54,7 @@ export default function SimpleLoopControl() {
 
     try {
       await fetch(
-        `http://localhost:8001/transport/loop?start=${start}&end=${end}&enabled=${looping}`,
+        `http://localhost:8000/transport/loop?start=${start}&end=${end}&enabled=${looping}`,
         { method: "POST" }
       );
     } catch (err) {
