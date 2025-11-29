@@ -27,6 +27,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
+# Import genre templates
+try:
+    from codette_genre_templates import (
+        get_genre_suggestions,
+        get_available_genres,
+        get_genre_characteristics,
+        combine_suggestions
+    )
+    GENRE_TEMPLATES_AVAILABLE = True
+except ImportError:
+    GENRE_TEMPLATES_AVAILABLE = False
+    print("[WARNING] Genre templates not available")
+
 # Try to import numpy for audio analysis
 try:
     import numpy as np
@@ -553,14 +566,22 @@ async def analyze_audio(request: AudioAnalysisRequest):
 
 @app.post("/codette/suggest", response_model=SuggestionResponse)
 async def get_suggestions(request: SuggestionRequest):
-    """Get AI-powered suggestions"""
+    """Get AI-powered suggestions with genre support"""
     try:
         suggestions = []
         context_type = request.context.get("type", "general") if request.context else "general"
+        genre = request.context.get("genre", "") if request.context else ""
+        
+        # Use genre templates if available
+        if GENRE_TEMPLATES_AVAILABLE and genre:
+            genre_lower = genre.lower().strip()
+            genre_suggestions = get_genre_suggestions(genre_lower, limit=min(3, request.limit))
+            if genre_suggestions:
+                suggestions.extend(genre_suggestions)
         
         # Use real suggestions from training data
         if context_type == "gain-staging":
-            suggestions = [
+            base_suggestions = [
                 {
                     "type": "optimization",
                     "title": "Peak Level Optimization",
@@ -574,8 +595,10 @@ async def get_suggestions(request: SuggestionRequest):
                     "confidence": 0.95,
                 },
             ]
+            if not suggestions:
+                suggestions.extend(base_suggestions)
         elif context_type == "mixing":
-            suggestions = [
+            base_suggestions = [
                 {
                     "type": "effect",
                     "title": "EQ for Balance",
@@ -589,8 +612,10 @@ async def get_suggestions(request: SuggestionRequest):
                     "confidence": 0.85,
                 },
             ]
+            if not suggestions:
+                suggestions.extend(base_suggestions)
         elif context_type == "mastering":
-            suggestions = [
+            base_suggestions = [
                 {
                     "type": "optimization",
                     "title": "Loudness Target",
@@ -604,15 +629,19 @@ async def get_suggestions(request: SuggestionRequest):
                     "confidence": 0.87,
                 },
             ]
+            if not suggestions:
+                suggestions.extend(base_suggestions)
         else:
-            suggestions = [
-                {
-                    "type": "optimization",
-                    "title": "Gain Optimization",
-                    "description": "Maintain proper gain levels throughout signal chain",
-                    "confidence": 0.85,
-                },
-            ]
+            if not suggestions:
+                base_suggestions = [
+                    {
+                        "type": "optimization",
+                        "title": "Gain Optimization",
+                        "description": "Maintain proper gain levels throughout signal chain",
+                        "confidence": 0.85,
+                    },
+                ]
+                suggestions.extend(base_suggestions)
         
         # Limit suggestions
         suggestions = suggestions[:request.limit]
@@ -1039,6 +1068,68 @@ async def get_status():
         ],
         "timestamp": get_timestamp(),
     }
+
+# ============================================================================
+# GENRE TEMPLATES ENDPOINTS
+# ============================================================================
+
+@app.get("/codette/genres")
+async def get_available_genres_endpoint():
+    """Get list of available genre templates"""
+    try:
+        if GENRE_TEMPLATES_AVAILABLE:
+            genres = get_available_genres()
+            return {
+                "genres": genres,
+                "status": "success",
+                "timestamp": get_timestamp(),
+            }
+        return {
+            "genres": [],
+            "status": "templates_unavailable",
+            "timestamp": get_timestamp(),
+        }
+    except Exception as e:
+        logger.error(f"Error retrieving genres: {e}", exc_info=True)
+        return {
+            "genres": [],
+            "status": "error",
+            "error": str(e),
+            "timestamp": get_timestamp(),
+        }
+
+
+@app.get("/codette/genre/{genre_id}")
+async def get_genre_characteristics_endpoint(genre_id: str):
+    """Get mixing characteristics for a specific genre"""
+    try:
+        if GENRE_TEMPLATES_AVAILABLE:
+            characteristics = get_genre_characteristics(genre_id.lower())
+            if characteristics:
+                return {
+                    "genre": genre_id,
+                    "characteristics": characteristics,
+                    "status": "success",
+                    "timestamp": get_timestamp(),
+                }
+            return {
+                "genre": genre_id,
+                "status": "genre_not_found",
+                "timestamp": get_timestamp(),
+            }
+        return {
+            "genre": genre_id,
+            "status": "templates_unavailable",
+            "timestamp": get_timestamp(),
+        }
+    except Exception as e:
+        logger.error(f"Error retrieving genre {genre_id}: {e}", exc_info=True)
+        return {
+            "genre": genre_id,
+            "status": "error",
+            "error": str(e),
+            "timestamp": get_timestamp(),
+        }
 
 # ============================================================================
 # SERVER STARTUP
