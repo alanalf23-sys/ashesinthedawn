@@ -52,7 +52,6 @@ export function useTransportClock(
 
         ws.onopen = () => {
           clearTimeout(connectionTimeout);
-          console.log("✓ Connected to transport clock");
           setConnected(true);
           setError(null);
           reconnectAttemptsRef.current = 0;
@@ -73,16 +72,16 @@ export function useTransportClock(
           }
         };
 
-        ws.onerror = (error) => {
+        ws.onerror = () => {
           clearTimeout(connectionTimeout);
-          console.error("WebSocket error:", error);
+          // Suppress verbose WebSocket error logging in console
+          // Connection failures are handled by onclose event
           setError("WebSocket connection failed");
           setConnected(false);
         };
 
         ws.onclose = () => {
           clearTimeout(connectionTimeout);
-          console.log("✗ Disconnected from transport clock");
           setConnected(false);
           wsRef.current = null;
 
@@ -94,13 +93,9 @@ export function useTransportClock(
             );
             reconnectTimeoutRef.current = setTimeout(() => {
               reconnectAttemptsRef.current++;
-              console.log(
-                `Reconnecting to transport clock... (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
-              );
               connect();
             }, delay);
           } else {
-            console.log("WebSocket: Max reconnection attempts reached");
             setError("Transport clock WebSocket unavailable");
           }
         };

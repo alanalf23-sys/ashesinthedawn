@@ -7,6 +7,7 @@ import TrackList from './components/TrackList';
 import Timeline from './components/Timeline';
 import Mixer from './components/Mixer';
 import EnhancedSidebar from './components/EnhancedSidebar';
+import AudioSettingsModal from './components/modals/AudioSettingsModal';
 
 function AppContent() {
   const [mixerHeight, setMixerHeight] = React.useState(200);
@@ -78,6 +79,9 @@ function AppContent() {
           <EnhancedSidebar />
         </div>
       </div>
+
+      {/* Global Modals */}
+      <AudioSettingsModal />
     </div>
   );
 }

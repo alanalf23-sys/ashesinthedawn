@@ -348,9 +348,9 @@ export default function WaveformAdjuster({
             </div>
 
             {/* Peak Level */}
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-xs text-gray-400">Peak:</span>
-              <div className="w-20 h-2 bg-gray-700 rounded overflow-hidden">
+            <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+              <span className="text-xs text-gray-400 whitespace-nowrap">Peak:</span>
+              <div className="w-24 h-2 bg-gray-700 rounded overflow-hidden flex-shrink-0">
                 <div
                   className="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500"
                   style={{
@@ -359,7 +359,7 @@ export default function WaveformAdjuster({
                   }}
                 />
               </div>
-              <span className="text-xs text-gray-400 w-8">
+              <span className="text-xs text-gray-400 w-10 text-right flex-shrink-0">
                 {Math.round(peakLevel * 100)}%
               </span>
             </div>
