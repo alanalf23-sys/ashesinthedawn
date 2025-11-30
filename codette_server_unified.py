@@ -1321,7 +1321,8 @@ async def get_genre_characteristics_endpoint(genre_id: str):
 # ============================================================================
 
 if __name__ == "__main__":
-    port = int(os.getenv("CODETTE_PORT", "8000"))
+    # Always use port 8000 for backend
+    port = 8000
     
     logger.info("=" * 80)
     logger.info("Starting Codette AI Unified Server")

@@ -124,6 +124,15 @@ export class AudioEngine {
     }
 
     try {
+      // Resume audio context if suspended (browser autoplay policy)
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume().then(() => {
+          console.log('[AudioEngine] Audio context resumed');
+        }).catch(err => {
+          console.error('[AudioEngine] Failed to resume audio context:', err);
+        });
+      }
+
       // Stop any existing playback for this track
       this.stopAudio(trackId);
 
