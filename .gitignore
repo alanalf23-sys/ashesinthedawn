@@ -72,3 +72,6 @@ Codette/**/*.spec
 /.vs/ashesinthedawn.slnx/FileContentIndex/6b09a500-398f-4b56-a416-98d314d535e2.vsidx
 /.vs/ashesinthedawn.slnx/FileContentIndex/e8362143-cd93-4356-8344-3dfa6032b513.vsidx
 *.vsidx
+
+# Ignore IDE-generated configuration files  
+.vs/  
