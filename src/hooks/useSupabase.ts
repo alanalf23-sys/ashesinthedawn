@@ -225,7 +225,7 @@ export interface UseSupabaseTableOptions {
   limit?: number;
   orderBy?: string;
   ascending?: boolean;
-  filter?: Record<string, any>;
+  filter?: Record<string, unknown>;
 }
 
 export interface UseSupabaseTableReturn<T> {
@@ -260,7 +260,7 @@ export function useSupabaseTable<T>(
     }
 
     setIsLoading(false);
-  }, [tableName, options]);
+  }, []);
 
   useEffect(() => {
     refetch();

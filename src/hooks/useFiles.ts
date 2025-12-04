@@ -31,11 +31,6 @@ export function useFiles(): UseFilesReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load files on mount
-  useEffect(() => {
-    loadFiles();
-  }, []);
-
   const loadFiles = useCallback(async (fileType?: string) => {
     try {
       setLoading(true);
@@ -56,6 +51,11 @@ export function useFiles(): UseFilesReturn {
       setLoading(false);
     }
   }, []);
+
+  // Load files on mount
+  useEffect(() => {
+    loadFiles();
+  }, [loadFiles]);
 
   const uploadFile = useCallback(
     async (filename: string, storagePath: string, fileType: string) => {

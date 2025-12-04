@@ -47,7 +47,7 @@ export interface CodetteSuggestion {
   type: "effect" | "parameter" | "automation" | "routing" | "mixing";
   title: string;
   description: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   confidence: number;
   category: string;
 }
@@ -75,7 +75,7 @@ export interface CodetteAnalysisRequest {
 
 export interface CodetteAnalysisResponse {
   analysis_type: string;
-  results: Record<string, any>;
+  results: Record<string, unknown>;
   recommendations: string[];
   quality_score: number;
 }
@@ -83,13 +83,13 @@ export interface CodetteAnalysisResponse {
 export interface CodetteProcessRequest {
   id: string;
   type: "chat" | "suggest" | "analyze" | "sync";
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
 }
 
 export interface CodetteProcessResponse {
   id: string;
   type: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   status: "success" | "error";
   message?: string;
 }
@@ -116,7 +116,7 @@ interface ConnectionState {
 interface QueuedRequest {
   id: string;
   method: "chat" | "suggest" | "analyze" | "process";
-  data: any;
+  data: unknown;
   timestamp: number;
   retries: number;
 }
@@ -130,7 +130,7 @@ class CodetteBridge {
   };
 
   private requestQueue: Map<string, QueuedRequest> = new Map();
-  private listeners: Map<string, Set<Function>> = new Map();
+  private listeners: Map<string, Set<(data?: unknown) => void>> = new Map();
 
   // Reconnection settings
   private maxReconnectAttempts: number = 10;
@@ -143,11 +143,11 @@ class CodetteBridge {
     try {
       this.initHealthCheck();
       // Initialize WebSocket connection asynchronously
-      this.initializeWebSocket().catch((err) => {
-        console.debug("[CodetteBridge] WebSocket initialization failed:", err);
+      this.initializeWebSocket().catch((_err) => {
+        console.debug("[CodetteBridge] WebSocket initialization failed:", _err);
       });
-    } catch (err) {
-      console.error("[CodetteBridge] Constructor error:", err);
+    } catch (_err) {
+      console.error("[CodetteBridge] Constructor error:", _err);
       // Continue with degraded functionality
     }
   }
@@ -162,8 +162,8 @@ class CodetteBridge {
     }
 
     this.healthCheckInterval = setInterval(() => {
-      this.healthCheck().catch((err) => {
-        console.debug("[CodetteBridge] Health check failed:", err.message);
+      this.healthCheck().catch((_err) => {
+        console.debug("[CodetteBridge] Health check failed:", _err.message);
       });
     }, 30000); // Every 30 seconds
   }
@@ -382,7 +382,7 @@ class CodetteBridge {
   ): Promise<{
     success: boolean;
     trackId: string;
-    appliedParameters: Record<string, any>;
+    appliedParameters: Record<string, unknown>;
   }> {
     const requestData = {
       action: "apply_suggestion",
@@ -391,11 +391,16 @@ class CodetteBridge {
       parameters: suggestion.parameters,
     };
 
-    return this.makeRequest(
+    const result = await this.makeRequest(
       "chat",
       "/codette/suggest",
       requestData
     );
+    return result as unknown as {
+      success: boolean;
+      trackId: string;
+      appliedParameters: Record<string, unknown>;
+    };
   }
 
   /**
@@ -476,11 +481,12 @@ class CodetteBridge {
       action: "transport_play",
     };
 
-    return this.makeRequest(
+    const result = await this.makeRequest(
       "chat",
       "/codette/chat",
       requestData
-    ) as any;
+    );
+    return result as unknown as CodetteTransportState;
   }
 
   /**
@@ -491,11 +497,12 @@ class CodetteBridge {
       action: "transport_stop",
     };
 
-    return this.makeRequest(
+    const result = await this.makeRequest(
       "chat",
       "/codette/chat",
       requestData
-    ) as any;
+    );
+    return result as unknown as CodetteTransportState;
   }
 
   /**
@@ -507,11 +514,12 @@ class CodetteBridge {
       time: timeSeconds,
     };
 
-    return this.makeRequest(
+    const result = await this.makeRequest(
       "chat",
       "/codette/chat",
       requestData
-    ) as any;
+    );
+    return result as unknown as CodetteTransportState;
   }
 
   /**
@@ -523,11 +531,12 @@ class CodetteBridge {
       bpm: bpm,
     };
 
-    return this.makeRequest(
+    const result = await this.makeRequest(
       "chat",
       "/codette/chat",
       requestData
-    ) as any;
+    );
+    return result as unknown as CodetteTransportState;
   }
 
   /**
@@ -545,18 +554,19 @@ class CodetteBridge {
       loop_end: endTime,
     };
 
-    return this.makeRequest(
+    const result = await this.makeRequest(
       "chat",
       "/codette/chat",
       requestData
-    ) as any;
+    );
+    return result as unknown as CodetteTransportState;
   }
 
   /**
    * Get production checklist from Codette
    */
   async getProductionChecklist(
-    projectState: Record<string, any>
+    projectState: Record<string, unknown>
   ): Promise<{
     items: Array<{
       category: string;
@@ -571,7 +581,16 @@ class CodetteBridge {
       project_state: projectState,
     };
 
-    return this.makeRequest("chat", "/codette/chat", requestData) as any;
+    const result = await this.makeRequest("chat", "/codette/chat", requestData);
+    return result as unknown as {
+      items: Array<{
+        category: string;
+        task: string;
+        completed: boolean;
+        priority: "high" | "medium" | "low";
+      }>;
+      completionPercentage: number;
+    };
   }
 
   /**
@@ -678,10 +697,10 @@ class CodetteBridge {
   /**
    * Core request handler with error handling, retries, and reconnection
    */
-  private async makeRequest<T = any>(
+  private async makeRequest<T = Record<string, unknown>>(
     method: "chat" | "suggest" | "analyze" | "process",
     endpoint: string,
-    data: any,
+    data: unknown,
     retryCount: number = 0
   ): Promise<T> {
     const requestId = `${method}-${Date.now()}-${Math.random()}`;
@@ -752,8 +771,8 @@ class CodetteBridge {
         
         // Trigger reconnection attempt
         if (!this.connectionState.isReconnecting) {
-          this.attemptReconnect().catch((err) =>
-            console.warn("[CodetteBridge] Reconnect attempt error:", err)
+          this.attemptReconnect().catch((_err) =>
+            console.warn("[CodetteBridge] Reconnect attempt error:", _err)
           );
         }
       }
@@ -775,7 +794,7 @@ class CodetteBridge {
   private queueRequest(
     id: string,
     method: "chat" | "suggest" | "analyze" | "process",
-    data: any
+    data: unknown
   ): void {
     this.requestQueue.set(id, {
       id,
@@ -872,15 +891,21 @@ class CodetteBridge {
 
         this.ws.onmessage = (event) => {
           try {
-            const message = JSON.parse(event.data);
+            const message = JSON.parse(event.data) as {
+              type: string;
+              data?: unknown;
+            };
             
             // Enhanced logging with structured data
+            const dataKeys = message.data && typeof message.data === 'object' 
+              ? Object.keys(message.data as Record<string, unknown>).slice(0, 5) 
+              : 'N/A';
             const logData = {
               type: message.type,
               hasData: !!message.data,
               dataType: typeof message.data,
               timestamp: new Date().toISOString(),
-              dataKeys: message.data && typeof message.data === 'object' ? Object.keys(message.data).slice(0, 5) : 'N/A'
+              dataKeys: dataKeys
             };
             console.debug("[CodetteBridge] WebSocket message received:", logData);
 
@@ -889,13 +914,17 @@ class CodetteBridge {
               console.debug("[CodetteBridge] → transport_changed event emitted");
               this.emit("transport_changed", message.data);
             } else if (message.type === "suggestion") {
-              console.debug("[CodetteBridge] → suggestion_received event emitted", { count: message.data?.length || 0 });
+              const suggestionArray = Array.isArray(message.data) ? message.data : [];
+              console.debug("[CodetteBridge] → suggestion_received event emitted", { count: suggestionArray.length });
               this.emit("suggestion_received", message.data);
             } else if (message.type === "analysis_complete") {
               console.debug("[CodetteBridge] → analysis_complete event emitted");
               this.emit("analysis_complete", message.data);
             } else if (message.type === "state_update") {
-              console.debug("[CodetteBridge] → state_update event emitted", { keys: Object.keys(message.data || {}) });
+              const stateKeys = message.data && typeof message.data === 'object'
+                ? Object.keys(message.data as Record<string, unknown>)
+                : [];
+              console.debug("[CodetteBridge] → state_update event emitted", { keys: stateKeys });
               this.emit("state_update", message.data);
             } else if (message.type === "error") {
               console.warn("[CodetteBridge] → ws_error event emitted", message.data);
@@ -904,14 +933,19 @@ class CodetteBridge {
               console.debug("[CodetteBridge] Unknown message type:", message.type);
             }
           } catch (error) {
-            console.error("[CodetteBridge] Failed to parse WebSocket message:", error, { rawData: event.data?.substring(0, 100) });
+            const dataPreview = event.data instanceof ArrayBuffer
+              ? `ArrayBuffer(${event.data.byteLength})`
+              : typeof event.data === 'string'
+              ? event.data.substring(0, 100)
+              : String(event.data);
+            console.error("[CodetteBridge] Failed to parse WebSocket message:", error, { rawData: dataPreview });
           }
         };
 
-        this.ws.onerror = (error) => {
-          console.error("[CodetteBridge] ❌ WebSocket error:", error);
+        this.ws.onerror = (_error) => {
+          console.error("[CodetteBridge] ❌ WebSocket error:", _error);
           this.wsConnected = false;
-          this.emit("ws_error", error);
+          this.emit("ws_error", _error);
         };
 
         this.ws.onclose = () => {
@@ -972,7 +1006,7 @@ class CodetteBridge {
   /**
    * Send message over WebSocket
    */
-  sendWebSocketMessage(message: Record<string, any>): boolean {
+  sendWebSocketMessage(message: Record<string, unknown>): boolean {
     if (!this.ws || !this.wsConnected) {
       console.debug(
         "[CodetteBridge] WebSocket not connected, falling back to REST"
@@ -1045,18 +1079,18 @@ class CodetteBridge {
   /**
    * Event emitter system
    */
-  on(event: string, callback: Function): void {
+  on(event: string, callback: (data?: unknown) => void): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
     this.listeners.get(event)!.add(callback);
   }
 
-  off(event: string, callback: Function): void {
+  off(event: string, callback: (data?: unknown) => void): void {
     this.listeners.get(event)?.delete(callback);
   }
 
-  private emit(event: string, data?: any): void {
+  private emit(event: string, data?: unknown): void {
     this.listeners.get(event)?.forEach((callback) => {
       try {
         callback(data);

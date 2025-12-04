@@ -66,7 +66,7 @@ export function useEffectChain({
   const [error, setError] = useState<Error | null>(null);
 
   // References
-  const dspBridgeRef = useRef<any>(null);
+  const dspBridgeRef = useRef<{ processEffect: (type: string, audio: Float32Array, params: Record<string, unknown>) => Promise<Float32Array> } | null>(null);
 
   /**
    * Initialize DSP bridge on mount
@@ -74,7 +74,8 @@ export function useEffectChain({
   useReactEffect(() => {
     const initBridge = async () => {
       try {
-        dspBridgeRef.current = await initializeDSPBridge();
+        const bridge = await initializeDSPBridge();
+        dspBridgeRef.current = bridge as unknown as { processEffect: (type: string, audio: Float32Array, params: Record<string, unknown>) => Promise<Float32Array> };
       } catch (err) {
         const e = err instanceof Error ? err : new Error('Failed to initialize DSP bridge');
         setError(e);
@@ -86,7 +87,7 @@ export function useEffectChain({
 
     // Cleanup on unmount
     return () => {
-      if (autoCleanup) {
+      if (autoCleanup && dspBridgeRef.current) {
         dspBridgeRef.current = null;
       }
     };

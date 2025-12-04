@@ -66,21 +66,6 @@ export function useCodetteControl(userId: string): UseCodetteControlReturn {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
-  // Load permissions on mount
-  useEffect(() => {
-    loadPermissions();
-  }, [userId]);
-
-  // Load settings on mount
-  useEffect(() => {
-    loadSettings();
-  }, [userId]);
-
-  // Load activity on mount
-  useEffect(() => {
-    loadActivity();
-  }, [userId]);
-
   const loadPermissions = useCallback(async () => {
     try {
       setPermLoading(true);
@@ -137,6 +122,21 @@ export function useCodetteControl(userId: string): UseCodetteControlReturn {
       setSettingsLoading(false);
     }
   }, [userId]);
+
+  // Load permissions on mount
+  useEffect(() => {
+    loadPermissions();
+  }, [loadPermissions]);
+
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  // Load activity on mount
+  useEffect(() => {
+    loadActivity();
+  }, [loadActivity]);
 
   const setPermission = useCallback(
     async (actionType: string, level: PermissionLevel) => {

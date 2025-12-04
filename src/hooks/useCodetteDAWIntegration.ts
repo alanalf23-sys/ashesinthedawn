@@ -40,19 +40,19 @@ export function useCodetteDAWIntegration(): CodetteDAWIntegration {
       try {
         switch (suggestion.type) {
           case 'effect': {
-            const effectType = suggestion.parameters.effectType || suggestion.title;
+            const effectType = (suggestion.parameters?.effectType as string) || (suggestion.title as string);
             // Use addEffectToTrack from DAW context
             addEffectToTrack(selectedTrack.id, effectType);
             return true;
           }
 
           case 'parameter': {
-            const { paramName, value } = suggestion.parameters;
+            const { paramName, value } = suggestion.parameters as Record<string, unknown>;
             if (paramName && value !== undefined) {
               // Update track parameter via DAW context
-              const updates: Record<string, any> = {};
+              const updates: Record<string, unknown> = {};
               if (paramName === 'volume' || paramName === 'pan' || paramName === 'inputGain') {
-                updates[paramName] = value;
+                updates[paramName as string] = value;
                 updateTrack(selectedTrack.id, updates);
                 return true;
               }
@@ -61,21 +61,22 @@ export function useCodetteDAWIntegration(): CodetteDAWIntegration {
           }
 
           case 'automation': {
-            const { parameterName: _parameterName, timePosition: _timePosition, value: _value } = suggestion.parameters;
+            const { parameterName: _parameterName, timePosition: _timePosition, value: _value } = suggestion.parameters as Record<string, unknown>;
             // This would need a DAW context method
             return false;
           }
 
           case 'routing': {
-            const { destination } = suggestion.parameters;
-            updateTrack(selectedTrack.id, { routing: destination });
+            const { destination } = suggestion.parameters as Record<string, unknown>;
+            const dest = destination as string;
+            updateTrack(selectedTrack.id, { routing: dest });
             return true;
           }
 
           case 'mixing': {
-            const { adjustments } = suggestion.parameters;
+            const { adjustments } = suggestion.parameters as Record<string, unknown>;
             if (adjustments) {
-              updateTrack(selectedTrack.id, adjustments);
+              updateTrack(selectedTrack.id, adjustments as Record<string, unknown>);
               return true;
             }
             return false;
@@ -194,11 +195,15 @@ export function useCodetteDAWIntegration(): CodetteDAWIntegration {
       try {
         const result = await getSuggestions('checklist');
         if (Array.isArray(result)) {
-          return result.map((item: any) => ({
-            task: item.title || item.description || 'Unknown task',
-            completed: item.parameters?.completed ?? false,
-            priority: item.parameters?.priority ?? 'medium',
-          }));
+          return result.map((item: unknown) => {
+            const itemData = item as Record<string, unknown>;
+            const params = itemData.parameters as Record<string, unknown> || {};
+            return {
+              task: (itemData.title as string) || (itemData.description as string) || 'Unknown task',
+              completed: (params.completed as boolean) ?? false,
+              priority: (params.priority as 'high' | 'medium' | 'low') ?? 'medium',
+            };
+          });
         }
         return [];
       } catch (err) {
