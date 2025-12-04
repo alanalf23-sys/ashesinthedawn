@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import nltk
 import numpy as np
 import sympy as sp
@@ -383,71 +383,87 @@ class Codette:
         
         # Check if this is a DAW-related query
         daw_keywords = ['mix', 'eq', 'compress', 'track', 'audio', 'bass', 'vocal', 'drum', 'frequency', 
-                       'gain', 'reverb', 'delay', 'master', 'pan', 'stereo', 'plugin', 'daw', 'recording',
-                       'sound', 'volume', 'level', 'effect', 'processing']
+                       'gain', 'reverb', 'delay', 'master', 'pan', 'stereo', 'plugin']
         is_daw_query = any(keyword in prompt.lower() for keyword in daw_keywords)
         
         # Generate responses using multiple perspectives
         responses = []
         
-        # If DAW query, prioritize DAW-specific response first
+        # Neural perspective with creative sentence
+        neural_insight = self.generate_creative_sentence(key_concepts if key_concepts else ["understanding"])
+        responses.append(f"[Neural] {neural_insight}")
+        
+        # Define response templates
+        response_templates = {
+            'logical': [
+                "Following cause and effect: {cause} leads to {effect}.",
+                "Logical analysis shows that {premise} implies {conclusion}.",
+                "Structured reasoning suggests {insight}."
+            ],
+            'creative': [
+                "Imagine {metaphor} - this illustrates how {concept} relates to {application}.",
+                "Like {natural_process}, we can see how {principle} emerges naturally.",
+                "Visualize {scenario} to understand the deeper patterns."
+            ],
+            'ethical': [
+                "From an ethical standpoint, we must consider {consideration}.",
+                "The moral dimension suggests focusing on {value}.",
+                "Balancing {aspect1} with {aspect2} leads to ethical outcomes."
+            ],
+            'quantum': [
+                "In the quantum realm, we see {principle} manifesting as {application}.",
+                "Like quantum superposition, this situation contains multiple {states}.",
+                "The uncertainty principle here relates {variable1} to {variable2}."
+            ]
+        }
+
+        # Define variables for template filling
+        variables = {
+            'complexity': ['multi-layered', 'interconnected', 'dynamic', 'emergent'],
+            'approach': ['systematic analysis', 'holistic understanding', 'iterative refinement'],
+            'aspect': ['core principles', 'fundamental patterns', 'key relationships'],
+            'focus': ['adaptability', 'resilience', 'integration', 'harmony'],
+            'cause': ['careful analysis', 'systematic approach', 'balanced perspective'],
+            'effect': ['improved understanding', 'better outcomes', 'sustainable solutions'],
+            'premise': ['current conditions', 'observed patterns', 'established principles'],
+            'conclusion': ['strategic adaptation', 'systematic improvement', 'harmonious integration'],
+            'insight': ['patterns emerge from chaos', 'balance leads to stability', 'adaptation drives growth'],
+            'metaphor': ['a river finding its path', 'a tree growing towards light', 'a crystal forming in solution'],
+            'concept': ['natural growth', 'adaptive learning', 'emergent behavior'],
+            'application': ['our current situation', 'the challenge at hand', 'our approach'],
+            'natural_process': ['evolution', 'crystallization', 'metamorphosis'],
+            'principle': ['self-organization', 'natural selection', 'emergent complexity'],
+            'scenario': ['a garden in bloom', 'a constellation of stars', 'a forest ecosystem'],
+            'consideration': ['long-term impact', 'collective benefit', 'sustainable growth'],
+            'value': ['harmony', 'integrity', 'wisdom'],
+            'aspect1': ['efficiency', 'innovation', 'stability'],
+            'aspect2': ['sustainability', 'adaptability', 'reliability'],
+            'states': ['possibilities', 'potentials', 'outcomes'],
+            'variable1': ['certainty', 'precision', 'control'],
+            'variable2': ['adaptability', 'innovation', 'freedom']
+        }
+
+        # Select random perspectives (2-3)
+        perspectives = list(response_templates.keys())
+        np.random.shuffle(perspectives)
+        num_perspectives = np.random.randint(2, min(4, len(perspectives) + 1))
+        selected_perspectives = perspectives[:num_perspectives]
+
+        # Generate responses
+        for perspective in selected_perspectives:
+            template = np.random.choice(response_templates[perspective])
+            # Replace variables in template
+            response = template
+            for var in re.findall(r'\{(\w+)\}', template):
+                if var in variables:
+                    replacement = np.random.choice(variables[var])
+                    response = response.replace('{'+var+'}', replacement)
+            responses.append(f"[{perspective.capitalize()}] {response}")
+        
+        # Add DAW-specific response if relevant
         if is_daw_query:
             daw_response = self._generate_daw_specific_response(prompt, key_concepts)
             responses.append(f"[DAW Expert] {daw_response}")
-            # Limit other perspectives for DAW queries to keep response focused
-            responses.append(f"[Neural] {self.generate_creative_sentence(key_concepts if key_concepts else ['understanding'])}")
-        else:
-            # For non-DAW queries, use full multi-perspective analysis
-            # Neural perspective with creative sentence
-            neural_insight = self.generate_creative_sentence(key_concepts if key_concepts else ["understanding"])
-            responses.append(f"[Neural] {neural_insight}")
-        
-        # Define response templates (only use if not DAW query)
-        if not is_daw_query:
-            response_templates = {
-                'logical': [
-                    "Following cause and effect: {cause} leads to {effect}.",
-                    "Logical analysis shows that {premise} implies {conclusion}.",
-                    "Structured reasoning suggests {insight}."
-                ],
-                'creative': [
-                    "Imagine {metaphor} - this illustrates how {concept} relates to {application}.",
-                    "Like {natural_process}, we can see how {principle} emerges naturally.",
-                    "Visualize {scenario} to understand the deeper patterns."
-                ]
-            }
-
-            # Define variables for template filling
-            variables = {
-                'cause': ['careful analysis', 'systematic approach', 'balanced perspective'],
-                'effect': ['improved understanding', 'better outcomes', 'sustainable solutions'],
-                'premise': ['current conditions', 'observed patterns', 'established principles'],
-                'conclusion': ['strategic adaptation', 'systematic improvement', 'harmonious integration'],
-                'insight': ['patterns emerge from chaos', 'balance leads to stability', 'adaptation drives growth'],
-                'metaphor': ['a river finding its path', 'a tree growing towards light', 'a crystal forming in solution'],
-                'concept': ['natural growth', 'adaptive learning', 'emergent behavior'],
-                'application': ['our current situation', 'the challenge at hand', 'our approach'],
-                'natural_process': ['evolution', 'crystallization', 'metamorphosis'],
-                'principle': ['self-organization', 'natural selection', 'emergent complexity'],
-                'scenario': ['a garden in bloom', 'a constellation of stars', 'a forest ecosystem']
-            }
-
-            # Select random perspectives (1-2 for non-DAW queries)
-            perspectives = list(response_templates.keys())
-            np.random.shuffle(perspectives)
-            num_perspectives = np.random.randint(1, min(3, len(perspectives) + 1))
-            selected_perspectives = perspectives[:num_perspectives]
-
-            # Generate responses
-            for perspective in selected_perspectives:
-                template = np.random.choice(response_templates[perspective])
-                # Replace variables in template
-                response = template
-                for var in re.findall(r'\{(\w+)\}', template):
-                    if var in variables:
-                        replacement = np.random.choice(variables[var])
-                        response = response.replace('{'+var+'}', replacement)
-                responses.append(f"[{perspective.capitalize()}] {response}")
 
         return "\n\n".join(responses)
     
