@@ -131,7 +131,7 @@ export async function generateOptimalEffectChain(
       .slice(0, 3)
       .map((a, index) => ({
         effect: a.suggestion.title,
-        parameters: a.suggestion.parameters,
+        parameters: (a.suggestion.parameters || {}) as Record<string, number>,
         order: index,
         reason: `Codette recommends this at position ${index + 1}`,
       }));

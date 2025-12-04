@@ -32,7 +32,7 @@ export function useTransportClock() {
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bridgeRef = useRef(getCodetteBridge());
-  const handlersRef = useRef<Array<{ event: string; handler: Function }>>([]);
+  const handlersRef = useRef<Array<{ event: string; handler: (data?: unknown) => void }>>([]);
 
   // Connect to CodetteBridge WebSocket
   useEffect(() => {
