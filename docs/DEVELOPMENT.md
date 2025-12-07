@@ -1,6 +1,6 @@
 # CoreLogic Studio - Development Guide
 
-**Last Updated**: November 24, 2025 | Phase 7 Complete: Configuration Integration Fixed ✅
+**Last Updated**: November 24, 2025 | Phase 7 Complete: Configuration & VU Meter Integration ✅
 
 ## Quick Start
 
@@ -72,10 +72,15 @@ ashesinthedawn/
 │   │   ├── Timeline.tsx            # Visual timeline
 │   │   ├── Mixer.tsx               # Horizontal mixer strips
 │   │   ├── Sidebar.tsx             # Multi-tab sidebar
-│   │   └── WelcomeModal.tsx        # Project creation modal
+│   │   ├── WelcomeModal.tsx        # Project creation modal
+│   │   ├── VUMeterGfx.tsx          # VU Meter rendering engine ✨ NEW
+│   │   └── VUMeterPanel.tsx        # VU Meter UI wrapper ✨ NEW
 │   ├── contexts/
 │   │   └── DAWContext.tsx          # Global state management
+│   ├── hooks/
+│   │   └── useVUMeterData.ts       # VU Meter data hook ✨ NEW
 │   ├── lib/
+│   │   ├── audioEngine.ts          # Web Audio API wrapper
 │   │   └── supabase.ts             # Supabase client configuration
 │   ├── types/
 │   │   └── index.ts                # TypeScript type definitions
@@ -96,6 +101,10 @@ ashesinthedawn/
 │   │   └── __init__.py            # Automation framework
 │   └── metering/
 │       └── __init__.py            # Metering & analysis tools
+│
+├── docs/                          # Documentation
+│   ├── VU_METER_INTEGRATION_COMPLETE.md  # VU Meter guide ✨ NEW
+│   └── ...other docs
 │
 ├── supabase/
 │   └── migrations/
@@ -123,6 +132,64 @@ ashesinthedawn/
 └── Changelog.ipynb                # Version history
 
 ```
+
+---
+
+## Frontend Components - ✨ NEW: VU Meter System
+
+### VU Meter GFX (JSFX Conversion)
+
+**Component**: `src/components/VUMeterGfx.tsx` (1,050+ lines)
+
+**Purpose**: Canvas-based analog VU meter with exact JSFX formula preservation
+
+**Features**:
+- ✅ Dual stereo meters (LEFT/RIGHT)
+- ✅ Real-time needle animation (60 FPS)
+- ✅ RMS and Peak displays
+- ✅ Red clip indicators (>0 dBFS)
+- ✅ Authentic scale markings (-20 to +3 dB)
+- ✅ Exponential needle decay (realistic ballistics)
+- ✅ Sample-accurate processing
+
+**Usage**:
+```typescript
+import { VUMeterGfx } from './components/VUMeterGfx';
+
+<VUMeterGfx
+  leftLevel={0.5}      // 0-1 normalized
+  rightLevel={0.6}     // 0-1 normalized
+  responseMs={50}      // Attack time
+  release={5}          // Release speed
+  sampleRate={44100}
+  width={425}
+  height={520}
+/>
+```
+
+### VU Meter Panel (Ready-to-Use)
+
+**Component**: `src/components/VUMeterPanel.tsx` (150 lines)
+
+**Purpose**: User-friendly VU meter with controls and audio engine integration
+
+**Usage**:
+```typescript
+import { VUMeterPanel } from './components/VUMeterPanel';
+
+<VUMeterPanel 
+  trackId={selectedTrack?.id}  // Optional: track-specific
+  responseMs={50}
+  release={5}
+  showControls={true}
+/>
+```
+
+### VU Meter Data Hook
+
+**Hook**: `src/hooks/useVUMeterData.ts` (70 lines)
+
+**Purpose**: Extract real-time audio levels from audio engine
 
 ---
 
@@ -176,6 +243,30 @@ ashesinthedawn/
 ---
 
 ## Development Workflow
+
+### Adding a New VU Meter
+
+1. **Import the panel component**:
+   ```typescript
+   import { VUMeterPanel } from './VUMeterPanel';
+   ```
+
+2. **Add to your layout**:
+   ```typescript
+   <VUMeterPanel 
+     trackId={selectedTrack?.id}
+     responseMs={50}
+     release={5}
+   />
+   ```
+
+3. **Customize appearance** (optional):
+   ```typescript
+   <VUMeterPanel 
+     className="custom-style"
+     showControls={false}  // Hide sliders
+   />
+   ```
 
 ### Adding a New Feature
 
@@ -346,6 +437,21 @@ Requires:
 const { currentProject, tracks, isPlaying } = useDAW();
 ```
 
+### Using VU Meters
+
+```typescript
+// Get audio levels
+const { leftLevel, rightLevel, leftPeak, rightPeak } = useVUMeterData();
+
+// Display with VU meter
+<VUMeterGfx 
+  leftLevel={leftLevel}
+  rightLevel={rightLevel}
+  responseMs={50}
+  release={5}
+/>
+```
+
 ### Adding a Track
 
 ```typescript
@@ -413,6 +519,22 @@ await loadProject("project-123");
 ```bash
 # React DevTools browser extension recommended
 # Helps inspect component props and state
+```
+
+### VU Meter Troubleshooting
+
+**Needles not moving**:
+```typescript
+// Check audio engine
+const { getAudioLevels } = getAudioEngine();
+console.log('Levels:', getAudioLevels());
+```
+
+**Canvas is blank**:
+```typescript
+// Check canvas element
+const canvas = document.querySelector('canvas');
+console.log('Canvas dimensions:', canvas?.width, canvas?.height);
 ```
 
 ### Console Logging
@@ -487,6 +609,16 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - [ ] Modals open and close
 - [ ] Styling renders correctly
 
+### VU Meters (✨ NEW)
+
+- [ ] Meters render with correct dimensions
+- [ ] Needles respond to audio input
+- [ ] RMS and peak values display correctly
+- [ ] Clip indicators activate above 0 dB
+- [ ] Response time slider adjusts attack
+- [ ] Release slider adjusts decay
+- [ ] Canvas scales properly on window resize
+
 ### State Management
 
 - [ ] Adding tracks updates list
@@ -546,18 +678,13 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - **Supabase**: https://supabase.com/docs
 - **Lucide Icons**: https://lucide.dev
 
----
+### VU Meter Documentation
 
-## Support
-
-For issues or questions:
-
-1. Check the Changelog for known issues
-2. Review ARCHITECTURE.md for component details
-3. Check component-specific documentation in code comments
-4. Run `npm run typecheck` and `npm run lint` to identify problems
+- **Integration Guide**: `docs/VU_METER_INTEGRATION_COMPLETE.md`
+- **Original JSFX Plugin**: VU Meter by Liteon (GPL)
+- **License**: GNU General Public License
 
 ---
 
-**Last Updated**: November 17, 2025
-**Current Phase**: Phase 1 - Development
+**Last Updated**: November 24, 2025  
+**Current Phase**: Phase 7 - Configuration & VU Meter Integration ✅
