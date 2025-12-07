@@ -6,11 +6,13 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
 *.local
 
+# IDE
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -20,24 +22,41 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment
 .env
+.env.local
+.env.*.local
 
 # Visual Studio cache/options directories
 .vs/
+*.vsidx
 
-# Documentation (all .md files are in docs/ folder)
-# Only sensitive security docs should be excluded from version control
-docs/URGENT_KAGGLE_SECURITY_BREACH.md
-docs/*SECURITY*.md
+# Temporary & Build Artifacts
+dist/
+.vite-temp/
+.vite/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+TestResults/
+*.db
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Duplicate/Legacy Folders (Should be removed)
+doc/                    # Use docs/ instead
+ashesinthedawn-main/    # Old project copy
+npm instal/             # Typo folder from failed install
 
 # Codette Large Files & Artifacts (GitHub 100MB limit)
-# Build artifacts
 Codette/build/
 Codette/build_*/
 Codette/dist/
 Codette/dist_*/
-
-# Test executables & environments
 Codette/arviz_test/
 Codette/test_env/
 Codette/test_*/
@@ -80,14 +99,16 @@ Codette/data/
 Codette/*.csv
 Codette/*.parquet
 
-# PyInstaller specs
-Codette/*.spec
-Codette/**/*.spec
-
-# Kaggle Credentials & API Keys (SECURITY)
+# Security & Sensitive Files
+docs/URGENT_KAGGLE_SECURITY_BREACH.md
+docs/*SECURITY*.md
 .kaggle/
 kaggle.json
 **/kaggle.json
 docs/KAGGLE_CODETTE_MODEL_GUIDE.md
 
-*.vsidx
+# Documentation (Keep organized in docs/ folder)
+# Ignore legacy/duplicate doc folders
+/doc/
+/documentation/
+/**/doc/
