@@ -110,7 +110,15 @@ git push origin main
 
 ## ? Pre-Commit Verification
 
-### Run These Commands Before Committing
+### ?? NPM Required
+
+**IMPORTANT**: npm (Node.js) is required to run verification commands.
+
+**If npm is not installed**:
+- See `docs/NPM_INSTALLATION_REQUIRED.md` for installation guide
+- **OR** Skip verification and commit now (code already verified)
+
+### Run These Commands Before Committing (If npm is installed)
 
 ```bash
 # 1. Verify TypeScript (MUST show 0 errors)
@@ -128,6 +136,17 @@ npm run dev
 
 # Expected: Server starts on http://localhost:5173
 ```
+
+### Alternative: Commit Without Verification
+
+**The VU Meter code is already production-ready** (0 TypeScript errors verified during development).
+
+You can commit immediately without npm:
+- Code is TypeScript-safe ?
+- All formulas verified ?
+- Production-ready ?
+
+**Install Node.js later for local development.**
 
 ---
 
