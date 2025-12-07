@@ -11,7 +11,8 @@
 
 ```bash
 # Just run this:
-.\scripts\commit-vu-meter.bat
+cd D:\HorizonCore\GitHub
+scripts\commit-vu-meter.bat
 ```
 
 **Then press `y` when prompted!**
