@@ -1,9 +1,16 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import os from 'os';
+
+// Use a temporary directory outside the project for cache
+const tempDir = path.join(os.tmpdir(), 'vite-corelogic-cache');
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Use temp directory for cache to avoid permission issues
+  cacheDir: tempDir,
+  
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
