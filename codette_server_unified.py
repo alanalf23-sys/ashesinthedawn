@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """
 Codette AI Unified Server - Complete Implementation
-All endpoints required by frontend codetteApiClient.ts
 """
 
 # FIRST: Set environment to suppress PyTensor warnings BEFORE any imports
@@ -13,6 +12,7 @@ import sys
 import json
 import logging
 import time
+import asyncio
 import traceback
 import warnings
 from pathlib import Path
@@ -112,6 +112,34 @@ except ImportError:
     NUMPY_AVAILABLE = False
     print("[WARNING] NumPy not available - audio processing disabled")
 
+# Try to import OpenAI for fallback model
+OPENAI_AVAILABLE = False
+openai_client = None
+OPENAI_FALLBACK_ENABLED = os.getenv("OPENAI_FALLBACK_ENABLED", "false").lower() == "true"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_FALLBACK_MODEL_PRIMARY = os.getenv("OPENAI_FALLBACK_MODEL_PRIMARY", "ft:gpt-4.1-2025-04-14:raiffs-bits:codette-v9:BWgspFHr:ckpt-step-456")
+OPENAI_FALLBACK_MODEL_SECONDARY = os.getenv("OPENAI_FALLBACK_MODEL_SECONDARY", "ft:gpt-4.1-2025-04-14:raiffs-bits:codettev71:C61lAE2r:ckpt-step-60")
+OPENAI_ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID", "asst_qOBjSkFUAGVJgglhcnauiUZJ")
+
+if OPENAI_FALLBACK_ENABLED and OPENAI_API_KEY:
+    try:
+        from openai import OpenAI
+        openai_client = OpenAI(api_key=OPENAI_API_KEY)
+        OPENAI_AVAILABLE = True
+        logger.info("✅ OpenAI client initialized (fallback enabled)")
+        logger.info(f"   • Primary model: {OPENAI_FALLBACK_MODEL_PRIMARY[:60]}...")
+        logger.info(f"   • Secondary model: {OPENAI_FALLBACK_MODEL_SECONDARY[:60]}...")
+        logger.info(f"   • Assistant ID: {OPENAI_ASSISTANT_ID}")
+    except ImportError:
+        logger.warning("⚠️ OpenAI library not installed. Run: pip install openai")
+    except Exception as e:
+        logger.warning(f"⚠️ OpenAI client initialization failed: {e}")
+else:
+    if not OPENAI_API_KEY:
+        logger.info("ℹ️  OpenAI fallback disabled: No API key provided")
+    else:
+        logger.info("ℹ️  OpenAI fallback disabled in configuration")
+
 # Try to import DAW Core DSP effects
 DSP_EFFECTS_AVAILABLE = False
 try:
@@ -125,6 +153,15 @@ try:
     logger.info("✅ DSP effects library loaded")
 except ImportError as e:
     logger.warning(f"⚠️ DSP effects not available: {e}")
+
+# Try to import Intelligent Mixing Suggestions
+INTELLIGENT_MIXING_AVAILABLE = False
+try:
+    from intelligent_mixing import IntelligentMixingSuggestionGenerator
+    INTELLIGENT_MIXING_AVAILABLE = True
+    logger.info("✅ Intelligent Mixing Suggestions loaded")
+except ImportError as e:
+    logger.warning(f"⚠️ Intelligent Mixing not available: {e}")
 
 # ============================================================================
 # CODETTE IMPORT
@@ -230,131 +267,617 @@ else:
     logger.warning("⚠️ No Codette engine available - running in fallback mode")
 
 # ============================================================================
-# COCOON MANAGER INTEGRATION
+# OPENAI FALLBACK HANDLER
 # ============================================================================
 
-# Import or create CocoonManager
-cocoon_manager = None
-COCOONS_DIR = Path(__file__).parent / "Codette" / "cocoons"
+# Thread storage for persistent conversations
+openai_threads: Dict[str, str] = {}  # user_id -> thread_id mapping
 
-def get_cocoon_manager():
-    """Get or create the cocoon manager instance"""
-    global cocoon_manager
-    if cocoon_manager is None:
+async def get_or_create_thread(user_id: str = "default") -> str:
+    """Get existing thread or create new one for user"""
+    if user_id not in openai_threads:
         try:
-            # Try to import the existing CocoonManager
-            from Codette.src.utils.cocoon_manager import CocoonManager
-            cocoon_manager = CocoonManager(str(COCOONS_DIR))
-            cocoon_manager.load_cocoons()
-            logger.info(f"✅ CocoonManager loaded with {len(cocoon_manager.cocoon_data)} cocoons")
-        except ImportError:
-            logger.warning("⚠️ CocoonManager not found, using fallback")
-            cocoon_manager = FallbackCocoonManager(str(COCOONS_DIR))
-    return cocoon_manager
+            thread = openai_client.beta.threads.create()
+            openai_threads[user_id] = thread.id
+            logger.info(f"[OpenAI] Created new thread for user {user_id}: {thread.id}")
+        except Exception as e:
+            logger.error(f"[OpenAI] Failed to create thread: {e}")
+            raise
+    return openai_threads[user_id]
 
-
-class FallbackCocoonManager:
-    """Fallback cocoon manager if the real one isn't available"""
+async def query_openai_assistant(message: str, daw_context: Optional[Dict[str, Any]] = None, user_id: str = "default") -> Dict[str, Any]:
+    """Query OpenAI Assistant using Assistants v2 API with thread management"""
     
-    def __init__(self, base_dir: str):
-        self.base_dir = Path(base_dir)
-        self.cocoon_data = []
-        self.quantum_state = {"coherence": 0.5, "entanglement": 0.5, "resonance": 0.5, "phase": 1.57, "fluctuation": 0.07}
-        self._load_cocoons()
+    if not OPENAI_AVAILABLE or not openai_client:
+        return {
+            "response": None,
+            "source": "unavailable",
+            "confidence": 0.0,
+            "error": "OpenAI Assistant not configured"
+        }
     
-    def _load_cocoons(self):
-        """Load all cocoon files from disk"""
-        try:
-            if not self.base_dir.exists():
-                self.base_dir.mkdir(parents=True, exist_ok=True)
-                logger.info(f"Created cocoons directory: {self.base_dir}")
-                return
+    try:
+        # Get or create thread for this user
+        thread_id = await get_or_create_thread(user_id)
+        
+        # Build context-aware message
+        full_message = message
+        if daw_context:
+            context_str = "\n\n**DAW Context:**\n"
+            if "selectedTrack" in daw_context and daw_context["selectedTrack"]:
+                track = daw_context["selectedTrack"]
+                context_str += f"- Selected Track: {track.get('name', 'Unknown')} ({track.get('type', 'audio')})\n"
+                context_str += f"- Volume: {track.get('volume', 0)} dB\n"
+                context_str += f"- Pan: {track.get('pan', 0)}\n"
             
-            cocoon_files = list(self.base_dir.glob("*.cocoon"))
-            logger.info(f"Found {len(cocoon_files)} cocoon files")
+            if "trackCount" in daw_context:
+                context_str += f"- Total Tracks: {daw_context['trackCount']}\n"
             
-            for fpath in cocoon_files:
-                try:
-                    with open(fpath, 'r', encoding='utf-8') as f:
-                        cocoon = json.load(f)
-                        cocoon['id'] = fpath.stem
-                        cocoon['filename'] = fpath.name
-                        self.cocoon_data.append(cocoon)
-                except Exception as e:
-                    logger.warning(f"Failed to load cocoon {fpath.name}: {e}")
+            if "isPlaying" in daw_context:
+                context_str += f"- Transport: {'Playing' if daw_context['isPlaying'] else 'Stopped'}\n"
             
-            # Sort by timestamp (newest first)
-            self.cocoon_data.sort(
-                key=lambda x: x.get('timestamp', x.get('data', {}).get('timestamp', '0')),
-                reverse=True
+            full_message += context_str
+        
+        # Add message to thread
+        logger.info(f"[OpenAI Assistant] Adding message to thread {thread_id}")
+        openai_client.beta.threads.messages.create(
+            thread_id=thread_id,
+            role="user",
+            content=full_message
+        )
+        
+        # Build tools array (include intelligent mixing + advanced features)
+        tools = []
+        if INTELLIGENT_MIXING_AVAILABLE:
+            tools.append({
+                "type": "function",
+                "function": {
+                    "name": "generate_intelligent_mixing_suggestions",
+                    "description": "Generate real-time, context-aware audio mixing recommendations using audio analysis and track metadata.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "track_type": {
+                                "type": "string",
+                                "description": "Type of audio track (e.g., vocals, drums, bass, guitar, synth, etc.)"
+                            },
+                            "audio_data": {
+                                "type": ["array", "null"],
+                                "description": "Audio buffer as a list of audio samples (mono or stereo). Omit or set to null for context-only analysis.",
+                                "items": {"type": "number"}
+                            },
+                            "sample_rate": {
+                                "type": "integer",
+                                "description": "Sampling rate of the audio buffer in Hz. Defaults to 44100.",
+                                "default": 44100
+                            },
+                            "track_info": {
+                                "type": "object",
+                                "description": "Metadata about the track (e.g., peak_level, muted, soloed, volume, etc.).",
+                                "properties": {
+                                    "peak_level": {"type": "number", "description": "Current peak level of the track in dB."},
+                                    "muted": {"type": "boolean", "description": "Whether the track is muted."},
+                                    "soloed": {"type": "boolean", "description": "Whether the track is in solo mode."},
+                                    "volume": {"type": "number", "description": "The volume setting of the track in dB."}
+                                },
+                                "required": ["peak_level", "muted", "soloed", "volume"],
+                                "additionalProperties": False
+                            },
+                            "context": {
+                                "type": "object",
+                                "description": "Project-level context such as BPM and genre.",
+                                "properties": {
+                                    "bpm": {"type": "integer", "description": "Project beats per minute."},
+                                    "genre": {"type": "string", "description": "Musical genre (e.g., pop, rock, jazz, EDM, etc.)"}
+                                },
+                                "required": ["bpm", "genre"],
+                                "additionalProperties": False
+                            }
+                        },
+                        "required": ["track_type", "track_info", "context"]
+                    }
+                }
+            })
+        
+        # ADD NEW ADVANCED FEATURES
+        tools.extend([
+            {
+                "type": "function",
+                "function": {
+                    "name": "detect_genre",
+                    "description": "Detect music genre based on BPM, instruments, and project context. Returns top 3 genre candidates with confidence scores.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "bpm": {"type": "number", "description": "Tempo in beats per minute"},
+                            "tracks": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {"type": "string", "description": "Track name"},
+                                        "type": {"type": "string", "description": "Track type (e.g., audio, instrument, drums)"}
+                                    }
+                                },
+                                "description": "Array of track metadata (optional)"
+                            },
+                            "project_name": {"type": "string", "description": "Project name (optional, used for hints)"}
+                        },
+                        "required": ["bpm"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_production_checklist",
+                    "description": "Generate stage-specific professional production workflow checklist with organized tasks and priorities.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "stage": {
+                                "type": "string",
+                                "enum": ["recording", "arrangement", "mixing", "mastering"],
+                                "description": "Production stage to get checklist for"
+                            }
+                        },
+                        "required": ["stage"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_instrument_processing_guide",
+                    "description": "Get professional mixing guidance for specific instruments including frequency ranges, EQ recommendations, compression settings, and common issues.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "category": {
+                                "type": "string",
+                                "enum": ["vocals", "drums", "guitars", "bass", "keys", "strings", "brass", "woodwinds"],
+                                "description": "Instrument category"
+                            },
+                            "instrument": {"type": "string", "description": "Specific instrument name (e.g., 'kick', 'lead', 'electric')"}
+                        },
+                        "required": ["category", "instrument"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_ear_training_exercise",
+                    "description": "Generate interactive ear training exercises for intervals, chords, or rhythm with multiple difficulty levels.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "exercise_type": {
+                                "type": "string",
+                                "enum": ["interval", "chord", "rhythm"],
+                                "description": "Type of ear training exercise"
+                            },
+                            "difficulty": {
+                                "type": "string",
+                                "enum": ["beginner", "intermediate", "advanced"],
+                                "description": "Exercise difficulty level"
+                            }
+                        },
+                        "required": ["exercise_type", "difficulty"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "calculate_delay_sync",
+                    "description": "Calculate precise tempo-synced delay times in milliseconds for rhythmic effects. Supports all standard note divisions including dotted and triplet values.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "bpm": {"type": "number", "description": "Project tempo in beats per minute (1-300)"},
+                            "note_division": {
+                                "type": "string",
+                                "enum": ["whole", "half", "quarter", "eighth", "sixteenth", "dotted_quarter", "dotted_eighth", "triplet_quarter", "triplet_eighth"],
+                                "description": "Note division for delay time calculation"
+                            }
+                        },
+                        "required": ["bpm", "note_division"]
+                    }
+                }
+            }
+        ])
+        
+        # Create and wait for run (with tools if available)
+        logger.info(f"[OpenAI Assistant] Creating run with assistant {OPENAI_ASSISTANT_ID}")
+        run_params = {
+            "thread_id": thread_id,
+            "assistant_id": OPENAI_ASSISTANT_ID
+        }
+        if tools:
+            run_params["tools"] = tools
+            logger.info(f"[OpenAI Assistant] Enabled {len(tools)} function tools")
+        
+        run = openai_client.beta.threads.runs.create(**run_params)
+        
+        # Poll for completion with function call handling
+        max_wait = int(os.getenv("OPENAI_TIMEOUT", "30"))
+        waited = 0
+        while run.status in ("queued", "in_progress", "requires_action"):
+            if waited >= max_wait:
+                logger.error(f"[OpenAI Assistant] Timeout after {max_wait}s")
+                return {
+                    "response": None,
+                    "source": "assistant_timeout",
+                    "confidence": 0.0,
+                    "error": f"Assistant run timed out after {max_wait}s"
+                }
+            
+            # Handle function calls if needed
+            if run.status == "requires_action":
+                logger.info("[OpenAI Assistant] Handling function calls...")
+                tool_outputs = await handle_assistant_function_calls(run)
+                
+                # Submit tool outputs
+                run = openai_client.beta.threads.runs.submit_tool_outputs(
+                    thread_id=thread_id,
+                    run_id=run.id,
+                    tool_outputs=tool_outputs
+                )
+            
+            await asyncio.sleep(1)
+            waited += 1
+            run = openai_client.beta.threads.runs.retrieve(
+                thread_id=thread_id,
+                run_id=run.id
             )
             
-            # Find the best quantum state from cocoons
-            for cocoon in self.cocoon_data:
-                data = cocoon.get('data', {})
-                qs = data.get('quantum_state')
-                chaos = data.get('chaos_state', [])
-                
-                if isinstance(qs, list) and len(qs) >= 2:
-                    self.quantum_state = {
-                        "coherence": round(qs[0], 4) if len(qs) > 0 else 0.5,
-                        "entanglement": round(qs[1], 4) if len(qs) > 1 else 0.5,
-                        "resonance": round(sum(qs) / len(qs), 4) if qs else 0.5,
-                        "phase": round(chaos[0], 4) if isinstance(chaos, list) and len(chaos) > 0 else 1.57,
-                        "fluctuation": round(chaos[1], 4) if isinstance(chaos, list) and len(chaos) > 1 else 0.07
-                    }
-                    break
-                elif isinstance(qs, dict) and len(qs) > 1:
-                    self.quantum_state = {
-                        "coherence": qs.get('coherence', 0.5),
-                        "entanglement": qs.get('entanglement', 0.5),
-                        "resonance": qs.get('resonance', 0.5),
-                        "phase": qs.get('phase', 1.57),
-                        "fluctuation": qs.get('fluctuation', 0.07)
-                    }
-                    break
-            
-            logger.info(f"Loaded {len(self.cocoon_data)} cocoons")
-            
-        except Exception as e:
-            logger.error(f"Error loading cocoons: {e}")
-    
-    def get_latest_cocoons(self, limit: int = 10) -> List[Dict[str, Any]]:
-        return self.cocoon_data[:limit]
-    
-    def get_cocoon_by_id(self, cocoon_id: str) -> Optional[Dict[str, Any]]:
-        for cocoon in self.cocoon_data:
-            if cocoon.get('id') == cocoon_id or cocoon.get('filename', '').startswith(cocoon_id):
-                return cocoon
-        return None
-    
-    def save_cocoon(self, data: Dict[str, Any], cocoon_type: str = "codette") -> Optional[str]:
-        try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{cocoon_type}_cocoon_{timestamp}.cocoon"
-            filepath = self.base_dir / filename
-            
-            cocoon = {
-                "timestamp": datetime.now().isoformat(),
-                "data": {**data, "timestamp": datetime.now().isoformat(), "quantum_state": self.quantum_state.copy()}
+            if waited % 5 == 0:
+                logger.info(f"[OpenAI Assistant] Waiting for run... ({waited}s, status: {run.status})")
+        
+        # Check final status
+        if run.status != "completed":
+            logger.error(f"[OpenAI Assistant] Run failed with status: {run.status}")
+            return {
+                "response": None,
+                "source": "assistant_failed",
+                "confidence": 0.0,
+                "error": f"Assistant run failed: {run.status}"
             }
-            
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(cocoon, f, indent=2)
-            
-            cocoon['id'] = filepath.stem
-            cocoon['filename'] = filename
-            self.cocoon_data.insert(0, cocoon)
-            logger.info(f"Saved cocoon: {filename}")
-            return cocoon['id']
-        except Exception as e:
-            logger.error(f"Error saving cocoon: {e}")
-            return None
+        
+        # Get response messages
+        messages = openai_client.beta.threads.messages.list(
+            thread_id=thread_id,
+            order="desc",
+            limit=1
+        )
+        
+        if not messages.data:
+            logger.error("[OpenAI Assistant] No response messages")
+            return {
+                "response": None,
+                "source": "assistant_empty",
+                "confidence": 0.0,
+                "error": "No response from assistant"
+            }
+        
+        # Extract response text
+        response_message = messages.data[0]
+        response_text = ""
+        
+        for content_block in response_message.content:
+            if content_block.type == "text":
+                response_text += content_block.text.value
+        
+        if not response_text:
+            logger.error("[OpenAI Assistant] Empty response text")
+            return {
+                "response": None,
+                "source": "assistant_empty",
+                "confidence": 0.0,
+                "error": "Empty response from assistant"
+            }
+        
+        logger.info(f"[OpenAI Assistant] ✅ Success ({len(response_text)} chars)")
+        
+        return {
+            "response": response_text,
+            "source": "openai_assistant",
+            "confidence": 0.95,  # Highest confidence for assistant
+            "thread_id": thread_id,
+            "run_id": run.id,
+            "error": None
+        }
     
-    def get_latest_quantum_state(self) -> Dict[str, float]:
-        return self.quantum_state.copy()
+    except Exception as e:
+        logger.error(f"[OpenAI Assistant] Error: {e}")
+        return {
+            "response": None,
+            "source": "assistant_error",
+            "confidence": 0.0,
+            "error": str(e)
+        }
+
+async def handle_assistant_function_calls(run) -> List[Dict[str, Any]]:
+    """Handle function calls from OpenAI Assistant"""
+    tool_outputs = []
+    
+    if not run.required_action or not run.required_action.submit_tool_outputs:
+        return tool_outputs
+    
+    for tool_call in run.required_action.submit_tool_outputs.tool_calls:
+        function_name = tool_call.function.name
+        function_args = json.loads(tool_call.function.arguments)
+        
+        logger.info(f"[OpenAI Assistant] Function call: {function_name}")
+        
+        try:
+            # Existing intelligent mixing function
+            if function_name == "generate_intelligent_mixing_suggestions":
+                result = await execute_mixing_suggestions(function_args)
+            
+            # NEW ADVANCED FEATURE FUNCTIONS
+            elif function_name == "detect_genre":
+                result = await execute_genre_detection(function_args)
+                
+            elif function_name == "get_production_checklist":
+                result = await execute_production_checklist(function_args)
+                
+            elif function_name == "get_instrument_processing_guide":
+                result = await execute_instrument_guide(function_args)
+                
+            elif function_name == "get_ear_training_exercise":
+                result = await execute_ear_training(function_args)
+                
+            elif function_name == "calculate_delay_sync":
+                result = await execute_delay_sync(function_args)
+            
+            else:
+                logger.warning(f"[OpenAI Assistant] Unknown function: {function_name}")
+                tool_outputs.append({
+                    "tool_call_id": tool_call.id,
+                    "output": json.dumps({"error": f"Unknown function: {function_name}"})
+                })
+                continue
+            
+            tool_outputs.append({
+                "tool_call_id": tool_call.id,
+                "output": json.dumps(result)
+            })
+        except Exception as e:
+            logger.error(f"[OpenAI Assistant] Function call error: {e}")
+            tool_outputs.append({
+                "tool_call_id": tool_call.id,
+                "output": json.dumps({"error": str(e)})
+            })
+    
+    return tool_outputs
+
+async def execute_mixing_suggestions(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Execute intelligent mixing suggestions function"""
+    if not INTELLIGENT_MIXING_AVAILABLE:
+        return {"error": "Intelligent mixing module not available"}
+    
+    try:
+        from intelligent_mixing import IntelligentMixingSuggestionGenerator
+        import numpy as np
+        
+        generator = IntelligentMixingSuggestionGenerator()
+        
+        # Parse arguments
+        track_type = args.get("track_type", "audio")
+        audio_data = args.get("audio_data")  # Can be None
+        sample_rate = args.get("sample_rate", 44100)
+        track_info = args.get("track_info", {})
+        context = args.get("context", {})
+        
+        # Convert audio data to numpy array if provided
+        audio_array = None
+        if audio_data is not None:
+            audio_array = np.array(audio_data, dtype=np.float32)
+        
+        # Generate suggestions
+        suggestions = generator.generate_suggestions(
+            track_type=track_type,
+            audio_data=audio_array,
+            sample_rate=sample_rate,
+            track_info=track_info,
+            context=context
+        )
+        
+        # Convert to dict for JSON serialization
+        result = {
+            "suggestions": [
+                {
+                    "type": sug.type,
+                    "title": sug.title,
+                    "description": sug.description,
+                    "parameters": sug.parameters,
+                    "priority": sug.priority,
+                    "confidence": sug.confidence,
+                    "reasoning": sug.reasoning
+                }
+                for sug in suggestions[:10]  # Limit to top 10
+            ],
+            "total_suggestions": len(suggestions),
+            "track_type": track_type,
+            "has_audio_analysis": audio_array is not None
+        }
+        
+        logger.info(f"[Mixing Suggestions] Generated {len(suggestions)} suggestions for {track_type}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"[Mixing Suggestions] Error: {e}")
+        return {"error": str(e)}
 
 
+async def execute_genre_detection(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Execute genre detection based on BPM, tracks, and project context"""
+    try:
+        request = GenreDetectRequest(
+            bpm=args.get("bpm", 120.0),
+            tracks=args.get("tracks", []),
+            project_name=args.get("project_name", "")
+        )
+        
+        # Call existing genre detection logic
+        response = await detect_genre(request)
+        
+        # Return JSON-serializable result
+        return {
+            "success": response.get("success", True),
+            "genre": response.get("genre", "Unknown"),
+            "genre_id": response.get("genre_id", "unknown"),
+            "confidence": response.get("confidence", 0.0),
+            "bpm_range": response.get("bpm_range", [80, 160]),
+            "characteristics": response.get("characteristics", []),
+            "candidates": response.get("candidates", [])[:3],  # Top 3
+            "input": response.get("input", {})
+        }
+    except Exception as e:
+        logger.error(f"[Genre Detection] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def execute_production_checklist(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Execute production checklist generation for specified stage"""
+    try:
+        stage = args.get("stage", "mixing")
+        response = await production_checklist(stage)
+        
+        return {
+            "success": response.get("success", True),
+            "stage": response.get("stage", stage),
+            "items": response.get("items", []),
+            "total_tasks": len(response.get("items", [])),
+            "high_priority_count": len([i for i in response.get("items", []) if i.get("priority") == "high"]),
+            "completion_percentage": response.get("completionPercentage", 0)
+        }
+    except Exception as e:
+        logger.error(f"[Production Checklist] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def execute_instrument_guide(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Execute instrument processing guide retrieval"""
+    try:
+        category = args.get("category", "vocals")
+        instrument = args.get("instrument", "lead")
+        
+        response = await instrument_info(category, instrument)
+        
+        return {
+            "success": response.get("success", True),
+            "category": response.get("category", category),
+            "instrument": response.get("instrument", instrument),
+            "info": response.get("info", {}),
+            "formatted_guide": format_instrument_guide(response.get("info", {}))
+        }
+    except Exception as e:
+        logger.error(f"[Instrument Guide] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def execute_ear_training(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Execute ear training exercise generation"""
+    try:
+        exercise_type = args.get("exercise_type", "interval")
+        difficulty = args.get("difficulty", "beginner")
+        
+        response = await ear_training(exercise_type, difficulty)
+        
+        return {
+            "success": response.get("success", True),
+            "exercise_type": exercise_type,
+            "difficulty": difficulty,
+            "quiz_items": response.get("quiz_items", []),
+            "instructions": response.get("instructions", ""),
+            "total_exercises": len(response.get("quiz_items", []))
+        }
+    except Exception as e:
+        logger.error(f"[Ear Training] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def execute_delay_sync(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Calculate tempo-synced delay times with precise millisecond accuracy"""
+    try:
+        bpm = args.get("bpm", 120.0)
+        note_division = args.get("note_division", "quarter")
+        
+        # Note division to beat multiplier mapping
+        divisions = {
+            "whole": 4.0,
+            "half": 2.0,
+            "quarter": 1.0,
+            "eighth": 0.5,
+            "sixteenth": 0.25,
+            "dotted_quarter": 1.5,
+            "dotted_eighth": 0.75,
+            "triplet_quarter": 2.0 / 3.0,
+            "triplet_eighth": 1.0 / 3.0
+        }
+        
+        if note_division not in divisions:
+            return {
+                "success": False,
+                "error": f"Invalid note division: {note_division}"
+            }
+        
+        beat_value = divisions[note_division]
+        delay_ms = (60000.0 / bpm) * beat_value
+        delay_seconds = delay_ms / 1000.0
+        
+        return {
+            "success": True,
+            "bpm": bpm,
+            "note_division": note_division,
+            "delay_ms": round(delay_ms, 2),
+            "delay_seconds": round(delay_seconds, 3),
+            "beat_value": beat_value,
+            "formula": f"(60000 / {bpm}) × {beat_value} = {delay_ms:.2f}ms",
+            "use_case": f"Set your delay plugin to {delay_ms:.2f}ms for tempo-synced {note_division} note delays"
+        }
+    except Exception as e:
+        logger.error(f"[Delay Sync] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def format_instrument_guide(info: Dict[str, Any]) -> str:
+    """Format instrument guide into readable text"""
+    try:
+        lines = []
+        
+        if "typical_range_hz" in info:
+            freq_range = info["typical_range_hz"]
+            lines.append(f"Frequency Range: {freq_range[0]}-{freq_range[1]} Hz")
+        
+        if "target_levels" in info:
+            levels = info["target_levels"]
+            lines.append(f"Target Levels: {levels.get('peaks_dbfs', 'N/A')} dBFS peaks, {levels.get('avg_lufs', 'N/A')} LUFS average")
+        
+        if "common_issues" in info:
+            issues = info["common_issues"]
+            lines.append(f"Common Issues: {', '.join(issues)}")
+        
+        if "recommended_processing" in info:
+            proc = info["recommended_processing"]
+            if "eq" in proc:
+                lines.append(f"EQ: {'; '.join(proc['eq']) if isinstance(proc['eq'], list) else proc['eq']}")
+            if "compression" in proc:
+                lines.append(f"Compression: {'; '.join(proc['compression']) if isinstance(proc['compression'], list) else proc['compression']}")
+            if "effects" in proc:
+                lines.append(f"Effects: {'; '.join(proc['effects']) if isinstance(proc['effects'], list) else proc['effects']}")
+        
+        if "tips" in info:
+            tips = info["tips"]
+            lines.append(f"Tips: {'; '.join(tips)}")
+        
+        return "\n".join(lines) if lines else "No detailed guide available"
+    except Exception as e:
+        return f"Error formatting guide: {str(e)}"
+        
 # ============================================================================
 # TRANSPORT MANAGER
 # ============================================================================
@@ -515,71 +1038,122 @@ async def health():
 @app.get("/api/codette/status")
 async def codette_status():
     mgr = get_cocoon_manager()
-    return {"status": "active", "codette_available": codette_core is not None, "quantum_state": mgr.quantum_state,
-            "cocoons_loaded": len(mgr.cocoon_data), "active_connections": len(active_websockets), "timestamp": get_timestamp()}
+    return {
+        "status": "active",
+        "codette_available": codette_core is not None,
+        "openai_assistant_available": OPENAI_AVAILABLE and OPENAI_ASSISTANT_ID is not None,
+        "openai_threads_active": len(openai_threads),
+        "quantum_state": mgr.quantum_state,
+        "cocoons_loaded": len(mgr.cocoon_data),
+        "active_connections": len(active_websockets),
+        "timestamp": get_timestamp()
+    }
 
 @app.post("/codette/chat")
 @app.post("/api/codette/chat")
 async def codette_chat(request: ChatRequest):
-    """Chat with Codette AI - returns multi-perspective analysis"""
+    """Chat with Codette AI - OpenAI Assistant as primary, local Codette as fallback"""
     response = "I'm Codette. How can I help with your production?"
     source = "fallback"
+    confidence = 0.5
     
     # Log incoming request for debugging
     logger.info(f"[Chat] Message: {request.message[:50]}... | DAW context: {bool(request.daw_context)}")
     
+    # TRY OPENAI ASSISTANT FIRST (PRIMARY)
+    if OPENAI_AVAILABLE and OPENAI_FALLBACK_ENABLED:
+        logger.info("[Chat] 🎯 Trying OpenAI Assistant (primary)...")
+        openai_result = await query_openai_assistant(request.message, request.daw_context)
+        
+        if openai_result["response"]:
+            response = openai_result["response"]
+            source = openai_result["source"]
+            confidence = openai_result["confidence"]
+            logger.info(f"[Chat] ✅ OpenAI Assistant successful ({source}, {len(response)} chars)")
+            
+            return {
+                "response": response,
+                "perspective": request.perspective,
+                "confidence": confidence,
+                "timestamp": get_timestamp(),
+                "source": source
+            }
+        else:
+            logger.warning(f"[Chat] ⚠️ OpenAI Assistant failed: {openai_result.get('error', 'Unknown error')}")
+    
+    # FALLBACK TO LOCAL CODETTE ENGINE
     if codette_engine and hasattr(codette_engine, 'respond'):
+        logger.info("[Chat] 🔄 Falling back to local Codette engine...")
         try:
             if request.daw_context:
                 response = codette_engine.respond(request.message, request.daw_context)
             else:
                 response = codette_engine.respond(request.message)
             source = codette_engine_type or "codette"
-            logger.info(f"[Chat] Response generated from {source} ({len(response)} chars)")
+            confidence = 0.85  # Slightly lower than OpenAI
+            logger.info(f"[Chat] ✅ Local Codette response ({source}, {len(response)} chars)")
+            
+            return {
+                "response": response,
+                "perspective": request.perspective,
+                "confidence": confidence,
+                "timestamp": get_timestamp(),
+                "source": source
+            }
         except Exception as e:
-            logger.error(f"[Chat] Codette engine error: {e}")
-            response = f"I encountered an issue processing your request. Let me give you general advice:\n\n"
-            response += "**copilot_agent**: For audio production, consider:\n"
-            response += "1. Start with proper gain staging (-6dB headroom)\n"
-            response += "2. Use EQ to carve space for each element\n"
-            response += "3. Apply compression for dynamics control\n"
-            response += "4. Add spatial effects (reverb/delay) for depth"
-            source = "fallback_error"
+            logger.error(f"[Chat] ❌ Local Codette engine error: {e}")
     else:
-        logger.warning("[Chat] No Codette engine available, using fallback")
-        # Enhanced fallback when no engine is available
-        prompt_lower = request.message.lower()
-        if any(kw in prompt_lower for kw in ['mix', 'eq', 'compress', 'reverb', 'vocal', 'drum', 'bass']):
-            response = "**copilot_agent**: [Mixing Advice]\n"
-            if 'vocal' in prompt_lower:
-                response += "1. Apply high-pass filter at 80-100Hz\n"
-                response += "2. Use compression (4:1 ratio) for consistency\n"
-                response += "3. Add presence boost at 3-5kHz\n"
-                response += "4. De-ess if sibilant (6-8kHz)"
-            elif 'drum' in prompt_lower or 'kick' in prompt_lower or 'snare' in prompt_lower:
-                response += "1. Gate for clean hits\n"
-                response += "2. EQ for punch and clarity\n"
-                response += "3. Compress for consistency\n"
-                response += "4. Add room reverb for depth"
-            elif 'bass' in prompt_lower:
-                response += "1. High-pass at 30-40Hz\n"
-                response += "2. Compress for consistency (4:1)\n"
-                response += "3. Keep centered in stereo\n"
-                response += "4. Consider sidechain to kick"
-            else:
-                response += "1. Set levels to -6dB peaks for headroom\n"
-                response += "2. High-pass non-bass elements\n"
-                response += "3. EQ to carve frequency space\n"
-                response += "4. Compress for dynamics control"
-        source = "fallback"
+        logger.warning("[Chat] ⚠️ No local Codette engine available")
+    
+    # LAST RESORT: BASIC KEYWORD FALLBACK
+    logger.warning("[Chat] ⚠️ Using basic keyword fallback (all engines failed)")
+    response = generate_basic_fallback_response(request.message)
+    source = "fallback_basic"
+    confidence = 0.5
     
     return {
         "response": response,
         "perspective": request.perspective,
-        "confidence": 0.85 if source != "fallback_error" else 0.5,
+        "confidence": confidence,
         "timestamp": get_timestamp(),
         "source": source
     }
+
+def generate_basic_fallback_response(message: str) -> str:
+    """Generate basic keyword-based response when all AI models fail"""
+    prompt_lower = message.lower()
+    
+    if any(kw in prompt_lower for kw in ['mix', 'eq', 'compress', 'reverb', 'vocal', 'drum', 'bass']):
+        response = "**copilot_agent**: [Mixing Advice]\n"
+        if 'vocal' in prompt_lower:
+            response += "1. Apply high-pass filter at 80-100Hz\n"
+            response += "2. Use compression (4:1 ratio) for consistency\n"
+            response += "3. Add presence boost at 3-5kHz\n"
+            response += "4. De-ess if sibilant (6-8kHz)"
+        elif 'drum' in prompt_lower or 'kick' in prompt_lower or 'snare' in prompt_lower:
+            response += "1. Gate for clean hits\n"
+            response += "2. EQ for punch and clarity\n"
+            response += "3. Compress for consistency\n"
+            response += "4. Add room reverb for depth"
+        elif 'bass' in prompt_lower:
+            response += "1. High-pass at 30-40Hz\n"
+            response += "2. Compress for consistency (4:1)\n"
+            response += "3. Keep centered in stereo\n"
+            response += "4. Consider sidechain to kick"
+        else:
+            response += "1. Set levels to -6dB peaks for headroom\n"
+            response += "2. High-pass non-bass elements\n"
+            response += "3. EQ to carve frequency space\n"
+            response += "4. Compress for dynamics control"
+    else:
+        response = "I'm here to help with your music production! Ask me about:\n"
+        response += "- Mixing and mastering techniques\n"
+        response += "- EQ and frequency balance\n"
+        response += "- Compression and dynamics\n"
+        response += "- Spatial effects (reverb, delay)\n"
+        response += "- Track arrangement and routing"
+    
+    return response
 
 @app.post("/codette/suggest")
 @app.post("/api/codette/suggest")
@@ -598,6 +1172,58 @@ async def codette_analyze(request: AudioAnalysisRequest):
 @app.post("/api/codette/process")
 async def codette_process(request: ProcessRequest):
     return {"id": request.id, "status": "success", "data": {"processed": True}, "processingTime": 0.05}
+
+# ============================================================================
+# INTELLIGENT MIXING SUGGESTIONS ENDPOINT
+# ============================================================================
+
+class MixingSuggestionsRequest(BaseModel):
+    track_type: str
+    audio_data: Optional[List[float]] = None
+    sample_rate: Optional[int] = 44100
+    track_info: Dict[str, Any]
+    context: Dict[str, Any]
+
+@app.post("/codette/mixing-suggestions")
+@app.post("/api/codette/mixing-suggestions")
+async def get_mixing_suggestions(request: MixingSuggestionsRequest):
+    """
+    Generate intelligent mixing suggestions based on track type, audio data, and context
+    
+    This endpoint uses AI-powered audio analysis to provide:
+    - EQ recommendations based on frequency analysis
+    - Compression settings based on dynamics analysis
+    - Track-specific mixing guidance
+    - Context-aware suggestions based on genre and BPM
+    """
+    if not INTELLIGENT_MIXING_AVAILABLE:
+        return {
+            "success": False,
+            "error": "Intelligent mixing module not available",
+            "timestamp": get_timestamp()
+        }
+    
+    try:
+        result = await execute_mixing_suggestions({
+            "track_type": request.track_type,
+            "audio_data": request.audio_data,
+            "sample_rate": request.sample_rate,
+            "track_info": request.track_info,
+            "context": request.context
+        })
+        
+        return {
+            "success": True,
+            "data": result,
+            "timestamp": get_timestamp()
+        }
+    except Exception as e:
+        logger.error(f"[Mixing Suggestions] Error: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": get_timestamp()
+        }
 
 # ============================================================================
 # TRAINING ENDPOINTS
@@ -694,63 +1320,49 @@ async def ear_training(exercise_type: str = "interval", difficulty: str = "begin
     # Chord exercises
     chords = {
         "beginner": [
-            {"name": "Major Triad", "intervals": [0, 4, 7], "quality": "bright, happy"},
-            {"name": "Minor Triad", "intervals": [0, 3, 7], "quality": "dark, sad"},
+            {"category": "Gain Staging", "task": "Set input gain to avoid clipping (peaks -12dB to -6dB)", "priority": "high"},
+            {"category": "Mic Technique", "task": "Check proximity effect and sibilance", "priority": "medium"},
+            {"category": "Phase", "task": "Verify phase on multi-mic sources", "priority": "high"},
         ],
         "intermediate": [
-            {"name": "Dominant 7th", "intervals": [0, 4, 7, 10], "quality": "tension, wants to resolve"},
-            {"name": "Major 7th", "intervals": [0, 4, 7, 11], "quality": "jazzy, dreamy"},
-            {"name": "Minor 7th", "intervals": [0, 3, 7, 10], "quality": "smooth, mellow"},
+            {"category": "Frequency Space", "task": "Ensure instruments don't mask each other in 200-500Hz", "priority": "high"},
+            {"category": "Rhythm", "task": "Tighten timing; quantize tastefully", "priority": "medium"},
+            {"category": "Transitions", "task": "Add fills, risers, impacts for sections", "priority": "low"},
         ],
-        "advanced": [
-            {"name": "Diminished 7th", "intervals": [0, 3, 6, 9], "quality": "tense, unstable"},
-            {"name": "Augmented", "intervals": [0, 4, 8], "quality": "dreamy, unresolved"},
-            {"name": "Sus4", "intervals": [0, 5, 7], "quality": "open, ambiguous"},
-            {"name": "Add9", "intervals": [0, 4, 7, 14], "quality": "colorful, modern"},
-        ]
+        "mixing": [
+            {"category": "Levels", "task": "Balance faders, vocals forward, kick/bass foundation", "priority": "high"},
+            {"category": "EQ", "task": "High-pass non-bass, tame 200-400Hz mud, add 2-5k presence", "priority": "high"},
+            {"category": "Compression", "task": "Control dynamics; avoid pumping unless stylistic", "priority": "medium"},
+            {"category": "Space", "task": "Use short room + plate/hall; pre-delay for clarity", "priority": "medium"},
+            {"category": "Stereo", "task": "Pan for width; keep low-end mono", "priority": "medium"},
+            {"category": "Headroom", "task": "Leave -6dBFS peak on master, -14 to -10 LUFS mix", "priority": "high"},
+        ],
+        "mastering": [
+            {"category": "Prep", "task": "Receive mix with -6dB headroom, no limiter on master", "priority": "high"},
+            {"category": "Tonal Balance", "task": "Broad EQ for target curve; fix harshness/resonance", "priority": "high"},
+            {"category": "Dynamics", "task": "Gentle bus comp (1-2dB GR), multiband if needed", "priority": "medium"},
+            {"category": "Loudness", "task": "Limiter to target: streaming ~ -14 LUFS, EDM up to -8 LUFS", "priority": "high"},
+            {"category": "Translation", "task": "Check on speakers, headphones, phone, mono", "priority": "high"},
+            {"category": "Delivery", "task": "Export 24-bit WAV, embedded metadata, 44.1k/48k as required", "priority": "medium"},
+        ],
     }
-    
-    # Frequency exercises for mixing
-    frequencies = {
-        "beginner": [
-            {"range": "Sub Bass", "hz": "20-60", "description": "Felt more than heard, rumble"},
-            {"range": "Bass", "hz": "60-250", "description": "Warmth, fullness, kick drum body"},
-            {"range": "Low Mids", "hz": "250-500", "description": "Muddiness zone, body of instruments"},
-        ],
-        "intermediate": [
-            {"range": "Mids", "hz": "500-2k", "description": "Clarity, vocal presence, guitar body"},
-            {"range": "Upper Mids", "hz": "2k-4k", "description": "Presence, attack, intelligibility"},
-            {"range": "Presence", "hz": "4k-6k", "description": "Definition, edge, sibilance zone"},
-        ],
-        "advanced": [
-            {"range": "Brilliance", "hz": "6k-10k", "description": "Air, sparkle, cymbal shimmer"},
-            {"range": "Air", "hz": "10k-20k", "description": "Openness, breathiness, high harmonics"},
-            {"range": "Problem Zones", "hz": "Various", "description": "200-400Hz mud, 3-4kHz harshness, 7-8kHz sibilance"},
-        ]
-    }
-    
-    if exercise_type == "interval":
-        exercises = intervals.get(difficulty, intervals["beginner"])
-    elif exercise_type == "chord":
-        exercises = chords.get(difficulty, chords["beginner"])
-    elif exercise_type == "frequency":
-        exercises = frequencies.get(difficulty, frequencies["beginner"])
-    else:
-        exercises = intervals.get(difficulty, intervals["beginner"])
-    
+
+    # Get items for requested stage, fallback to mixing if stage not found
+    items = base.get(stage_lower, base["mixing"])[:]
+
+    # Mark all as incomplete by default and add ids
+    for i, it in enumerate(items):
+        it["completed"] = False
+        it["id"] = f"{stage_lower}-{i}"
+
     return {
         "success": True,
-        "exercise_type": exercise_type,
-        "difficulty": difficulty,
-        "exercises": exercises,
-        "tips": [
-            "Practice daily for best results",
-            "Start with easier exercises and progress gradually",
-            "Use headphones for accurate frequency perception",
-            "Compare exercises to real songs you know"
-        ],
-        "timestamp": get_timestamp()
+        "stage": stage_lower,
+        "items": items,
+        "completionPercentage": 0,
+        "timestamp": get_timestamp(),
     }
+
 
 @app.get("/api/analysis/frequency-quiz")
 async def frequency_quiz(difficulty: str = "beginner"):
@@ -932,13 +1544,21 @@ async def detect_genre(request: GenreDetectRequest):
                         break
         else:
             score += 10  # Neutral
-        
-        scores[genre_id] = min(score, max_score)
     
     # Sort by score and get top matches
     sorted_genres = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     
-    # Build response
+    # Build response - handle empty scores case
+    if not sorted_genres:
+        # Fallback if no scores calculated
+        return {
+            "success": False,
+            "error": "Unable to detect genre",
+            "genre": "Unknown",
+            "confidence": 0.0,
+            "timestamp": get_timestamp()
+        }
+    
     best_genre_id = sorted_genres[0][0]
     best_score = sorted_genres[0][1]
     best_genre = genre_db[best_genre_id]
@@ -970,234 +1590,6 @@ async def detect_genre(request: GenreDetectRequest):
         },
         "timestamp": get_timestamp()
     }
-
-# ============================================================================
-# ADDITIONAL ANALYSIS ENDPOINTS (PRODUCTION CHECKLIST, INSTRUMENT INFO)
-# ============================================================================
-
-@app.get("/api/analysis/production-checklist")
-async def production_checklist(stage: str = "mixing"):
-    """Provide a practical production checklist for a given stage.
-    Stages: recording, arrangement, mixing, mastering
-    """
-    stage_lower = (stage or "mixing").strip().lower()
-
-    base = {
-        "recording": [
-            {"category": "Gain Staging", "task": "Set input gain to avoid clipping (peaks -12dB to -6dB)", "priority": "high"},
-            {"category": "Mic Technique", "task": "Check proximity effect and sibilance", "priority": "medium"},
-            {"category": "Phase", "task": "Verify phase on multi-mic sources", "priority": "high"},
-        ],
-        "arrangement": [
-            {"category": "Frequency Space", "task": "Ensure instruments don’t mask each other in 200-500Hz", "priority": "high"},
-            {"category": "Rhythm", "task": "Tighten timing; quantize tastefully", "priority": "medium"},
-            {"category": "Transitions", "task": "Add fills, risers, impacts for sections", "priority": "low"},
-        ],
-        "mixing": [
-            {"category": "Levels", "task": "Balance faders, vocals forward, kick/bass foundation", "priority": "high"},
-            {"category": "EQ", "task": "High-pass non-bass, tame 200-400Hz mud, add 2-5k presence", "priority": "high"},
-            {"category": "Compression", "task": "Control dynamics; avoid pumping unless stylistic", "priority": "medium"},
-            {"category": "Space", "task": "Use short room + plate/hall; pre-delay for clarity", "priority": "medium"},
-            {"category": "Stereo", "task": "Pan for width; keep low-end mono", "priority": "medium"},
-            {"category": "Headroom", "task": "Leave -6dBFS peak on master, -14 to -10 LUFS mix", "priority": "high"},
-        ],
-        "mastering": [
-            {"category": "Prep", "task": "Receive mix with -6dB headroom, no limiter on master", "priority": "high"},
-            {"category": "Tonal Balance", "task": "Broad EQ for target curve; fix harshness/resonance", "priority": "high"},
-            {"category": "Dynamics", "task": "Gentle bus comp (1-2dB GR), multiband if needed", "priority": "medium"},
-            {"category": "Loudness", "task": "Limiter to target: streaming ~ -14 LUFS, EDM up to -8 LUFS", "priority": "high"},
-            {"category": "Translation", "task": "Check on speakers, headphones, phone, mono", "priority": "high"},
-            {"category": "Delivery", "task": "Export 24-bit WAV, embedded metadata, 44.1k/48k as required", "priority": "medium"},
-        ],
-    }
-
-    items = base.get(stage_lower, base)["mixing"][:]
-
-    # Mark all as incomplete by default and add ids
-    for i, it in enumerate(items):
-        it["completed"] = False
-        it["id"] = f"{stage_lower}-{i}"
-
-    return {
-        "success": True,
-        "stage": stage_lower,
-        "items": items,
-        "completionPercentage": 0,
-        "timestamp": get_timestamp(),
-    }
-
-
-@app.get("/api/analysis/instrument-info")
-async def instrument_info(category: str = "vocals", instrument: str = "lead"):
-    """Return guidance for processing different instruments/categories."""
-    cat = (category or "vocals").strip().lower()
-    inst = (instrument or "lead").strip().lower()
-
-    db: Dict[str, Any] = {
-        "vocals": {
-            "lead": {
-                "typical_range_hz": [100, 12000],
-                "target_levels": {"peaks_dbfs": -6, "avg_lufs": -18},
-                "common_issues": ["sibilance 6-8k", "mud 200-400Hz", "nasal 800-1.2k"],
-                "recommended_processing": {
-                    "eq": [
-                        "HPF 80-100Hz",
-                        "Tame 200-400Hz if muddy",
-                        "Presence +2dB @ 3-5k if needed",
-                        "Air shelf 10-14k for sheen"
-                    ],
-                    "compression": [
-                        "2:1 to 4:1, 2-6dB GR",
-                        "Fast attack/release for control, or slower for punch"
-                    ],
-                    "effects": ["Short room/plate reverb", "Slapback or 100-150ms delay"],
-                    "de-esser": "Target 6-8k, broadband or split-band",
-                },
-            },
-            "bgv": {
-                "typical_range_hz": [150, 10000],
-                "tips": ["HPF more aggressively", "Pan for width", "Use more reverb/chorus than lead"],
-            },
-        },
-        "drums": {
-            "kick": {
-                "typical_range_hz": [30, 5000],
-                "common_issues": ["boxiness 200-300Hz", "click too sharp >5k"],
-                "recommended_processing": {
-                    "eq": ["Boost 50-80Hz for thump", "Cut 250Hz box", "Add 3-5k click if needed"],
-                    "compression": ["4:1, medium attack, medium-fast release"],
-                },
-                "target_levels": {"peaks_dbfs": -6},
-            },
-            "snare": {
-                "typical_range_hz": [100, 12000],
-                "eq": ["HPF 80-100Hz", "Body 150-250Hz", "Crack 2-5k", "Air 10k+"],
-            },
-        },
-        "guitars": {
-            "electric": {
-                "typical_range_hz": [80, 8000],
-                "common_issues": ["mud 200-400Hz", "harsh 2-4k"],
-                "tips": ["High-pass 80-120Hz", "Notch harsh bands", "Double-track + pan L/R"],
-            }
-        },
-        "bass": {
-            "electric": {
-                "typical_range_hz": [40, 5000],
-                "tips": ["Low-pass around 5-8k if noisy", "Compress 4-8dB GR for consistency"],
-                "stereo": "Keep mono below 120Hz",
-            }
-        }
-    }
-
-    # Fallbacks if not found
-    result = db.get(cat, {}).get(inst) or {
-        "typical_range_hz": [50, 10000],
-        "tips": ["High-pass to clear sub rumble", "Pan for space", "Cut before boost"],
-    }
-
-    return {
-        "success": True,
-        "category": cat,
-        "instrument": inst,
-        "info": result,
-        "timestamp": get_timestamp(),
-    }
-
-# ============================================================================
-# TRANSPORT ENDPOINTS
-# ============================================================================
-
-@app.post("/transport/play")
-async def transport_play():
-    return {"success": True, "message": "Playback started", "state": transport_manager.play()}
-
-@app.post("/transport/stop")
-async def transport_stop():
-    return {"success": True, "message": "Playback stopped", "state": transport_manager.stop()}
-
-@app.post("/transport/pause")
-async def transport_pause():
-    return {"success": True, "message": "Playback paused", "state": transport_manager.pause()}
-
-@app.post("/transport/resume")
-async def transport_resume():
-    return {"success": True, "message": "Playback resumed", "state": transport_manager.resume()}
-
-@app.get("/transport/seek")
-async def transport_seek(seconds: float = 0):
-    return {"success": True, "message": f"Seeked to {seconds}s", "state": transport_manager.seek(seconds)}
-
-@app.post("/transport/tempo")
-async def transport_tempo(bpm: float = 120):
-    return {"success": True, "message": f"Tempo set to {bpm}", "state": transport_manager.set_tempo(bpm)}
-
-@app.post("/transport/loop")
-async def transport_loop(enabled: bool = False, start_seconds: float = 0, end_seconds: float = 10):
-    return {"success": True, "message": "Loop configured", "state": transport_manager.set_loop(enabled, start_seconds, end_seconds)}
-
-@app.get("/transport/status")
-async def transport_status():
-    return transport_manager.get_state()
-
-@app.get("/transport/metrics")
-async def transport_metrics():
-    return {"uptime": time.time(), "total_plays": 0, "current_state": transport_manager.get_state()}
-
-# ============================================================================
-# DAW EFFECTS ENDPOINTS
-# ============================================================================
-
-@app.get("/daw/effects/list")
-async def list_effects():
-    return [
-        {"id": "compressor", "name": "Compressor", "category": "dynamics"},
-        {"id": "eq3band", "name": "3-Band EQ", "category": "eq"},
-        {"id": "reverb", "name": "Reverb", "category": "reverb"},
-        {"id": "delay", "name": "Delay", "category": "delay"},
-        {"id": "limiter", "name": "Limiter", "category": "dynamics"},
-        {"id": "saturation", "name": "Saturation", "category": "saturation"}
-    ]
-
-@app.get("/daw/effects/{effect_id}")
-async def get_effect_info(effect_id: str):
-    effects = {"compressor": {"id": "compressor", "name": "Compressor", "parameters": ["threshold", "ratio", "attack", "release"]},
-               "eq3band": {"id": "eq3band", "name": "3-Band EQ", "parameters": ["low", "mid", "high"]},
-               "reverb": {"id": "reverb", "name": "Reverb", "parameters": ["room_size", "damping", "wet", "dry"]}}
-    return effects.get(effect_id, {"id": effect_id, "name": effect_id.title(), "parameters": []})
-
-@app.post("/daw/effects/process")
-@app.post("/api/effects/process")
-async def process_effect(request: EffectProcessRequest):
-    # Passthrough if no DSP available
-    output = request.audio_data
-    if DSP_EFFECTS_AVAILABLE and NUMPY_AVAILABLE:
-        try:
-            audio = np.array(request.audio_data, dtype=np.float32)
-            # Apply effect based on type
-            if request.effect_type == "compressor":
-                fx = Compressor(threshold=request.parameters.get("threshold", -20), ratio=request.parameters.get("ratio", 4))
-                output = fx.process(audio).tolist()
-        except: pass
-    return {"status": "success", "effect": request.effect_type, "parameters": request.parameters,
-            "output": output, "length": len(output), "sample_rate": request.sample_rate, "timestamp": get_timestamp()}
-
-# ============================================================================
-# GENRE ENDPOINTS
-# ============================================================================
-
-@app.get("/codette/genres")
-async def get_genres():
-    return ["electronic", "rock", "pop", "jazz", "classical", "hip-hop", "ambient", "metal", "folk", "r&b"]
-
-@app.get("/codette/genre/{genre_id}")
-async def get_genre_characteristics(genre_id: str):
-    genres = {
-        "electronic": {"bpm_range": [120, 140], "characteristics": ["synthesizers", "drum machines", "heavy bass"]},
-        "rock": {"bpm_range": [100, 140], "characteristics": ["guitars", "drums", "bass", "vocals"]},
-        "pop": {"bpm_range": [100, 130], "characteristics": ["catchy melodies", "verse-chorus", "polished production"]}
-    }
-    return genres.get(genre_id, {"bpm_range": [80, 160], "characteristics": ["varied"]})
 
 # ============================================================================
 # MEMORY/COCOON ENDPOINTS
@@ -1328,16 +1720,22 @@ async def websocket_status():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for real-time communication"""
+    """WebSocket endpoint for real-time communication with graceful disconnect handling"""
     await websocket.accept()
     active_websockets.append(websocket)
     logger.info(f"✅ WebSocket connected. Total: {len(active_websockets)}")
 
-    # Send initial handshake & immediate status
-    await websocket.send_json({"type": "connected", "data": {"status": "connected", "timestamp": get_timestamp()}})
-    await websocket.send_json({"type": "server_status", "data": {"health": {"status": "healthy", "timestamp": get_timestamp()}, "transport": transport_manager.get_state(), "connections": len(active_websockets)}})
-
     try:
+        # Send initial handshake & immediate status
+        try:
+            await websocket.send_json({"type": "connected", "data": {"status": "connected", "timestamp": get_timestamp()}})
+            await websocket.send_json({"type": "server_status", "data": {"health": {"status": "healthy", "timestamp": get_timestamp()}, "transport": transport_manager.get_state(), "connections": len(active_websockets)}})
+        except (WebSocketDisconnect, ConnectionResetError, RuntimeError):
+            # Client disconnected before handshake completed
+            logger.info("WebSocket disconnected during handshake")
+            raise WebSocketDisconnect()
+
+        # Main message loop
         while True:
             try:
                 data = await websocket.receive_json()
@@ -1350,9 +1748,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_json({"type": "status", "data": {"codette_available": codette_core is not None, "quantum_state": manager.quantum_state, "timestamp": get_timestamp()}})
                 elif message_type == "chat":
                     response = "I'm here to help!"
-                    if codette_core and hasattr(codette_core, 'respond'):
+                    if codette_engine and hasattr(codette_engine, 'respond'):
                         try:
-                            response = codette_core.respond(data.get("data", {}).get("message", ""))
+                            response = codette_engine.respond(data.get("data", {}).get("message", ""))
                         except Exception:
                             pass
                     await websocket.send_json({"type": "chat_response", "data": {"response": response, "timestamp": get_timestamp()}})
@@ -1360,11 +1758,22 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_json({"type": "echo", "data": {"received_type": message_type, "timestamp": get_timestamp()}})
             except WebSocketDisconnect:
                 break
+            except (ConnectionResetError, RuntimeError) as e:
+                # Connection closed unexpectedly
+                logger.info(f"WebSocket connection closed: {type(e).__name__}")
+                break
             except json.JSONDecodeError:
-                await websocket.send_json({"type": "error", "data": {"message": "Invalid JSON"}})
+                try:
+                    await websocket.send_json({"type": "error", "data": {"message": "Invalid JSON"}})
+                except:
+                    # Can't send error, connection is dead
+                    break
     except WebSocketDisconnect:
         pass
+    except Exception as e:
+        logger.warning(f"WebSocket error: {type(e).__name__}: {e}")
     finally:
+        # Clean up connection
         if websocket in active_websockets:
             active_websockets.remove(websocket)
         logger.info(f"WebSocket disconnected. Total: {len(active_websockets)}")
@@ -1433,6 +1842,52 @@ async def startup_event():
         logger.info("   • Engine: Keyword-based responder")
         logger.info("   • Functionality: Limited to basic responses")
         logger.info("   • Recommendation: Install Codette package")
+    
+    # OpenAI Fallback status
+    logger.info("")
+    logger.info("🔄 OpenAI Fallback:")
+    if OPENAI_AVAILABLE and OPENAI_FALLBACK_ENABLED:
+        logger.info("   ✅ Status: ENABLED")
+        
+        # Assistant API status
+        if OPENAI_ASSISTANT_ID:
+            logger.info(f"   🤖 Assistant API: AVAILABLE")
+            logger.info(f"      • Assistant ID: {OPENAI_ASSISTANT_ID}")
+            logger.info(f"      • Version: {os.getenv('OPENAI_ASSISTANT_VERSION', 'v2')}")
+            logger.info(f"      • Thread Management: Enabled")
+            logger.info(f"      • Priority: Highest (tried first)")
+            logger.info("")
+        
+        # Chat models status
+        logger.info(f"   📋 Chat Models:")
+        logger.info(f"      • Primary: {OPENAI_FALLBACK_MODEL_PRIMARY[:50]}...")
+        logger.info(f"      • Secondary: {OPENAI_FALLBACK_MODEL_SECONDARY[:50]}...")
+        logger.info(f"      • Base: gpt-4o-mini")
+        logger.info("")
+        
+        # Fallback chain
+        if OPENAI_ASSISTANT_ID:
+            logger.info("   🔄 Response Priority Chain:")
+            logger.info("      1. ⭐ OpenAI Assistant API (PRIMARY - Highest quality)")
+            logger.info("      2. Local Codette (Fallback)")
+            logger.info("      3. Keyword Fallback (Last resort)")
+        else:
+            logger.info("   🔄 Response Priority Chain:")
+            logger.info("      1. ⭐ Fine-tuned Primary Model (PRIMARY)")
+            logger.info("      2. Fine-tuned Secondary Model")
+            logger.info("      3. Base Model (gpt-4o-mini)")
+            logger.info("      4. Local Codette (Fallback)")
+            logger.info("      5. Keyword Fallback (Last resort)")
+    elif OPENAI_FALLBACK_ENABLED and not OPENAI_API_KEY:
+        logger.info("   ⚠️  Status: DISABLED (No API Key)")
+        logger.info("   • Add OPENAI_API_KEY to .env to enable")
+    elif not OPENAI_FALLBACK_ENABLED:
+        logger.info("   ℹ️  Status: DISABLED (Configuration)")
+        logger.info("   • Set OPENAI_FALLBACK_ENABLED=true to enable")
+    else:
+        logger.info("   ❌ Status: NOT AVAILABLE")
+        logger.info("   • OpenAI library not installed")
+        logger.info("   • Run: pip install openai")
     logger.info("")
     
     # Database status
@@ -1451,61 +1906,34 @@ async def startup_event():
     deps = []
     deps.append("NumPy ✅" if NUMPY_AVAILABLE else "NumPy ❌")
     deps.append("Supabase ✅" if SUPABASE_AVAILABLE else "Supabase ❌")
-    deps.append("Redis ✅")  # Placeholder
-    logger.info(f"   {' | '.join(deps)}")
-    logger.info("")
-
-    # Start live monitoring broadcast task
-    try:
-        import asyncio
-        asyncio.create_task(broadcast_status_periodically(2.0))
-        logger.info("✅ Live server monitoring broadcast started (2s interval)")
-    except Exception as e:
-        logger.warning(f"⚠️ Failed to start monitoring broadcast: {e}")
+    deps.append("OpenAI ✅" if OPENAI_AVAILABLE else "OpenAI ❌")
+    deps.append("Mixing AI ✅" if INTELLIGENT_MIXING_AVAILABLE else "Mixing AI ❌")
+    logger.info("   • " + " | ".join(deps))
     
-    # Cache system status
-    logger.info("🗄️  Cache System:")
-    logger.info("   ✅ Status: ACTIVE")
-    logger.info("   • TTL: 300 seconds")
-    logger.info("   • Type: In-memory (ContextCache)")
-    logger.info("   • Stats: Ready to track")
-    logger.info("")
+    # Training data availability
+    logger.info("📚 Training Data:")
+    if TRAINING_AVAILABLE:
+        logger.info("   ✅ Available")
+        logger.info("   • Method: get_training_context()")
+    else:
+        logger.info("   ❌ Not available")
     
-    # Available features
-    logger.info("🎯 Available Features:")
-    logger.info("   • /codette/chat - AI chat with DAW context (REAL Codette)")
-    logger.info("   • /codette/suggest - AI mixing suggestions")
-    logger.info("   • /codette/analyze - Audio analysis with Codette")
-    logger.info("   • /api/training/context - Training data access")
-    logger.info("   • /api/analysis/* - Audio analysis endpoints")
-    logger.info("   • /api/prompt/* - Creative AI prompts")
-    logger.info("   • /transport/* - DAW transport control")
-    logger.info("   • /ws - WebSocket real-time updates")
-    logger.info("")
+    # Quantum Consciousness status
+    logger.info("🌌 Quantum Consciousness:")
+    if CODETTE_CAPABILITIES_AVAILABLE and quantum_consciousness:
+        logger.info("   ✅ Initialized")
+    else:
+        logger.info("   ❌ Not initialized or available")
     
-    # API documentation
-    logger.info("📚 API Documentation:")
-    logger.info("   • Swagger UI: http://localhost:8000/docs")
-    logger.info("   • ReDoc: http://localhost:8000/redoc")
-    logger.info("   • OpenAPI JSON: http://localhost:8000/openapi.json")
-    logger.info("")
+    # Transport manager status
+    logger.info("🚀 Transport Manager:")
+    logger.info(f"   • Playing: {transport_manager.playing}")
+    logger.info(f"   • Time: {transport_manager.time_seconds:.2f}s")
+    logger.info(f"   • BPM: {transport_manager.bpm}")
+    logger.info(f"   • Sample Rate: {transport_manager.sample_rate}")
+    logger.info(f"   • Loop: {transport_manager.loop_enabled} ({transport_manager.loop_start:.2f}s to {transport_manager.loop_end:.2f}s)")
     
-    # Quick test
-    logger.info("🧪 Quick Test:")
-    logger.info("   curl http://localhost:8000/health")
-    logger.info("   curl -X POST http://localhost:8000/codette/chat \\")
-    logger.info("     -H \"Content-Type: application/json\" \\")
-    logger.info("     -d '{\"message\": \"Hello Codette\"}'")
     logger.info("")
     logger.info("======================================================================")
-    logger.info("✅ SERVER READY - Codette AI is listening")
+    logger.info("✅ CODETTE AI UNIFIED SERVER IS READY")
     logger.info("======================================================================")
-
-
-# ============================================================================
-# MAIN
-# ============================================================================
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")

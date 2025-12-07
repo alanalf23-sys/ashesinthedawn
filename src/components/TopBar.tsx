@@ -18,6 +18,7 @@ import {
   Folder,
   File,
   Volume2,
+  Wrench,
 } from "lucide-react";
 import { useDAW } from '../contexts/DAWContext';
 import { useTransportClock } from "../hooks/useTransportClock";
@@ -28,6 +29,7 @@ import {
   subscribeDirectoryEntries,
 } from "../lib/projectDirectoryStore";
 import type { DirectoryEntry } from "../lib/projectDirectoryStore";
+import CodetteAdvancedTools from "./CodetteAdvancedTools"; // NEW: Import advanced tools modal
 
 export default function TopBar() {
   const {
@@ -101,6 +103,7 @@ export default function TopBar() {
   const [isProjectDirDocked, setIsProjectDirDocked] = useState(true);
   const [showMIDIDropdown, setShowMIDIDropdown] = useState(false);
   const [directoryEntries, setDirectoryEntries] = useState<DirectoryEntry[]>([]);
+  const [showAdvancedTools, setShowAdvancedTools] = useState(false);
 
   useEffect(() => {
     setDirectoryEntries(getDirectoryEntries());
@@ -456,6 +459,18 @@ export default function TopBar() {
         <Settings className="w-4 h-4" />
       </button>
 
+      {/* Advanced Tools Button */}
+      {codetteConnected && (
+        <button
+          onClick={() => setShowAdvancedTools(true)}
+          className="flex items-center gap-1.5 px-2 py-1 rounded text-xs bg-purple-900/40 hover:bg-purple-900/60 text-purple-300 hover:text-purple-200 border border-purple-700/50 hover:border-purple-600 transition-all duration-200"
+          title="Codette Advanced Tools (Genre Detection, Checklists, Guides, Training)"
+        >
+          <Wrench className="w-3 h-3" />
+          <span className="hidden sm:inline font-medium">Tools</span>
+        </button>
+      )}
+
       {/* Codette Status Indicator */}
       <div className="flex items-center gap-2 px-2 py-1 rounded text-xs bg-gray-900 border border-gray-700">
         <Zap className={`w-3 h-3 ${codetteConnected ? 'text-purple-400' : 'text-gray-500'}`} />
@@ -463,6 +478,11 @@ export default function TopBar() {
           {codetteConnected ? 'AI Ready' : 'AI Offline'}
         </span>
       </div>
+
+      {/* Advanced Tools Modal */}
+      {showAdvancedTools && (
+        <CodetteAdvancedTools onClose={() => setShowAdvancedTools(false)} />
+      )}
     </div>
   );
 }
