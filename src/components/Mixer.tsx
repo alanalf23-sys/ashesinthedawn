@@ -10,6 +10,7 @@ import InputMonitor from './InputMonitor';
 import { RecordingControls } from './RecordingControls';
 import { RecordingStatus } from './RecordingStatus';
 import { PunchInOutPanel } from './PunchInOutPanel';
+import { VUMeterPanel } from './VUMeterPanel';
 
 interface DetachedTileState {
   trackId: string;
@@ -47,6 +48,7 @@ const MixerComponent = () => {
   const [showPluginRack, setShowPluginRack] = useState(false); // Show/hide plugin rack panel
   const [showAdvancedMixer, setShowAdvancedMixer] = useState(false); // Show/hide advanced mixer panel
   const [showPunchPanel, setShowPunchPanel] = useState(false);
+  const [showVUMeter, setShowVUMeter] = useState(false); // Show/hide VU meter panel
 
   // MIDI Quick Actions Handler
   const triggerMIDIAction = (actionId: string) => {
@@ -285,6 +287,31 @@ const MixerComponent = () => {
               <Settings className="w-4 h-4" />
             </button>
 
+            {/* VU Meter Toggle Button */}
+            <button
+              onClick={() => setShowVUMeter(!showVUMeter)}
+              className={`p-0.5 hover:bg-gray-700 rounded transition-colors flex-shrink-0 ${
+                showVUMeter ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200'
+              }`}
+              title="Toggle VU Meter display"
+            >
+              <Tooltip 
+                content={{
+                  title: 'VU Meter',
+                  description: 'Professional analog-style volume unit meter with dual-channel display',
+                  category: 'metering',
+                  relatedFunctions: ['Track Metering', 'Level Monitoring'],
+                  performanceTip: 'Based on VU Meter by Liteon - accurate RMS and peak metering',
+                }}
+                position="left"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+              </Tooltip>
+            </button>
+
             <button
               onClick={() => setIsMinimized(!isMinimized)}
               className="p-0.5 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
@@ -301,6 +328,20 @@ const MixerComponent = () => {
 
         {!isMinimized && (
           <div className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-gray-950">
+            {/* VU Meter Panel - Collapsible */}
+            {showVUMeter && selectedTrack && (
+              <div className="border-t border-gray-700 bg-gray-800 flex-shrink-0 p-4">
+                <VUMeterPanel 
+                  trackId={selectedTrack.id}
+                  responseMs={50}
+                  release={5}
+                  showControls={true}
+                  compact={false}
+                  className="max-w-md mx-auto"
+                />
+              </div>
+            )}
+
             {/* Mixer Strips Container - Horizontal Scrollable */}
             <div 
               className="h-80 flex-shrink-0 bg-gray-950 group/scroller"
@@ -548,7 +589,7 @@ const MixerComponent = () => {
               </div>
             )}
           </div>
-        )}
+        ) }
       </div>
 
       {/* Detached Floating Tiles */}

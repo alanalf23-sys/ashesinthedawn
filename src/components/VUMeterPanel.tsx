@@ -9,10 +9,11 @@
 import { useState } from 'react';
 import { VUMeterGfx } from './VUMeterGfx';
 import { useVUMeterData } from '../hooks/useVUMeterData';
-import { Settings2 } from 'lucide-react';
+import { useDAW } from '../contexts/DAWContext';
+import { Settings2, Activity } from 'lucide-react';
 
 interface VUMeterPanelProps {
-  /** Track ID for track-specific metering (optional) */
+  /** Track ID for track-specific metering (optional, defaults to selected track or master) */
   trackId?: string;
   /** Response time in milliseconds (1-300, default 50) */
   responseMs?: number;
@@ -22,16 +23,27 @@ interface VUMeterPanelProps {
   className?: string;
   /** Show control sliders */
   showControls?: boolean;
+  /** Compact mode (hide settings and labels) */
+  compact?: boolean;
 }
 
 export function VUMeterPanel({
-  trackId,
+  trackId: propTrackId,
   responseMs: initialResponseMs = 50,
   release: initialRelease = 5,
   className = '',
   showControls = true,
+  compact = false,
 }: VUMeterPanelProps): JSX.Element {
-  const { leftLevel, rightLevel } = useVUMeterData(trackId);
+  const { selectedTrack, isPlaying } = useDAW();
+  
+  // Use prop trackId if provided, otherwise use selected track, or null for master
+  const effectiveTrackId = propTrackId || selectedTrack?.id;
+  const trackName = effectiveTrackId 
+    ? (selectedTrack?.name || `Track ${effectiveTrackId}`)
+    : 'Master';
+  
+  const { leftLevel, rightLevel, leftPeak, rightPeak } = useVUMeterData(effectiveTrackId);
   const [responseMs, setResponseMs] = useState(initialResponseMs);
   const [release, setRelease] = useState(initialRelease);
   const [showSettings, setShowSettings] = useState(false);
@@ -40,7 +52,15 @@ export function VUMeterPanel({
     <div className={`bg-gray-900 rounded-lg border border-gray-700 p-4 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-300">VU Meter</h3>
+        <div className="flex items-center gap-2">
+          <Activity className={`w-4 h-4 ${isPlaying ? 'text-green-500 animate-pulse' : 'text-gray-500'}`} />
+          {!compact && (
+            <div className="flex flex-col">
+              <h3 className="text-sm font-semibold text-gray-300">VU Meter</h3>
+              <span className="text-xs text-gray-500">{trackName}</span>
+            </div>
+          )}
+        </div>
         {showControls && (
           <button
             onClick={() => setShowSettings(!showSettings)}
@@ -53,7 +73,7 @@ export function VUMeterPanel({
       </div>
 
       {/* Settings Panel */}
-      {showControls && showSettings && (
+      {showControls && showSettings && !compact && (
         <div className="mb-3 p-3 bg-gray-800 rounded border border-gray-700 space-y-3">
           <div>
             <label className="flex items-center justify-between text-xs text-gray-400 mb-1">
@@ -98,25 +118,29 @@ export function VUMeterPanel({
       />
       
       {/* Level Readout */}
-      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-gray-800 rounded p-2 border border-gray-700">
-          <span className="text-gray-500">L Peak:</span>
-          <span className="ml-2 text-green-400 font-mono">
-            {(leftLevel * 100).toFixed(1)}%
-          </span>
-        </div>
-        <div className="bg-gray-800 rounded p-2 border border-gray-700">
-          <span className="text-gray-500">R Peak:</span>
-          <span className="ml-2 text-green-400 font-mono">
-            {(rightLevel * 100).toFixed(1)}%
-          </span>
-        </div>
-      </div>
+      {!compact && (
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-gray-800 rounded p-2 border border-gray-700">
+              <span className="text-gray-500">L Peak:</span>
+              <span className="ml-2 text-green-400 font-mono">
+                {(leftPeak * 100).toFixed(1)}%
+              </span>
+            </div>
+            <div className="bg-gray-800 rounded p-2 border border-gray-700">
+              <span className="text-gray-500">R Peak:</span>
+              <span className="ml-2 text-green-400 font-mono">
+                {(rightPeak * 100).toFixed(1)}%
+              </span>
+            </div>
+          </div>
 
-      {/* Attribution */}
-      <div className="mt-2 text-xs text-gray-600 text-center">
-        Based on VU Meter by Liteon (GPL)
-      </div>
+          {/* Attribution */}
+          <div className="mt-2 text-xs text-gray-600 text-center">
+            Based on VU Meter by Liteon (GPL)
+          </div>
+        </>
+      )}
     </div>
   );
 }
