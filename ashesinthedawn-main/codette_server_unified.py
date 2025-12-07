@@ -22,7 +22,7 @@ codette_path = Path(__file__).parent / "Codette"
 sys.path.insert(0, str(codette_path))
 sys.path.insert(0, str(Path(__file__).parent))
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -113,7 +113,9 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
+    # Do not use wildcard '*' together with allow_credentials=True
+    # Specify explicit allowed origins to ensure Access-Control-Allow-Origin header is returned
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1346,3 +1348,250 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Server failed to start: {e}")
         traceback.print_exc()
+
+# ============================================================================
+# ADVANCED TOOLS API ENDPOINTS (compatibility for frontend)
+# These endpoints mirror the ones the React app calls under /api/analysis/*
+# They provide minimal but useful responses to avoid 404s and CORS issues.
+# ============================================================================
+
+@app.post("/api/analysis/detect-genre")
+async def detect_genre_endpoint(request: Request):
+    """Detect music genre from session metadata (POST)
+    Expected JSON: { bpm: number, timeSignature?: string, trackCount?: int }
+    """
+    try:
+        payload = await request.json()
+        bpm = float(payload.get("bpm", 120))
+        track_count = int(payload.get("trackCount", 1))
+
+        if bpm < 80:
+            genres = ["Ambient", "Downtempo", "Chill"]
+        elif bpm < 100:
+            genres = ["Hip Hop", "R&B", "Soul"]
+        elif bpm < 120:
+            genres = ["Pop", "Funk", "Disco"]
+        elif bpm < 140:
+            genres = ["House", "Techno", "Dance"]
+        else:
+            genres = ["Trance", "Drum & Bass", "Hardcore"]
+
+        detected = genres[0]
+        confidence = 0.65 + (0.1 if track_count > 1 else 0)
+
+        return {
+            "detected_genre": detected,
+            "confidence": min(confidence, 0.95),
+            "bpm_range": [max(1, int(bpm - 10)), int(bpm + 10)],
+            "key": "C Major",
+            "energy_level": "high" if bpm > 120 else "medium",
+            "instrumentation": ["drums", "bass", "synth"] if detected in ["House", "Techno"] else ["drums", "bass", "guitar"],
+        }
+    except Exception as e:
+        logger.error(f"Error in /api/analysis/detect-genre: {e}")
+        return {"error": str(e)}
+
+
+@app.get("/api/analysis/delay-sync")
+async def delay_sync(bpm: float = 120):
+    """Calculate tempo-locked delay times (GET)
+    Returns a dict of note division -> ms
+    """
+    try:
+        note_divisions = {
+            "Whole Note": 4,
+            "Half Note": 2,
+            "Quarter Note": 1,
+            "Eighth Note": 0.5,
+            "16th Note": 0.25,
+            "Triplet Quarter": 2/3,
+            "Triplet Eighth": 1/3,
+            "Dotted Quarter": 1.5,
+            "Dotted Eighth": 0.75,
+        }
+        results = {}
+        for name, divisor in note_divisions.items():
+            delay_ms = round((60000.0 / max(1.0, float(bpm))) * divisor, 2)
+            results[name] = delay_ms
+        return results
+    except Exception as e:
+        logger.error(f"Error in /api/analysis/delay-sync: {e}")
+        return {"error": str(e)}
+
+
+@app.get("/api/analysis/ear-training")
+async def ear_training(exercise_type: str = "interval", interval: str = "Major Third", difficulty: str = "beginner"):
+    """Provide ear training visual data (GET)"""
+    try:
+        intervals_db = {
+            "Unison": {"semitones": 0, "frequency_ratio": 1.0, "visualization": "█"},
+            "Minor Second": {"semitones": 1, "frequency_ratio": 1.0595, "visualization": "█▏"},
+            "Major Second": {"semitones": 2, "frequency_ratio": 1.122, "visualization": "█▌"},
+            "Minor Third": {"semitones": 3, "frequency_ratio": 1.189, "visualization": "█▊"},
+            "Major Third": {"semitones": 4, "frequency_ratio": 1.26, "visualization": "██"},
+            "Perfect Fourth": {"semitones": 5, "frequency_ratio": 1.335, "visualization": "██▍"},
+            "Perfect Fifth": {"semitones": 7, "frequency_ratio": 1.498, "visualization": "██▊"},
+        }
+        intervals = [{"name": name, **data} for name, data in intervals_db.items()]
+        return {
+            "exercise_type": exercise_type,
+            "intervals": intervals,
+            "reference_frequency": 440,
+            "difficulty": difficulty,
+        }
+    except Exception as e:
+        logger.error(f"Error in /api/analysis/ear-training: {e}")
+        return {"error": str(e)}
+
+
+@app.get("/api/analysis/production-checklist")
+async def production_checklist(stage: str = "production"):
+    """Return production checklist for requested stage"""
+    try:
+        checklists = {
+            "pre_production": {
+                "stage": "Pre-Production",
+                "sections": {
+                    "Planning": [
+                        "Define project genre and style",
+                        "Set target BPM and time signature",
+                        "Plan track count and arrangement",
+                        "Create reference playlists",
+                    ],
+                    "Setup": [
+                        "Configure audio interface",
+                        "Set buffer size and latency",
+                        "Create DAW template",
+                        "Organize plugin chains",
+                    ],
+                },
+            },
+            "production": {
+                "stage": "Production",
+                "sections": {
+                    "Arrangement": [
+                        "Record/create intro section",
+                        "Build verse section",
+                        "Create chorus/hook",
+                        "Develop bridge/transition",
+                        "Plan breakdown",
+                    ],
+                    "Recording": [
+                        "Set input levels (gain staging)",
+                        "Record vocals/instruments",
+                        "Organize takes",
+                        "Create backing vocals",
+                    ],
+                },
+            },
+            "mixing": {
+                "stage": "Mixing",
+                "sections": {
+                    "Setup": [
+                        "Color-code tracks",
+                        "Organize into groups",
+                        "Create bus structure",
+                        "Set up aux sends",
+                    ],
+                    "Levels": [
+                        "Set track levels (-6dB headroom)",
+                        "Balance drums",
+                        "Balance melody vs accompaniment",
+                        "Check mono compatibility",
+                    ],
+                },
+            },
+            "mastering": {
+                "stage": "Mastering",
+                "sections": {
+                    "Preparation": [
+                        "Bounce stereo mix",
+                        "Leave headroom (3-6dB)",
+                        "Check loudness",
+                        "Compare with references",
+                    ],
+                    "Mastering": [
+                        "Linear phase EQ",
+                        "Multiband compression",
+                        "Limiting (prevent clipping)",
+                        "Metering/analysis",
+                    ],
+                },
+            },
+        }
+        return checklists.get(stage, checklists["production"])
+    except Exception as e:
+        logger.error(f"Error in /api/analysis/production-checklist: {e}")
+        return {"error": str(e), "stage": stage}
+
+
+@app.get("/api/analysis/instrument-info")
+async def instrument_info(category: str = "percussion", instrument: str = "kick"):
+    """Return instrument frequency specs and mixing tips"""
+    try:
+        instruments_db = {
+            "percussion": {
+                "kick": {
+                    "category": "Percussion",
+                    "instrument": "Kick Drum",
+                    "frequency_range": [20, 250],
+                    "characteristics": ["Deep", "Punchy", "Low-end focused"],
+                    "suggested_eq": {
+                        "Sub (20-80Hz)": "Boost for depth",
+                        "Mid-bass (80-250Hz)": "Adjust for punch",
+                        "Mid-range (250-2kHz)": "Cut for clarity",
+                    },
+                    "use_cases": ["Drums", "Electronic", "Pop"],
+                },
+                "snare": {
+                    "category": "Percussion",
+                    "instrument": "Snare Drum",
+                    "frequency_range": [100, 8000],
+                    "characteristics": ["Crisp", "Present", "Mid-range emphasis"],
+                    "suggested_eq": {
+                        "Low-mid (100-500Hz)": "Cut mud",
+                        "Presence (2-5kHz)": "Boost for snap",
+                        "High (5-8kHz)": "Add brightness",
+                    },
+                    "use_cases": ["Drums", "Rock", "Pop"],
+                },
+            },
+            "melodic": {
+                "piano": {
+                    "category": "Melodic",
+                    "instrument": "Piano",
+                    "frequency_range": [27, 4186],
+                    "characteristics": ["Resonant", "Full-spectrum", "Rich harmonics"],
+                    "suggested_eq": {
+                        "Sub (20-80Hz)": "Moderate boost",
+                        "Presence (2-4kHz)": "Slight boost",
+                        "High (8-16kHz)": "Controlled",
+                    },
+                    "use_cases": ["Classical", "Jazz", "Pop"],
+                },
+            },
+        }
+        return instruments_db.get(category, {}).get(instrument, {
+            "category": category,
+            "instrument": instrument,
+            "frequency_range": [20, 20000],
+            "characteristics": ["Generic instrument"],
+        })
+    except Exception as e:
+        logger.error(f"Error in /api/analysis/instrument-info: {e}")
+        return {"error": str(e), "category": category, "instrument": instrument}
+
+
+@app.get("/api/analysis/instruments-list")
+async def instruments_list():
+    """Return instruments by category"""
+    try:
+        return {
+            "percussion": ["kick", "snare", "hihat", "tom", "cymbal", "clap"],
+            "melodic": ["piano", "guitar", "synth", "bass", "strings", "brass"],
+            "vocal": ["lead", "harmony", "backing", "rap"],
+            "ambient": ["pad", "texture", "effect", "noise"],
+        }
+    except Exception as e:
+        logger.error(f"Error in /api/analysis/instruments-list: {e}")
+        return {"error": str(e)}

@@ -49,6 +49,85 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ============================================================================
+# Compatibility helpers (fix NameError for missing helpers at runtime)
+# ============================================================================
+
+# Provide a safe singleton CocoonManager loader used by status endpoints
+_COCOON_MANAGER_SINGLETON = None
+
+def get_cocoon_manager():
+    """Return a singleton CocoonManager instance.
+
+    Tries multiple import locations to be tolerant of package layout.
+    Falls back to a tiny local shim if real manager is unavailable.
+    """
+    global _COCOON_MANAGER_SINGLETON
+    if _COCOON_MANAGER_SINGLETON is not None:
+        return _COCOON_MANAGER_SINGLETON
+
+    # Try real implementations
+    candidates = [
+        "Codette.src.utils.cocoon_manager",
+        "Codette.src.utils.cocoon_manager",
+        "Codette.utils.cocoon_manager",
+        "Codette.codette.src.utils.cocoon_manager",
+        "Codette.codette.utils.cocoon_manager",
+        "codette.src.utils.cocoon_manager",
+        "codette.utils.cocoon_manager",
+    ]
+
+    for modname in candidates:
+        try:
+            mod = __import__(modname, fromlist=["CocoonManager"]) 
+            CocoonManager = getattr(mod, "CocoonManager")
+            mgr = CocoonManager()
+            try:
+                mgr.load_cocoons()
+            except Exception:
+                pass
+            _COCOON_MANAGER_SINGLETON = mgr
+            logger.info(f"Loaded CocoonManager from {modname}")
+            return _COCOON_MANAGER_SINGLETON
+        except Exception:
+            continue
+
+    # Fallback shim
+    class _Shim:
+        def __init__(self):
+            self.cocoon_data = []
+            self.quantum_state = {"coherence": 0.5}
+        def load_cocoons(self):
+            return
+        def get_latest_quantum_state(self):
+            return self.quantum_state.copy()
+        def get_latest_cocoons(self, limit=5):
+            return []
+        def save_cocoon(self, data, cocoon_type="codette"):
+            return False
+
+    _COCOON_MANAGER_SINGLETON = _Shim()
+    logger.warning("CocoonManager not found; using shim fallback")
+    return _COCOON_MANAGER_SINGLETON
+
+# Minimal fallback 'base' data used by production-checklist / ear-training code paths
+# Some endpoints in different versions expect a module-level 'base' mapping.
+base = {
+    "mixing": [
+        {"id": "mix_level_check", "task": "Verify master headroom and peaks", "priority": "high"},
+        {"id": "mix_balance", "task": "Balance instrument levels and panning", "priority": "medium"},
+    ],
+    "recording": [
+        {"id": "rec_signal_check", "task": "Confirm input levels and no clipping", "priority": "high"},
+    ],
+    "arrangement": [
+        {"id": "arr_structure", "task": "Verify song sections and transitions", "priority": "medium"},
+    ],
+    "mastering": [
+        {"id": "master_reference", "task": "Check reference tracks and LUFS", "priority": "high"},
+    ],
+}
+
+# ============================================================================
 # CONSTANTS & GLOBALS
 # ============================================================================
 
