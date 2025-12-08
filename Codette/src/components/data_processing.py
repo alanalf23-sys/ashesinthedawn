@@ -5,11 +5,15 @@ Handles sophisticated data processing and analysis tasks
 
 import logging
 from typing import Dict, List, Any, Optional, Union, Tuple
-import numpy as np
 from datetime import datetime
 import json
 import asyncio
 from pathlib import Path
+
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 logger = logging.getLogger(__name__)
 
@@ -361,7 +365,12 @@ class AdvancedDataProcessor:
             if not strengths or not coverages:
                 return 0.0
                 
-            return min(1.0, (np.mean(strengths) + np.mean(coverages)) / 2)
+            if np is not None:
+                return float(min(1.0, (np.mean(strengths) + np.mean(coverages)) / 2))
+            else:
+                s_mean = sum(strengths)/len(strengths) if strengths else 0.0
+                c_mean = sum(coverages)/len(coverages) if coverages else 0.0
+                return min(1.0, (s_mean + c_mean) / 2)
             
         except Exception as e:
             logger.error(f"Error calculating confidence: {e}")
@@ -509,12 +518,20 @@ class AdvancedDataProcessor:
         
         try:
             if all(isinstance(x, (int, float)) for x in seq):
-                features.update({
-                    "mean": float(np.mean(seq)),
-                    "std": float(np.std(seq)),
-                    "min": float(np.min(seq)),
-                    "max": float(np.max(seq))
-                })
+                if np is not None:
+                    features.update({
+                        "mean": float(np.mean(seq)),
+                        "std": float(np.std(seq)),
+                        "min": float(np.min(seq)),
+                        "max": float(np.max(seq))
+                    })
+                else:
+                    features.update({
+                        "mean": float(sum(seq)/len(seq)),
+                        "std": float((sum((x - (sum(seq)/len(seq)))**2 for x in seq)/len(seq))**0.5),
+                        "min": float(min(seq)),
+                        "max": float(max(seq))
+                    })
                 
         except Exception as e:
             logger.error(f"Error extracting sequence features: {e}")

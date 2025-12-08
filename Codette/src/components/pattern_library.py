@@ -121,49 +121,69 @@ class PatternLibrary:
     @classmethod
     def get_thinking_response(cls) -> str:
         """Get a contextually appropriate thinking pattern response"""
-        import random
-        return random.choice(cls.THINKING_PATTERNS)
+        try:
+            import random
+            return random.choice(cls.THINKING_PATTERNS)
+        except Exception:
+            return cls.THINKING_PATTERNS[0]
     
     @classmethod
     def get_follow_up(cls) -> str:
         """Get a varied follow-up question"""
-        import random
-        return random.choice(cls.FOLLOW_UP_PATTERNS)
+        try:
+            import random
+            return random.choice(cls.FOLLOW_UP_PATTERNS)
+        except Exception:
+            return cls.FOLLOW_UP_PATTERNS[0]
     
     @classmethod
     def get_pattern_for_context(cls, context: str) -> dict:
         """Get a relevant pattern for a given context with improved matching"""
-        import random
-        
+        try:
+            import random
+        except Exception:
+            random = None
+
         # Combine all patterns
-        all_patterns = (cls.CREATIVE_PATTERNS + 
-                       cls.PROBLEM_SOLVING_PATTERNS + 
-                       cls.LEARNING_PATTERNS +
-                       cls.TRANSITION_PATTERNS)
-        
+        all_patterns = (
+            cls.CREATIVE_PATTERNS
+            + cls.PROBLEM_SOLVING_PATTERNS
+            + cls.LEARNING_PATTERNS
+            + cls.TRANSITION_PATTERNS
+        )
+
         # Find patterns relevant to the context
         context_words = set(context.lower().split())
         relevant_patterns = [
-            p for p in all_patterns 
+            p
+            for p in all_patterns
             if any(
-                any(context_word in use_case.lower() 
-                    for context_word in context_words)
-                for use_case in p["use_case"]
+                any(context_word in use_case.lower() for context_word in context_words)
+                for use_case in p.get("use_case", [])
             )
         ]
-        
+
         # If no direct matches, return a random pattern
         if not relevant_patterns:
             # Exclude transition patterns from random selection
-            base_patterns = (cls.CREATIVE_PATTERNS + 
-                           cls.PROBLEM_SOLVING_PATTERNS + 
-                           cls.LEARNING_PATTERNS)
-            return random.choice(base_patterns)
-            
-        return random.choice(relevant_patterns)
+            base_patterns = (
+                cls.CREATIVE_PATTERNS
+                + cls.PROBLEM_SOLVING_PATTERNS
+                + cls.LEARNING_PATTERNS
+            )
+            if random is not None:
+                return random.choice(base_patterns)
+            return base_patterns[0]
+
+        if random is not None:
+            return random.choice(relevant_patterns)
+        return relevant_patterns[0]
     
     @classmethod
     def get_transition(cls) -> dict:
         """Get a transition pattern for smooth response flow"""
-        import random
-        return random.choice(cls.TRANSITION_PATTERNS)
+        try:
+            import random
+            return random.choice(cls.TRANSITION_PATTERNS)
+        except Exception:
+            return cls.TRANSITION_PATTERNS[0]

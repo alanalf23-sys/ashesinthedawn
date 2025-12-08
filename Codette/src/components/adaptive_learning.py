@@ -5,11 +5,15 @@ Provides a dynamic learning environment that adapts to user interactions
 
 import logging
 from typing import Dict, List, Any, Optional
-import numpy as np
 from datetime import datetime
 from .dynamic_learning import DynamicLearner
 
 logger = logging.getLogger(__name__)
+
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 class AdaptiveLearningEnvironment:
     """Manages an adaptive learning environment for Codette"""
@@ -169,7 +173,11 @@ class AdaptiveLearningEnvironment:
                 features.get("context_size", 0) / 100       # Normalize
             ]
             
-            return min(1.0, np.mean([f for f in complexity_factors if f is not None]))
+            if np is not None:
+                return min(1.0, float(np.mean([f for f in complexity_factors if f is not None])))
+            # Fallback to pure Python mean
+            vals = [f for f in complexity_factors if f is not None]
+            return min(1.0, float(sum(vals) / len(vals))) if vals else 0.0
             
         except Exception as e:
             logger.error(f"Error calculating complexity: {e}")
@@ -214,7 +222,9 @@ class AdaptiveLearningEnvironment:
             if not similarities:
                 return 1.0
                 
-            return 1.0 - np.mean(similarities)
+            if np is not None:
+                return float(1.0 - np.mean(similarities))
+            return float(1.0 - (sum(similarities) / len(similarities))) if similarities else 1.0
             
         except Exception as e:
             logger.error(f"Error evaluating novelty: {e}")
@@ -272,7 +282,9 @@ class AdaptiveLearningEnvironment:
                     # String comparison
                     similarities.append(1.0 if f1[key] == f2[key] else 0.0)
                     
-            return np.mean(similarities)
+            if np is not None:
+                return float(np.mean(similarities))
+            return float(sum(similarities) / len(similarities)) if similarities else 0.0
             
         except Exception as e:
             logger.error(f"Error calculating similarity: {e}")
@@ -290,7 +302,9 @@ class AdaptiveLearningEnvironment:
                 for h in self.history[-5:]  # Last 5 interactions
             ]
             
-            return np.mean(recent_scores) if recent_scores else 1.0
+            if np is not None:
+                return float(np.mean(recent_scores)) if recent_scores else 1.0
+            return float(sum(recent_scores) / len(recent_scores)) if recent_scores else 1.0
             
         except Exception as e:
             logger.error(f"Error calculating learning efficiency: {e}")
@@ -311,8 +325,14 @@ class AdaptiveLearningEnvironment:
             if len(recent_states) < 2:
                 return 1.0
                 
-            # Calculate stability as inverse of state volatility
-            stability = 1.0 - np.std(recent_states)
+            if np is not None:
+                stability = 1.0 - float(np.std(recent_states))
+            else:
+                # Simple python std fallback
+                mean = sum(recent_states) / len(recent_states)
+                variance = sum((x - mean) ** 2 for x in recent_states) / len(recent_states)
+                stability = 1.0 - variance ** 0.5
+                
             return max(0.0, min(1.0, stability))
             
         except Exception as e:
@@ -332,7 +352,11 @@ class AdaptiveLearningEnvironment:
             # Weight current adaptivity level more heavily
             weights = [0.2, 0.2, 0.2, 0.4]
             
-            return np.average(factors, weights=weights)
+            if np is not None:
+                return float(np.average(factors, weights=weights))
+            # Weighted average fallback
+            total_weight = sum(weights)
+            return float(sum(f * w for f, w in zip(factors, weights)) / total_weight)
             
         except Exception as e:
             logger.error(f"Error calculating adaptivity level: {e}")

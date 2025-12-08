@@ -2,14 +2,36 @@ import json
 import os
 import logging
 import random
-import torch
+try:
+    import torch
+except Exception:
+    torch = None
 from .fractal import dimensionality_reduction
-import numpy as np
+try:
+    from .fractal import dimensionality_reduction
+except Exception:
+    dimensionality_reduction = None
+
+try:
+    import numpy as np
+except Exception:
+    np = None
+
 import asyncio
 from datetime import datetime
 from typing import Dict, Any, Optional, List
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from dotenv import load_dotenv
+try:
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+except Exception:
+    AutoModelForCausalLM = None
+    AutoTokenizer = None
+
+try:
+    from dotenv import load_dotenv
+except Exception:
+    def load_dotenv():
+        return None
+
 from concurrent.futures import ThreadPoolExecutor
 # Import core components
 from .cognitive_processor import CognitiveProcessor
@@ -116,22 +138,38 @@ class AICore:
         
         logger.info(f"AI Core initialized in {'test' if test_mode else 'production'} mode")
         
-        self.cognitive_processor = CognitiveProcessor(
-            modes=["scientific", "creative", "emotional", "quantum", "philosophical"]
-        )
-        self.defense_system = DefenseSystem(
-            strategies=["evasion", "adaptability", "barrier", "quantum_shield"]
-        )
-        self.health_monitor = HealthMonitor()
-        self.fractal_identity = FractalIdentity()
+        try:
+            self.cognitive_processor = CognitiveProcessor(
+                modes=["scientific", "creative", "emotional", "quantum", "philosophical"]
+            )
+        except Exception:
+            self.cognitive_processor = None
+        
+        try:
+            self.defense_system = DefenseSystem(
+                strategies=["evasion", "adaptability", "barrier", "quantum_shield"]
+            )
+        except Exception:
+            self.defense_system = None
+        
+        try:
+            self.health_monitor = HealthMonitor()
+        except Exception:
+            self.health_monitor = None
+        
+        try:
+            self.fractal_identity = FractalIdentity()
+        except Exception:
+            self.fractal_identity = None
 
         # Initialize HuggingFace client
         try:
             from huggingface_hub import InferenceClient
             hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
             self.client = InferenceClient(token=hf_token) if hf_token else InferenceClient()
-        except Exception as e:
-            logger.warning(f"Could not initialize HuggingFace client: {e}")
+        except Exception:
+            self.client = None
+            logger.warning("Could not initialize HuggingFace client")
 
     def _initialize_language_model(self):
         """Initialize the language model with optimal settings."""

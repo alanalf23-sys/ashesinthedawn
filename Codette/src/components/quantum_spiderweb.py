@@ -2,8 +2,16 @@
 Quantum spiderweb implementation for advanced cognition.
 """
 
-import networkx as nx
-import numpy as np
+try:
+    import networkx as nx
+except Exception:
+    nx = None
+
+try:
+    import numpy as np
+except Exception:
+    np = None
+
 from typing import Dict, Any, List, Optional
 import random
 import logging
@@ -17,7 +25,14 @@ class QuantumSpiderweb:
     """
     
     def __init__(self, node_count: int = 128):
-        self.graph = nx.Graph()
+        if nx is not None:
+            self.graph = nx.Graph()
+        else:
+            self.graph = {
+                'nodes': {},
+                'edges': {}
+            }
+        
         self.dimensions = ['Ψ', 'τ', 'χ', 'Φ', 'λ']
         self._init_nodes(node_count)
         self.entangled_states = {}
@@ -28,15 +43,23 @@ class QuantumSpiderweb:
         for i in range(count):
             node_id = f"QNode_{i}"
             state = self._generate_state()
-            self.graph.add_node(node_id, state=state)
+            if nx is not None:
+                self.graph.add_node(node_id, state=state)
+            else:
+                self.graph['nodes'][node_id] = {'state': state, 'neighbors': {}}
+            
             if i > 0:
                 # Create connections with probability decay
                 connection_count = min(3, i)  # Maximum 3 connections per node
                 potential_connections = [f"QNode_{j}" for j in range(i)]
                 selected_connections = random.sample(potential_connections, connection_count)
+                
                 for connection in selected_connections:
                     weight = random.uniform(0.1, 1.0)
-                    self.graph.add_edge(node_id, connection, weight=weight)
+                    if nx is not None:
+                        self.graph.add_edge(node_id, connection, weight=weight)
+                    else:
+                        self.graph['nodes'][node_id]['neighbors'][connection] = {'weight': weight}
                     
     def _generate_state(self) -> Dict[str, float]:
         """Generate quantum state vector for all dimensions"""
@@ -74,9 +97,18 @@ class QuantumSpiderweb:
             })
             
             # Propagate to neighbors
-            for neighbor in self.graph.neighbors(current_id):
+            neighbors = []
+            if nx is not None:
+                neighbors = list(self.graph.neighbors(current_id))
+            else:
+                neighbors = list(self.graph['nodes'][current_id]['neighbors'].keys())
+            
+            for neighbor in neighbors:
                 if neighbor not in activated:
-                    edge_weight = self.graph[current_id][neighbor]["weight"]
+                    if nx is not None:
+                        edge_weight = self.graph[current_id][neighbor]["weight"]
+                    else:
+                        edge_weight = self.graph['nodes'][current_id]['neighbors'][neighbor]['weight']
                     activation = activated[current_id] * edge_weight * 0.8  # Decay factor
                     
                     if activation > self.activation_threshold:
@@ -105,13 +137,22 @@ class QuantumSpiderweb:
             return None
             
         # Calculate tension metrics
-        neighbor_states = [self.graph.nodes[n]["state"] for n in neighbors]
+        if nx is not None:
+            neighbor_states = [self.graph.nodes[n]["state"] for n in neighbors]
+        else:
+            neighbor_states = [self.graph['nodes'][n]['state'] for n in neighbors]
+        
         tension_metrics = {}
         
         for dim in self.dimensions:
             # Calculate variance between node and neighbors
             values = [node_state[dim]] + [s[dim] for s in neighbor_states]
-            tension_metrics[dim] = np.var(values)
+            if np is not None:
+                tension_metrics[dim] = float(np.var(values))
+            else:
+                mean = sum(values)/len(values)
+                variance = sum((v - mean)**2 for v in values) / len(values)
+                tension_metrics[dim] = variance
             
         # Consider node unstable if any dimension has high variance
         if any(tension > 0.3 for tension in tension_metrics.values()):
@@ -173,15 +214,25 @@ class QuantumSpiderweb:
         
     def get_node_state(self, node_id: str) -> Optional[Dict[str, float]]:
         """Get current state of a node"""
-        if node_id in self.graph:
-            return self.graph.nodes[node_id]["state"]
+        if nx is not None:
+            if node_id in self.graph:
+                return self.graph.nodes[node_id]["state"]
+        else:
+            return self.graph['nodes'].get(node_id, {}).get('state')
         return None
         
     def update_node_state(self, node_id: str, new_state: Dict[str, float]) -> bool:
         """Update node's quantum state"""
-        if node_id in self.graph:
-            # Validate state dimensions
-            if all(dim in new_state for dim in self.dimensions):
-                self.graph.nodes[node_id]["state"] = new_state
-                return True
-        return False
+        if nx is not None:
+            if node_id in self.graph:
+                # Validate state dimensions
+                if all(dim in new_state for dim in self.dimensions):
+                    self.graph.nodes[node_id]["state"] = new_state
+                    return True
+            return False
+        else:
+            if node_id in self.graph['nodes']:
+                if all(dim in new_state for dim in self.dimensions):
+                    self.graph['nodes'][node_id]['state'] = new_state
+                    return True
+            return False

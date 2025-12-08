@@ -5,11 +5,15 @@ Handles creative generation and novel idea synthesis
 
 import logging
 from typing import Dict, List, Any, Optional
-import numpy as np
 from datetime import datetime
 import random
 
 logger = logging.getLogger(__name__)
+
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 class AIDrivenCreativity:
     """Manages AI-driven creative processes for Codette"""
@@ -164,9 +168,9 @@ class AIDrivenCreativity:
                 "creative_response": synthesized,
                 "supporting_ideas": top_ideas,
                 "creativity_metrics": {
-                    "novelty": np.mean([i["scores"]["novelty"] for i in top_ideas]),
-                    "usefulness": np.mean([i["scores"]["usefulness"] for i in top_ideas]),
-                    "coherence": np.mean([i["scores"]["coherence"] for i in top_ideas])
+                    "novelty": float(np.mean([i["scores"]["novelty"] for i in top_ideas])) if np is not None else float(sum(i["scores"]["novelty"] for i in top_ideas)/len(top_ideas)),
+                    "usefulness": float(np.mean([i["scores"]["usefulness"] for i in top_ideas])) if np is not None else float(sum(i["scores"]["usefulness"] for i in top_ideas)/len(top_ideas)),
+                    "coherence": float(np.mean([i["scores"]["coherence"] for i in top_ideas])) if np is not None else float(sum(i["scores"]["coherence"] for i in top_ideas)/len(top_ideas))
                 },
                 "timestamp": datetime.now().isoformat()
             }
@@ -489,7 +493,10 @@ class AIDrivenCreativity:
             self.current_state["creativity_level"] = np.mean([
                 response.get("creativity_metrics", {}).get("novelty", 0.5),
                 response.get("creativity_metrics", {}).get("usefulness", 0.5)
-            ])
+            ]) if np is not None else float(sum([
+                response.get("creativity_metrics", {}).get("novelty", 0.5),
+                response.get("creativity_metrics", {}).get("usefulness", 0.5)
+            ]) / 2)
             
             # Update active concepts
             if "creative_response" in response:

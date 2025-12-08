@@ -2,18 +2,42 @@ import json
 import logging
 from typing import List, Dict, Any
 from datetime import datetime
-import numpy as np
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 logger = logging.getLogger(__name__)
+
+try:
+    import numpy as np
+except Exception:
+    np = None
+
+try:
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.decomposition import PCA
+except Exception:
+    StandardScaler = None
+    PCA = None
+
+try:
+    from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+except Exception:
+    # Fallback lightweight sentiment analyzer
+    class SentimentIntensityAnalyzer:
+        def polarity_scores(self, text: str):
+            # Very simple heuristic: positive if contains happy words, negative if sad words
+            t = (text or "").lower()
+            score = 0.0
+            if any(w in t for w in ("good", "happy", "joy", "wonder", "love")):
+                score = 0.5
+            if any(w in t for w in ("bad", "sad", "angry", "fear", "hate")):
+                score = -0.5
+            return {"compound": score}
+
 
 def dimensionality_reduction(data: List[Dict[str, Any]], n_components: int = 2) -> np.ndarray:
     """Reduce dimensionality of identity state data using PCA"""
     try:
         if not data:
-            return np.array([[0.0, 0.0]])
+            return np.array([[0.0, 0.0]]) if np is not None else [[0.0, 0.0]]
             
         # Extract numerical features
         features = []
@@ -32,20 +56,34 @@ def dimensionality_reduction(data: List[Dict[str, Any]], n_components: int = 2) 
             features.append(numerical_features)
             
         # Convert to numpy array and handle variable lengths
+        if np is None:
+            # Graceful fallback: return simple list of pairs
+            return [[0.0, 0.0] for _ in range(len(features))]
         max_len = max(len(f) for f in features)
         padded_features = np.zeros((len(features), max_len))
         for i, f in enumerate(features):
             padded_features[i, :len(f)] = f
             
-        # Standardize features
-        scaler = StandardScaler()
-        scaled_features = scaler.fit_transform(padded_features)
-        
-        # Apply PCA
-        pca = PCA(n_components=min(n_components, scaled_features.shape[1]))
-        reduced_data = pca.fit_transform(scaled_features)
-        
-        return reduced_data
+        # Standardize features if scaler available
+        if StandardScaler is not None:
+            scaler = StandardScaler()
+            scaled_features = scaler.fit_transform(padded_features)
+        else:
+            scaled_features = padded_features
+
+        # Apply PCA if available
+        if PCA is not None:
+            pca = PCA(n_components=min(n_components, scaled_features.shape[1]))
+            reduced_data = pca.fit_transform(scaled_features)
+            return reduced_data
+        else:
+            # Fallback: return first two columns or padded zeros
+            if scaled_features.shape[1] >= 2:
+                return scaled_features[:, :2]
+            else:
+                out = np.zeros((scaled_features.shape[0], 2))
+                out[:, :scaled_features.shape[1]] = scaled_features
+                return out
         
     except Exception as e:
         logger.error(f"Dimensionality reduction failed: {e}")

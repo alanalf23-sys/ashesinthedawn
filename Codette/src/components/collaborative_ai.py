@@ -5,9 +5,13 @@ Handles multi-agent collaboration and consensus building
 
 import logging
 from typing import Dict, List, Any, Optional
-import numpy as np
 from datetime import datetime
 import asyncio
+
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +197,7 @@ class CollaborativeAI:
                 "task_id": task.get("id"),
                 "agent_id": agent,
                 "content": self._generate_contribution(task, agent),
-                "confidence": np.random.uniform(0.5, 1.0),
+                "confidence": float(np.random.uniform(0.5, 1.0)) if np is not None else float(0.75),
                 "timestamp": datetime.now().isoformat()
             }
             
@@ -234,7 +238,7 @@ class CollaborativeAI:
             # In real implementation, this would use more sophisticated methods
             synthesis = {
                 "content": self._combine_contents(contents, confidences),
-                "confidence_level": np.mean(confidences),
+                "confidence_level": float(np.mean(confidences)) if np is not None else float(sum(confidences)/len(confidences)) if confidences else 0.0,
                 "num_contributors": len(contents),
                 "timestamp": datetime.now().isoformat()
             }
@@ -360,9 +364,9 @@ class CollaborativeAI:
                     "total_contributions": sum(
                         len(r["contributions"]) for r in round_results
                     ),
-                    "average_consensus": np.mean([
+                    "average_consensus": float(np.mean([
                         r["consensus_level"] for r in round_results
-                    ]),
+                    ])) if np is not None and round_results else float(sum(r["consensus_level"] for r in round_results)/len(round_results)) if round_results else 0.0,
                     "collaboration_duration": len(round_results)
                 },
                 "timestamp": datetime.now().isoformat()

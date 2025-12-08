@@ -36,7 +36,10 @@ class EnhancedAIConfig:
                 return config
             else:
                 logger.warning(f"Config file {self.config_path} not found, using defaults")
-                self._save_config(self.defaults)  # Create default config
+                try:
+                    self._save_config(self.defaults)  # Create default config
+                except Exception as e:
+                    logger.debug(f"Could not write default config: {e}")
                 return self.defaults.copy()
         except Exception as e:
             logger.error(f"Error loading config: {e}")

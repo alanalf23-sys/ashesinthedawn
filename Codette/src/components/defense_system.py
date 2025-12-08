@@ -61,7 +61,7 @@ class DefenseSystem:
             self._regenerate_energy()
             
             # Get consciousness influence
-            consciousness_factor = consciousness_state.get("m_score", 0.7) if consciousness_state else 0.7
+            consciousness_factor = (consciousness_state.get("m_score") if consciousness_state and isinstance(consciousness_state, dict) else 0.7) or 0.7
             # Boost energy regen based on consciousness
             self.regen_rate = 0.5 + (consciousness_factor * 0.5)
             

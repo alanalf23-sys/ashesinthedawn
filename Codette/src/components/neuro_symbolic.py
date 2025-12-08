@@ -3,7 +3,10 @@ This module implements a neuro-symbolic architecture combining neural networks w
 """
 
 from typing import Dict, Any, List, Optional
-import numpy as np
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 class NeuroSymbolicEngine:
     def __init__(self):
@@ -31,11 +34,19 @@ class NeuroSymbolicEngine:
             Processed neural outputs
         """
         # Simulate neural processing
-        processed_data = {
-            "features": np.random.random(10).tolist(),  # Simulated feature extraction
-            "confidence": np.random.random(),
-            "embedding": np.random.random(128).tolist()  # Simulated embedding
-        }
+        if np is not None:
+            processed_data = {
+                "features": np.random.random(10).tolist(),  # Simulated feature extraction
+                "confidence": float(np.random.random()),
+                "embedding": np.random.random(128).tolist()  # Simulated embedding
+            }
+        else:
+            import random
+            processed_data = {
+                "features": [random.random() for _ in range(10)],
+                "confidence": float(random.random()),
+                "embedding": [random.random() for _ in range(128)]
+            }
         
         self.neural_state.update(processed_data)
         return processed_data
@@ -62,7 +73,11 @@ class NeuroSymbolicEngine:
                 results["applied_rules"].append(rule)
                 results["inferences"].append(inference)
                 
-        results["confidence"] = np.mean([inf.get("confidence", 0) for inf in results["inferences"]]) if results["inferences"] else 0.0
+        if np is not None:
+            results["confidence"] = float(np.mean([inf.get("confidence", 0) for inf in results["inferences"]])) if results["inferences"] else 0.0
+        else:
+            vals = [inf.get("confidence", 0) for inf in results["inferences"]]
+            results["confidence"] = float(sum(vals)/len(vals)) if vals else 0.0
         
         return results
 
@@ -77,13 +92,18 @@ class NeuroSymbolicEngine:
         Returns:
             Combined neuro-symbolic output
         """
+        if np is not None:
+            confidence = float(np.mean([
+                neural_output.get("confidence", 0),
+                symbolic_output.get("confidence", 0)
+            ]))
+        else:
+            confidence = float((neural_output.get("confidence", 0) + symbolic_output.get("confidence", 0))/2)
+
         combined = {
             "neural_features": neural_output.get("features", []),
             "symbolic_inferences": symbolic_output.get("inferences", []),
-            "confidence": np.mean([
-                neural_output.get("confidence", 0),
-                symbolic_output.get("confidence", 0)
-            ]),
+            "confidence": confidence,
             "combined_embedding": self._combine_embeddings(
                 neural_output.get("embedding", []),
                 symbolic_output.get("embedding", [])

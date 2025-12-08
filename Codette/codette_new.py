@@ -24,17 +24,11 @@ class Codette:
         self.memory = []
         self.analyzer = SentimentIntensityAnalyzer()
         np.seterr(divide='ignore', invalid='ignore')
-        self.audit_log("Codette initialized with FULL ML CAPABILITIES (no placeholders)", system=True)
+        # audit_log may rely on logging; ensure method exists before call
         self.context_memory = []
-        
-        # DAW-specific knowledge base with REAL RESPONSES (not random)
         self.daw_knowledge = self._initialize_daw_knowledge()
-        
-        # Response tracking for consistency (not for random selection)
         self.recent_responses = []
         self.max_recent_responses = 20
-        
-        # Personality is deterministic based on context, NOT random
         self.personality_modes = {
             'technical_expert': 'precise_technical_professional',
             'creative_mentor': 'inspirational_metaphorical_encouraging',
@@ -43,22 +37,20 @@ class Codette:
             'innovative_explorer': 'experimental_cutting_edge_forward_thinking'
         }
         self.current_personality = 'technical_expert'
-        
-        # Conversation context for ML-based responses
         self.conversation_topics = []
         self.max_conversation_topics = 10
-        
-        # Database connectivity
         self.has_music_knowledge_table = False
         self.has_music_knowledge_backup_table = False
         self.has_chat_history_table = False
         self.music_knowledge_table = 'music_knowledge'
-        
-        # Initialize Supabase client (if available)
         self.supabase_client = self._initialize_supabase()
+        # Log after initialization
+        try:
+            self.audit_log("Codette initialized with FULL ML CAPABILITIES (no placeholders)", system=True)
+        except Exception:
+            logger.info("Codette initialized (audit log not available yet)")
 
     def _initialize_daw_knowledge(self) -> Dict[str, Any]:
-        """Initialize REAL DAW knowledge (not random responses)"""
         return {
             "frequency_ranges": {
                 "sub_bass": (20, 60),
@@ -83,93 +75,63 @@ class Codette:
             }
         }
 
-    def respond(self, prompt):
-        """
-        Generate ML-powered response with ZERO random selections
-        Uses sentiment analysis, context awareness, and deterministic logic
-        """
-        # Analyze sentiment and extract concepts using ML
+    def respond(self, prompt: str) -> str:
         sentiment = self.analyze_sentiment(prompt)
         key_concepts = self.extract_key_concepts(prompt)
-        
-        # Store in memory for ML learning
+
         self.memory.append({
             "prompt": prompt,
             "sentiment": sentiment,
             "concepts": key_concepts,
             "timestamp": datetime.now().isoformat()
         })
-        
-        # Check if this is a DAW-related query using semantic matching (not keywords)
+
         is_daw_query = self._is_daw_query_ml(prompt, key_concepts)
-        
-        # Generate responses using ML-based multi-perspective analysis
-        responses = []
-        
+        responses: List[str] = []
+
         if is_daw_query:
-            # REAL DAW-specific response using knowledge base (not random)
             daw_response = self._generate_daw_specific_response_ml(prompt, key_concepts, sentiment)
             responses.append(f"[DAW Expert] {daw_response}")
-            
-            # Add technical insight using ML analysis (not random template)
+
             technical_insight = self._generate_technical_insight_ml(key_concepts, sentiment)
             responses.append(f"[Technical] {technical_insight}")
         else:
-            # For non-DAW queries, use ML-based multi-perspective analysis
-            # Neural perspective with ML-generated insight (not random sentence)
             neural_insight = self._generate_neural_insight_ml(key_concepts, sentiment)
             responses.append(f"[Neural] {neural_insight}")
-            
-            # Logical perspective using deterministic analysis (not random template)
+
             logical_response = self._generate_logical_response_ml(key_concepts, sentiment)
             responses.append(f"[Logical] {logical_response}")
-            
-            # Creative perspective using ML creativity (not random patterns)
+
             creative_response = self._generate_creative_response_ml(key_concepts, sentiment)
             responses.append(f"[Creative] {creative_response}")
-        
-        # Save conversation to DB
+
         try:
             full_response = "\n\n".join(responses)
             self.save_conversation_to_db(prompt, full_response)
         except Exception as e:
             logger.warning(f"Could not save conversation to DB: {e}")
-        
-        # Add to context memory for ML learning
+
         self.context_memory.append({
             'input': prompt,
             'concepts': key_concepts,
-            'sentiment': sentiment['compound'],
+            'sentiment': sentiment.get('compound', 0) if isinstance(sentiment, dict) else 0,
             'is_daw': is_daw_query
         })
 
         return "\n\n".join(responses)
-    
+
     def _is_daw_query_ml(self, prompt: str, concepts: List[str]) -> bool:
-        """Use ML semantic matching instead of keyword matching"""
-        # Semantic DAW indicators (not just keywords)
         daw_semantic_indicators = {
             'audio_production', 'mixing', 'mastering', 'recording',
             'eq', 'compression', 'reverb', 'delay', 'frequency',
             'gain', 'volume', 'pan', 'stereo', 'track', 'plugin'
         }
-        
-        # Check concepts against semantic indicators
         prompt_lower = prompt.lower()
         concept_set = set(concepts)
-        
-        # Semantic match: any overlap indicates DAW query
-        return bool(daw_semantic_indicators & concept_set) or \
-               any(indicator in prompt_lower for indicator in ['mix', 'eq', 'compress', 'audio', 'track'])
-    
+        return bool(daw_semantic_indicators & concept_set) or any(indicator in prompt_lower for indicator in ['mix', 'eq', 'compress', 'audio', 'track'])
+
     def _generate_daw_specific_response_ml(self, prompt: str, concepts: List[str], sentiment: Dict) -> str:
-        """
-        Generate REAL DAW response using knowledge base and ML analysis
-        NO RANDOM SELECTION - deterministic based on semantic understanding
-        """
         prompt_lower = prompt.lower()
-        
-        # Semantic query classification (not random)
         if any(term in prompt_lower for term in ['gain', 'level', 'volume', 'loud']):
             return self.daw_knowledge['mixing_principles']['gain_staging']
         elif any(term in prompt_lower for term in ['eq', 'frequency', 'boost', 'cut']):
@@ -187,78 +149,60 @@ class Codette:
         elif any(term in prompt_lower for term in ['flat', 'depth', 'dimension']):
             return self.daw_knowledge['problem_detection']['lack_of_depth']
         else:
-            # General DAW guidance based on sentiment (not random)
-            if sentiment['compound'] < 0:
+            if isinstance(sentiment, dict) and sentiment.get('compound', 0) < 0:
                 return "Identify the specific issue: frequency buildup, dynamic imbalance, or routing problem. Isolate and address systematically."
             else:
                 return "Continue with gain staging, then EQ for balance, compression for control, and spatial effects for depth. Follow signal flow logically."
-    
+
     def _generate_neural_insight_ml(self, concepts: List[str], sentiment: Dict) -> str:
-        """Generate neural network insight using ML pattern recognition (not random sentences)"""
         if not concepts:
             return "Neural analysis suggests exploring the pattern relationships within this context."
-        
-        # Deterministic insight generation based on concept analysis
         primary_concept = concepts[0] if concepts else "concept"
-        sentiment_polarity = "positive" if sentiment['compound'] > 0 else "neutral" if sentiment['compound'] == 0 else "analytical"
-        
+        sentiment_polarity = "positive" if (isinstance(sentiment, dict) and sentiment.get('compound', 0) > 0) else "neutral" if (isinstance(sentiment, dict) and sentiment.get('compound', 0) == 0) else "analytical"
         return f"Pattern recognition analysis of '{primary_concept}' reveals {sentiment_polarity} associations across multiple domains. Neural networks suggest systematic exploration through interconnected relationships."
-    
+
     def _generate_logical_response_ml(self, concepts: List[str], sentiment: Dict) -> str:
-        """Generate logical analysis using deterministic reasoning (not random templates)"""
         if not concepts:
             return "Logical analysis requires structured evaluation of cause-effect relationships."
-        
-        # Deterministic logical structure
         primary_concept = concepts[0]
         return f"Structured analysis shows that '{primary_concept}' follows deterministic principles. Cause-effect mapping suggests systematic approach yields optimal outcomes."
-    
+
     def _generate_creative_response_ml(self, concepts: List[str], sentiment: Dict) -> str:
-        """Generate creative insight using ML creativity engine (not random metaphors)"""
         if not concepts:
             return "Creative synthesis reveals novel connections emerging from conceptual intersections."
-        
-        # Deterministic creative pattern
         primary_concept = concepts[0]
         return f"Creative synthesis transforms '{primary_concept}' through multi-dimensional perspective shifts. Emergent patterns suggest innovative approaches through systematic exploration."
-    
+
     def _generate_technical_insight_ml(self, concepts: List[str], sentiment: Dict) -> str:
-        """Generate technical insight using ML analysis (not random)"""
         if not concepts:
             return "Technical analysis requires precise parameter identification and systematic adjustment."
-        
-        # Deterministic technical guidance
         primary_concept = concepts[0]
         return f"Technical analysis of '{primary_concept}' indicates specific parameter optimization opportunities. Systematic calibration yields measurable improvements."
 
-    def analyze_sentiment(self, text):
-        """ML-powered sentiment analysis (VADER)"""
+    def analyze_sentiment(self, text: str) -> Dict[str, float]:
         score = self.analyzer.polarity_scores(text)
-        self.audit_log(f"Sentiment analysis: {score}")
+        try:
+            self.audit_log(f"Sentiment analysis: {score}")
+        except Exception:
+            logger.debug("audit_log unavailable during sentiment analysis")
         return score
 
-    def extract_key_concepts(self, text):
-        """ML-powered concept extraction using NLP"""
+    def extract_key_concepts(self, text: str) -> List[str]:
         try:
             tokens = word_tokenize(text.lower())
-            # Filter for meaningful concepts (length > 2, not stopwords)
             concepts = [token for token in tokens if len(token) > 2 and token.isalpha()]
-            return list(set(concepts[:5]))  # Top 5 unique concepts
+            return list(dict.fromkeys(concepts))[:5]
         except Exception as e:
             logger.warning(f"Could not extract concepts: {e}")
-            # Fallback: simple split
             return [w for w in text.lower().split() if len(w) > 2][:5]
 
-    def audit_log(self, message, system=False):
+    def audit_log(self, message: str, system: bool = False) -> None:
         source = "SYSTEM" if system else self.user_name
-        logging.info(f"{source}: {message}")
-    
+        logger.info(f"{source}: {message}")
+
     def _initialize_supabase(self):
-        """Initialize Supabase client if credentials available"""
         try:
             from supabase import create_client, Client
-            
-            # Check all possible environment variable names
             supabase_url = (
                 os.environ.get('VITE_SUPABASE_URL') or
                 os.environ.get('SUPABASE_URL') or
@@ -270,7 +214,6 @@ class Codette:
                 os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or
                 os.environ.get('NEXT_PUBLIC_SUPABASE_ANON_KEY')
             )
-            
             if supabase_url and supabase_key:
                 client = create_client(supabase_url, supabase_key)
                 logger.info("✅ Supabase client initialized")
@@ -281,12 +224,10 @@ class Codette:
         except Exception as e:
             logger.warning(f"⚠️  Could not initialize Supabase: {e}")
             return None
-    
-    def save_conversation_to_db(self, user_message: str, codette_response: str):
-        """Save conversation to Supabase (if available)"""
+
+    def save_conversation_to_db(self, user_message: str, codette_response: str) -> None:
         if not self.supabase_client:
             return
-        
         try:
             data = {
                 "user_message": user_message,
@@ -294,29 +235,15 @@ class Codette:
                 "timestamp": datetime.now().isoformat(),
                 "user_name": self.user_name
             }
-            
             self.supabase_client.table('chat_history').insert(data).execute()
             logger.debug("Conversation saved to Supabase")
         except Exception as e:
             logger.debug(f"Could not save conversation: {e}")
-    
-    # ============================================================================
-    # METHODS FOR SERVER INTEGRATION (from codette_advanced.py)
-    # ============================================================================
-    
+
     async def generate_response(self, query: str, user_id: int = 0, daw_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Generate response with async support for server integration
-        This method is called by codette_server_unified.py
-        """
         try:
-            # Generate base response
             response_text = self.respond(query)
-            
-            # Analyze sentiment
             sentiment = self.analyze_sentiment(query)
-            
-            # Build result dict
             result = {
                 "response": response_text,
                 "sentiment": sentiment,
@@ -327,13 +254,9 @@ class Codette:
                 "security_filtered": True,
                 "health_status": "healthy"
             }
-            
-            # Add DAW context if provided
             if daw_context:
                 result["daw_context"] = daw_context
-            
             return result
-            
         except Exception as e:
             logger.error(f"Response generation failed: {e}")
             return {
@@ -342,22 +265,14 @@ class Codette:
                 "fallback": True,
                 "timestamp": datetime.now().isoformat()
             }
-    
+
     def generate_mixing_suggestions(self, track_type: str, track_info: dict) -> List[str]:
-        """
-        Generate mixing suggestions for a specific track
-        Called by server endpoints for track-specific advice
-        """
         suggestions = []
-        
-        # Peak level suggestions
         peak_level = track_info.get('peak_level', 0)
         if peak_level > -3:
             suggestions.append("Reduce level to prevent clipping (aim for -6dB peak)")
         elif peak_level < -20:
             suggestions.append("Increase level - track is very quiet (aim for -12dB to -6dB)")
-        
-        # Track type specific suggestions
         if track_type == 'audio':
             suggestions.append("Apply high-pass filter at 80-100Hz to remove rumble")
             suggestions.append("Check for phase issues if recording in stereo")
@@ -369,59 +284,38 @@ class Codette:
         elif track_type == 'midi':
             suggestions.append("Adjust velocity curves for natural dynamics")
             suggestions.append("Layer with EQ and compression for polish")
-        
-        # Mute/solo status
         if track_info.get('muted'):
             suggestions.append("⚠️ Track is muted - unmute to hear in mix")
         if track_info.get('soloed'):
             suggestions.append("ℹ️ Track is soloed - unsolo to hear full mix context")
-        
-        return suggestions[:4]  # Return top 4 suggestions
-    
-    def analyze_daw_context(self, daw_context: dict) -> dict:
-        """
-        Analyze DAW project context and provide insights
-        Called by server when analyzing full project
-        """
-        tracks = daw_context.get('tracks', [])
-        
+        return suggestions[:4]
+
+    def analyze_daw_context(self, daw_context: dict) -> Dict[str, Any]:
+        tracks = daw_context.get('tracks', []) if isinstance(daw_context, dict) else []
         analysis = {
             'track_count': len(tracks),
             'recommendations': [],
             'potential_issues': [],
             'session_health': 'good'
         }
-        
-        # Check track count
         if analysis['track_count'] > 64:
             analysis['potential_issues'].append("High track count (>64) may impact CPU performance")
             analysis['session_health'] = 'warning'
-        elif analysis['track_count'] > 100:
+        if analysis['track_count'] > 100:
             analysis['potential_issues'].append("Very high track count (>100) - consider bouncing to audio")
             analysis['session_health'] = 'critical'
-        
-        # Check for muted tracks
         muted_count = len([t for t in tracks if t.get('muted', False)])
-        if muted_count > len(tracks) * 0.3:
+        if muted_count > len(tracks) * 0.3 and len(tracks) > 0:
             analysis['potential_issues'].append(f"{muted_count} muted tracks - consider archiving unused content")
-        
-        # General recommendations
         analysis['recommendations'].append("Use color coding for track organization")
         analysis['recommendations'].append("Create buses for grouped processing (drums, vocals, etc)")
         analysis['recommendations'].append("Leave 6dB headroom on master for mastering")
-        
-        # BPM-specific
-        bpm = daw_context.get('bpm', 120)
+        bpm = daw_context.get('bpm', 120) if isinstance(daw_context, dict) else 120
         if bpm:
             analysis['recommendations'].append(f"Current BPM: {bpm} - sync delay times to tempo for musical results")
-        
         return analysis
-    
+
     def get_personality_prefix(self) -> str:
-        """
-        Get personality-based response prefix
-        Used for tone adjustment in responses
-        """
         prefixes = {
             'technical_expert': '[Technical Expert]',
             'creative_mentor': '[Creative Mentor]',

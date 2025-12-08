@@ -2,13 +2,17 @@ import psutil
 import asyncio
 import time
 import logging
-import numpy as np
 from collections import deque
 from threading import Lock
 from typing import Dict, List, Optional
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 class HealthMonitor:
     """Real-time system diagnostics with quantum-aware anomaly detection"""
@@ -27,11 +31,18 @@ class HealthMonitor:
         try:
             # Get initial status to establish baseline
             initial_status = await self.check_status_async()
-            self.baseline = np.array([
-                initial_status["memory"],
-                initial_status["cpu"],
-                initial_status["response_time"]
-            ])
+            if np is not None:
+                self.baseline = np.array([
+                    initial_status["memory"],
+                    initial_status["cpu"],
+                    initial_status["response_time"]
+                ])
+            else:
+                self.baseline = [
+                    initial_status["memory"],
+                    initial_status["cpu"],
+                    initial_status["response_time"]
+                ]
             self.initialized = True
             logger.info("Health monitor initialized successfully")
             return True
@@ -160,21 +171,39 @@ class HealthMonitor:
                 return 0.0
                 
             # Extract recent metrics
-            recent_data = np.array([
-                [m["memory"], m["cpu"], m["response_time"]]
-                for m in list(self.metrics)[-10:]
-            ])
+            if np is not None:
+                recent_data = np.array([
+                    [m["memory"], m["cpu"], m["response_time"]]
+                    for m in list(self.metrics)[-10:]
+                ])
+            else:
+                recent_data = [
+                    [m["memory"], m["cpu"], m["response_time"]]
+                    for m in list(self.metrics)[-10:]
+                ]
             
             if self.baseline is None:
-                self.baseline = np.mean(recent_data, axis=0)
+                if np is not None:
+                    self.baseline = np.mean(recent_data, axis=0)
+                else:
+                    # Compute simple mean per column
+                    cols = list(zip(*recent_data))
+                    self.baseline = [sum(c)/len(c) for c in cols]
                 return 0.0
                 
-            # Calculate deviation from baseline
-            deviations = np.abs(recent_data - self.baseline)
-            max_deviation = np.max(deviations)
-            
-            # Update baseline with moving average
-            self.baseline = 0.9 * self.baseline + 0.1 * np.mean(recent_data, axis=0)
+            if np is not None:
+                deviations = np.abs(recent_data - self.baseline)
+                max_deviation = float(np.max(deviations))
+                
+                # Update baseline with moving average
+                self.baseline = 0.9 * self.baseline + 0.1 * np.mean(recent_data, axis=0)
+            else:
+                deviations = [[abs(a - b) for a,b in zip(row, self.baseline)] for row in recent_data]
+                max_deviation = float(max(max(row) for row in deviations))
+                # Update baseline (python moving average)
+                cols = list(zip(*recent_data))
+                means = [sum(c)/len(c) for c in cols]
+                self.baseline = [0.9*b + 0.1*m for b,m in zip(self.baseline, means)]
             
             # Normalize anomaly score to [0,1]
             return min(1.0, max_deviation / 100.0)
@@ -190,9 +219,14 @@ class HealthMonitor:
                 return {"status": "initializing"}
                 
             recent_metrics = list(self.metrics)[-10:]
-            avg_memory = np.mean([m["memory"] for m in recent_metrics])
-            avg_cpu = np.mean([m["cpu"] for m in recent_metrics])
-            avg_latency = np.mean([m["response_time"] for m in recent_metrics])
+            if np is not None:
+                avg_memory = float(np.mean([m["memory"] for m in recent_metrics]))
+                avg_cpu = float(np.mean([m["cpu"] for m in recent_metrics]))
+                avg_latency = float(np.mean([m["response_time"] for m in recent_metrics]))
+            else:
+                avg_memory = float(sum(m["memory"] for m in recent_metrics)/len(recent_metrics))
+                avg_cpu = float(sum(m["cpu"] for m in recent_metrics)/len(recent_metrics))
+                avg_latency = float(sum(m["response_time"] for m in recent_metrics)/len(recent_metrics))
             
             return {
                 "status": "healthy" if avg_memory < 80 and avg_cpu < 80 else "stressed",

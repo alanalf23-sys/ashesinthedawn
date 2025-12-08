@@ -5,10 +5,14 @@ Ensures ethical behavior and decision-making in AI systems
 
 import logging
 from typing import Dict, List, Any, Optional
-import numpy as np
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 class EthicalAIGovernance:
     """Manages ethical governance and decision-making"""
@@ -172,10 +176,13 @@ class EthicalAIGovernance:
                 compliance_results.append(result)
                 
             # Calculate overall compliance
-            overall_compliance = np.mean([
-                r["compliance_score"]
-                for r in compliance_results
-            ])
+            if np is not None:
+                overall_compliance = float(np.mean([
+                    r["compliance_score"]
+                    for r in compliance_results
+                ]))
+            else:
+                overall_compliance = float(sum(r["compliance_score"] for r in compliance_results)/len(compliance_results)) if compliance_results else 0.0
             
             return {
                 "status": "compliant" if overall_compliance >= self.ethics_threshold else "non_compliant",
@@ -305,10 +312,14 @@ class EthicalAIGovernance:
             features = self._extract_ethical_features(context)
             
             # Calculate impact
-            impact = np.mean([
-                self._evaluate_feature_impact(feature)
-                for feature in features.values()
-            ])
+            if np is not None:
+                impact = float(np.mean([
+                    self._evaluate_feature_impact(feature)
+                    for feature in features.values()
+                ]))
+            else:
+                vals = [self._evaluate_feature_impact(feature) for feature in features.values()]
+                impact = float(sum(vals)/len(vals)) if vals else 0.0
             
             return {
                 "impact": impact,
@@ -352,7 +363,7 @@ class EthicalAIGovernance:
             # Calculate compliance score
             compliance_score = np.mean([
                 r["score"] for r in criteria_results
-            ])
+            ]) if np is not None else sum(r["score"] for r in criteria_results) / len(criteria_results) if criteria_results else 0.0
             
             return {
                 "policy_name": policy["name"],
@@ -412,10 +423,16 @@ class EthicalAIGovernance:
                     concerns.append(f"Low {principle} score: {score:.2f}")
                     
             # Calculate overall score
-            overall_score = np.average(
-                list(scores.values()),
-                weights=[d["weight"] for d in self.ethical_principles.values()]
-            )
+            if np is not None:
+                overall_score = float(np.average(
+                    list(scores.values()),
+                    weights=[d["weight"] for d in self.ethical_principles.values()]
+                ))
+            else:
+                vals = list(scores.values())
+                weights = [d["weight"] for d in self.ethical_principles.values()]
+                total_w = sum(weights)
+                overall_score = float(sum(v*w for v,w in zip(vals, weights))/total_w) if total_w else 0.0
             
             return {
                 "score": overall_score,
@@ -547,7 +564,7 @@ class EthicalAIGovernance:
                 
             # Calculate based on score consistency
             values = list(scores.values())
-            consistency = 1.0 - np.std(values)
+            consistency = 1.0 - np.std(values) if np is not None else 1.0 - sum((x - (sum(values)/len(values))) ** 2 for x in values) / len(values) if values else 0.0
             coverage = len(scores) / len(self.ethical_principles)
             
             return min(1.0, (consistency + coverage) / 2)

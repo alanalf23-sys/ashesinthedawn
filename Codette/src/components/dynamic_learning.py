@@ -5,10 +5,14 @@ Handles real-time learning and adaptation of the AI system
 
 import logging
 from typing import Dict, List, Any, Optional
-import numpy as np
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 class DynamicLearner:
     """Handles dynamic learning and adaptation for Codette"""
@@ -106,7 +110,10 @@ class DynamicLearner:
                 similarity = self._calculate_similarity(memory['data'], data)
                 similarities.append(similarity)
                 
-            avg_similarity = np.mean(similarities) if similarities else 0.0
+            if np is not None:
+                avg_similarity = float(np.mean(similarities)) if similarities else 0.0
+            else:
+                avg_similarity = float(sum(similarities)/len(similarities)) if similarities else 0.0
             return 1.0 - avg_similarity
             
         except Exception as e:
@@ -127,7 +134,9 @@ class DynamicLearner:
                 score = self._check_data_consistency(memory['data'], data)
                 consistency_scores.append(score)
                 
-            return np.mean(consistency_scores) if consistency_scores else 1.0
+            if np is not None:
+                return float(np.mean(consistency_scores)) if consistency_scores else 1.0
+            return float(sum(consistency_scores)/len(consistency_scores)) if consistency_scores else 1.0
             
         except Exception as e:
             logger.error(f"Error checking consistency: {e}")
@@ -192,10 +201,13 @@ class DynamicLearner:
         """Update internal state based on adaptation score"""
         try:
             # Update performance metric
-            self.current_state["performance"] = np.mean([
-                self.current_state["performance"],
-                adaptation_score
-            ])
+            if np is not None:
+                self.current_state["performance"] = float(np.mean([
+                    self.current_state["performance"],
+                    adaptation_score
+                ]))
+            else:
+                self.current_state["performance"] = float((self.current_state["performance"] + adaptation_score)/2)
             
             # Update adaptability
             if adaptation_score > self.adaptation_threshold:
@@ -210,10 +222,13 @@ class DynamicLearner:
                 )
                 
             # Update complexity
-            self.current_state["complexity"] = np.mean([
-                self.current_state["complexity"],
-                1.0 - adaptation_score
-            ])
+            if np is not None:
+                self.current_state["complexity"] = float(np.mean([
+                    self.current_state["complexity"],
+                    1.0 - adaptation_score
+                ]))
+            else:
+                self.current_state["complexity"] = float((self.current_state["complexity"] + (1.0 - adaptation_score))/2)
             
         except Exception as e:
             logger.error(f"Error updating state: {e}")

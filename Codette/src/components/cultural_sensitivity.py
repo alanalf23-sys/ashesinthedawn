@@ -5,10 +5,14 @@ Ensures AI responses are culturally appropriate and inclusive
 
 import logging
 from typing import Dict, List, Any, Optional
-import numpy as np
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 class CulturalSensitivityEngine:
     """Manages cultural sensitivity analysis and adaptation"""
@@ -163,18 +167,18 @@ class CulturalSensitivityEngine:
             )
             
             # Calculate overall score
-            overall_score = np.mean([
-                respect_score["score"],
-                inclusion_score["score"],
-                sensitivity_score["score"]
-            ])
+            scores = [respect_score["score"], inclusion_score["score"], sensitivity_score["score"]]
+            if np is not None:
+                overall_score = float(np.mean(scores))
+            else:
+                overall_score = float(sum(scores)/len(scores))
             
             # Calculate confidence
-            confidence = np.mean([
-                respect_score["confidence"],
-                inclusion_score["confidence"],
-                sensitivity_score["confidence"]
-            ])
+            confs = [respect_score["confidence"], inclusion_score["confidence"], sensitivity_score["confidence"]]
+            if np is not None:
+                confidence = float(np.mean(confs))
+            else:
+                confidence = float(sum(confs)/len(confs))
             
             return {
                 "overall_score": overall_score,
@@ -412,10 +416,14 @@ class CulturalSensitivityEngine:
                 self.sensitivity_memory = self.sensitivity_memory[-self.max_memory:]
                 
             # Update current state
-            self.current_state["sensitivity_level"] = np.mean([
-                m["analysis"]["overall_score"]
-                for m in self.sensitivity_memory[-10:]
-            ])
+            if np is not None:
+                self.current_state["sensitivity_level"] = float(np.mean([
+                    m["analysis"]["overall_score"]
+                    for m in self.sensitivity_memory[-10:]
+                ]))
+            else:
+                vals = [m["analysis"]["overall_score"] for m in self.sensitivity_memory[-10:]]
+                self.current_state["sensitivity_level"] = float(sum(vals)/len(vals)) if vals else 0.0
             
         except Exception as e:
             logger.error(f"Error updating memory: {e}")

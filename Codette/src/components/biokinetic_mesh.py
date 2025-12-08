@@ -3,8 +3,16 @@ Biokinetic Neural Mesh - A biomimetic neural routing system
 Combines biological neural patterns with kinetic state processing for ultra-fast routing
 """
 
-import numpy as np
-import torch
+try:
+    import numpy as np
+except Exception:
+    np = None
+
+try:
+    import torch
+except Exception:
+    torch = None
+
 from typing import Dict, List, Tuple, Optional, Set, Any
 from dataclasses import dataclass
 import logging
@@ -20,7 +28,7 @@ class SynapticNode:
     id: str
     energy: float = 1.0
     connections: Dict[str, float] = None
-    activation_pattern: np.ndarray = None
+    activation_pattern: 'np.ndarray' = None
     kinetic_state: float = 0.0
     
     def __post_init__(self):
@@ -57,12 +65,21 @@ class BioKineticMesh:
         self.perspective_resonance = perspective_resonance
         
         # Kinetic state tensors
-        self.kinetic_matrix = torch.zeros((initial_nodes, initial_nodes))
-        self.energy_gradients = torch.zeros(initial_nodes)
+        if torch is not None:
+            self.kinetic_matrix = torch.zeros((initial_nodes, initial_nodes))
+            self.energy_gradients = torch.zeros(initial_nodes)
+        else:
+            self.kinetic_matrix = None
+            self.energy_gradients = [0.0] * initial_nodes
         
         # Pattern recognition layers
-        self.pattern_embeddings = np.random.rand(initial_nodes, 128)
-        self.activation_history: List[np.ndarray] = []
+        if np is not None:
+            self.pattern_embeddings = np.random.rand(initial_nodes, 128)
+        else:
+            self.pattern_embeddings = [[0.0]*128 for _ in range(initial_nodes)]
+        
+        # Activation history
+        self.activation_history: List['np.ndarray'] = []
         
         # Integration components
         self.quantum_resonance: Dict[str, float] = {}  # Quantum state influence
@@ -70,7 +87,11 @@ class BioKineticMesh:
         self.active_pathways: Set[Tuple[str, str]] = set()  # Currently active neural pathways
         
         # Initialize mesh
-        self._initialize_mesh(initial_nodes)
+        # Initialize mesh
+        try:
+            self._initialize_mesh(initial_nodes)
+        except Exception as e:
+            logger.warning(f"Failed to fully initialize mesh: {e}")
         
     def _initialize_mesh(self, node_count: int):
         """Initialize the biokinetic mesh with initial nodes"""
@@ -106,16 +127,19 @@ class BioKineticMesh:
         # Convert input to energy pattern
         energy_pattern = self._compute_energy_pattern(input_pattern)
         
-        # Fast parallel activation
-        activations = torch.tensor([
-            self._compute_node_activation(node, energy_pattern, context)
-            for node in self.nodes.values()
-        ])
-        
+        # Fast activation: fall back to python loop if torch missing
+        activations = []
+        for node in self.nodes.values():
+            try:
+                act = self._compute_node_activation(node, energy_pattern, context)
+            except Exception:
+                act = 0.0
+            activations.append(act)
+
         # Find highest energy path
-        max_idx = torch.argmax(activations).item()
+        max_idx = int(max(range(len(activations)), key=lambda i: activations[i]))
         node_id = list(self.nodes.keys())[max_idx]
-        confidence = activations[max_idx].item()
+        confidence = float(activations[max_idx])
         
         # Update kinetic state
         self._update_kinetic_state(node_id, confidence)
@@ -125,27 +149,42 @@ class BioKineticMesh:
     def _compute_energy_pattern(self, input_pattern: np.ndarray) -> torch.Tensor:
         """Convert input pattern to energy distribution"""
         # Normalize input
-        input_norm = input_pattern / np.linalg.norm(input_pattern)
-        
-        # Create energy tensor
-        energy = torch.from_numpy(input_norm).float()
-        
-        # Apply kinetic transformation
-        energy = self._apply_kinetic_transform(energy)
-        
-        return energy
+        if np is not None:
+            input_norm = input_pattern / (np.linalg.norm(input_pattern) + 1e-12)
+        else:
+            # Simple python normalization
+            mag = sum(x*x for x in input_pattern) ** 0.5
+            input_norm = [x / (mag + 1e-12) for x in input_pattern]
+
+        # Create energy tensor if torch available
+        if torch is not None and np is not None:
+            energy = torch.from_numpy(input_norm).float()
+            energy = self._apply_kinetic_transform(energy)
+            return energy
+        else:
+            return input_norm
 
     def _compute_node_activation(self, 
                                node: SynapticNode, 
                                energy_pattern: torch.Tensor,
                                context: Optional[Dict]) -> float:
         """Compute node activation based on energy pattern and context"""
-        # Base activation from pattern match
-        base_activation = torch.cosine_similarity(
-            energy_pattern,
-            torch.from_numpy(node.activation_pattern).float().unsqueeze(0),
-            dim=1
-        )
+        # Base activation from pattern match (torch optional)
+        if torch is not None:
+            base_activation = torch.cosine_similarity(
+                energy_pattern,
+                torch.from_numpy(node.activation_pattern).float().unsqueeze(0),
+                dim=1
+            )
+            base_val = base_activation.item()
+        else:
+            # fallback cosine similarity
+            a = energy_pattern if isinstance(energy_pattern, (list, tuple)) else energy_pattern.tolist()
+            b = node.activation_pattern.tolist() if hasattr(node.activation_pattern, 'tolist') else list(node.activation_pattern)
+            dot = sum(x*y for x,y in zip(a,b))
+            norm_a = sum(x*x for x in a) ** 0.5
+            norm_b = sum(x*x for x in b) ** 0.5
+            base_val = dot / (norm_a * norm_b + 1e-12)
         
         # Apply kinetic state
         kinetic_boost = node.kinetic_state * self.learning_rate
@@ -154,27 +193,45 @@ class BioKineticMesh:
         context_factor = 1.0
         if context:
             context_pattern = self._context_to_pattern(context)
-            context_match = torch.cosine_similarity(
-                torch.from_numpy(context_pattern).float().unsqueeze(0),
-                torch.from_numpy(node.activation_pattern).float().unsqueeze(0),
-                dim=1
-            )
-            context_factor = 1.0 + (context_match.item() * 0.5)
+            if torch is not None:
+                context_match = torch.cosine_similarity(
+                    torch.from_numpy(context_pattern).float().unsqueeze(0),
+                    torch.from_numpy(node.activation_pattern).float().unsqueeze(0),
+                    dim=1
+                )
+                context_factor = 1.0 + (context_match.item() * 0.5)
+            else:
+                # simple fallback dot match
+                a = context_pattern
+                b = node.activation_pattern.tolist() if hasattr(node.activation_pattern, 'tolist') else list(node.activation_pattern)
+                dot = sum(x*y for x,y in zip(a,b))
+                norm_a = sum(x*x for x in a) ** 0.5
+                norm_b = sum(x*x for x in b) ** 0.5
+                match = dot / (norm_a * norm_b + 1e-12)
+                context_factor = 1.0 + (match * 0.5)
         
-        return (base_activation.item() + kinetic_boost) * context_factor
+        return (base_val + kinetic_boost) * context_factor
 
     def _apply_kinetic_transform(self, energy: torch.Tensor) -> torch.Tensor:
         """Apply kinetic transformation to energy pattern"""
-        # Create momentum factor
-        momentum = torch.sigmoid(self.energy_gradients.mean())
-        
-        # Apply momentum to energy
-        energy = energy * (1.0 + momentum)
-        
-        # Normalize
-        energy = energy / energy.norm()
-        
-        return energy
+        if torch is not None:
+            # Create momentum factor
+            momentum = torch.sigmoid(self.energy_gradients.mean())
+            
+            # Apply momentum to energy
+            energy = energy * (1.0 + momentum)
+            
+            # Normalize
+            energy = energy / energy.norm()
+            
+            return energy
+        else:
+            mean_grad = sum(self.energy_gradients)/len(self.energy_gradients) if self.energy_gradients else 0.0
+            momentum = 1.0 / (1.0 + (2.718281828 ** (-mean_grad)))
+            energy = [e * (1.0 + momentum) for e in energy]
+            mag = sum(x*x for x in energy) ** 0.5
+            energy = [x / (mag + 1e-12) for x in energy]
+            return energy
 
     def _update_kinetic_state(self, node_id: str, activation: float):
         """Update kinetic state of the network"""
@@ -193,7 +250,10 @@ class BioKineticMesh:
     def _context_to_pattern(self, context: Dict) -> np.ndarray:
         """Convert context dictionary to pattern vector"""
         # Create empty pattern
-        pattern = np.zeros(128)
+        if np is not None:
+            pattern = np.zeros(128)
+        else:
+            pattern = [0.0]*128
         
         # Add context influences
         if "mode" in context:
@@ -206,7 +266,11 @@ class BioKineticMesh:
             pattern *= (1.0 + priority_factor)
             
         # Normalize
-        pattern = pattern / (np.linalg.norm(pattern) + 1e-8)
+        if np is not None:
+            pattern = pattern / (np.linalg.norm(pattern) + 1e-8)
+        else:
+            mag = sum(x*x for x in pattern) ** 0.5
+            pattern = [x / (mag + 1e-8) for x in pattern]
         
         return pattern
 

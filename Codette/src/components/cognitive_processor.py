@@ -3,7 +3,10 @@ Simplified cognitive processor for Codette
 """
 
 from typing import List, Dict, Any, Optional
-import numpy as np
+try:
+    import numpy as np
+except Exception:
+    np = None
 from datetime import datetime
 
 class CognitiveProcessor:

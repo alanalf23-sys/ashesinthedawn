@@ -7,7 +7,10 @@
   "properties": {
     "action": {
       "type": "string",
-      "enum": ["load", "save"],
+      "enum": [
+        "load",
+        "save"
+      ],
       "description": "Action to perform: 'load' or 'save'."
     },
     "path": {
@@ -15,21 +18,36 @@
       "description": "Path to the project.json file. Optional for load when default path is used."
     },
     "router": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "description": "Serialized router object, containing track and routing info (required for save).",
       "additionalProperties": true
     },
     "meta": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "description": "Project metadata such as name and bpm (required for save).",
       "additionalProperties": true
     }
   },
-  "required": ["action"],
+  "required": [
+    "action"
+  ],
   "if": {
-    "properties": { "action": { "const": "save" } }
+    "properties": {
+      "action": {
+        "const": "save"
+      }
+    }
   },
   "then": {
-    "required": ["router", "meta"]
+    "required": [
+      "router",
+      "meta"
+    ]
   }
 }
