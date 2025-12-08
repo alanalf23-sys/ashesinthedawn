@@ -1,9 +1,11 @@
-// Environment typings to allow import.meta.env in TypeScript when using Vite
+/// <reference types="vite/client" />
+
 interface ImportMetaEnv {
   readonly VITE_CODETTE_API?: string;
-  readonly VITE_API_BASE_URL?: string;
-  readonly DEV?: boolean;
-  // add other env vars as needed
+  readonly VITE_SUPABASE_URL?: string;
+  readonly VITE_SUPABASE_ANON_KEY?: string;
+  // add other VITE_* env vars as needed
+  readonly [key: string]: string | undefined;
 }
 
 interface ImportMeta {

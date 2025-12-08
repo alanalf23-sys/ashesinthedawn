@@ -1,4 +1,4 @@
-import { Track } from "../types";
+import { Track } from "../types/index";
 
 /**
  * Audio Engine - Handles Web Audio API playback, recording, and mixing
@@ -1121,6 +1121,16 @@ export class AudioEngine {
       offset += 2;
     }
 
+    return buffer;
+  }
+
+  /**
+   * Get decoded AudioBuffer for a track
+   * Returns null if no buffer is loaded for the track
+   */
+  async getTrackBuffer(trackId: string): Promise<AudioBuffer | null> {
+    if (!this.audioContext) await this.initialize();
+    const buffer = this.audioBuffers.get(trackId) ?? null;
     return buffer;
   }
 

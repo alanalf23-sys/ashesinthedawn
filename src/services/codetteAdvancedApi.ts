@@ -3,8 +3,10 @@
  * Service layer for 5 advanced music production features
  */
 
-// Local API base (avoid import.meta to be safe for TypeScript build)
-const API_BASE_URL = 'http://localhost:8000';
+// Read API base from globalThis or fallback URL to avoid import.meta parsing issues
+const API_BASE_URL = (globalThis as any)?.VITE_CODETTE_API || 'http://localhost:8000';
+
+import codetteApi from '@/lib/codetteApi';
 
 // TypeScript Interfaces
 
@@ -109,16 +111,11 @@ export async function detectGenre(
   projectName?: string
 ): Promise<GenreDetectionResult> {
   try {
-    const resp = await fetch(`${API_BASE_URL}/api/analysis/detect-genre`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bpm, tracks: tracks || [], project_name: projectName || '' }),
-    });
-    if (!resp.ok) throw new Error(resp.statusText);
-    const data = await resp.json();
+    // Try backend first via shared codetteApi client
+    const data = await codetteApi.detectGenre({ bpm, timeSignature: '4/4', trackCount: (tracks || []).length, keySignature: '' });
 
-    const genre = (data.detected_genre || data.genre || 'Unknown') as string;
-    const confidence = typeof data.confidence === 'number' ? data.confidence : (data.confidence ?? 0.5);
+    const genre = (data.detected_genre || 'Unknown') as string;
+    const confidence = typeof data.confidence === 'number' ? data.confidence : 0.5;
     const bpmRange = (data.bpm_range as [number, number]) || [Math.max(1, bpm - 10), bpm + 10];
 
     return {
@@ -127,14 +124,16 @@ export async function detectGenre(
       genre_id: genre.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
       confidence,
       bpm_range: bpmRange,
-      characteristics: data.instrumentation || data.characteristics || [],
-      candidates: (data.candidates || []).map((c: any) => ({
-        genre: c.genre || c.detected_genre || genre,
-        genre_id: (c.genre || genre).toLowerCase().replace(/[^a-z0-9]+/g, '_'),
-        confidence: typeof c.confidence === 'number' ? c.confidence : 0.5,
-        bpm_range: c.bpm_range || bpmRange,
-        characteristics: c.characteristics || [],
-      })),
+      characteristics: data.instrumentation || [],
+      candidates: [
+        {
+          genre,
+          genre_id: genre.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+          confidence,
+          bpm_range: bpmRange,
+          characteristics: data.instrumentation || [],
+        },
+      ],
       input: {
         bpm,
         track_count: (tracks || []).length,
@@ -144,12 +143,15 @@ export async function detectGenre(
   } catch (error) {
     console.error('[CodetteAdvancedAPI] detectGenre error:', error);
     // Fallback heuristic based on BPM
+    let candidates: GenreDetectionResult['candidates'] = [];
     let genre = 'Electronic';
     if (bpm < 80) genre = 'Ambient';
     else if (bpm < 100) genre = 'Hip Hop';
     else if (bpm < 120) genre = 'Pop';
     else if (bpm < 140) genre = 'House';
     else genre = 'Drum & Bass';
+
+    candidates.push({ genre, genre_id: genre.toLowerCase().replace(/[^a-z0-9]+/g, '_'), confidence: 0.5, bpm_range: [Math.max(1, bpm - 10), bpm + 10], characteristics: [] });
 
     return {
       success: false,
@@ -158,9 +160,7 @@ export async function detectGenre(
       confidence: 0.5,
       bpm_range: [Math.max(1, bpm - 10), bpm + 10],
       characteristics: [],
-      candidates: [
-        { genre, genre_id: genre.toLowerCase().replace(/[^a-z0-9]+/g, '_'), confidence: 0.5, bpm_range: [Math.max(1, bpm - 10), bpm + 10], characteristics: [] }
-      ],
+      candidates,
       input: { bpm, track_count: (tracks || []).length, project_name: projectName || '' },
     };
   }
@@ -173,23 +173,19 @@ export async function getProductionChecklist(
   stage: 'recording' | 'arrangement' | 'mixing' | 'mastering'
 ): Promise<ProductionChecklistResult> {
   try {
-    const resp = await fetch(`${API_BASE_URL}/api/analysis/production-checklist?stage=${stage}`);
-    if (!resp.ok) throw new Error(resp.statusText);
-    const json = await resp.json();
+    const data = await fetch(`${API_BASE_URL}/api/analysis/production-checklist?stage=${stage}`);
+    if (!data.ok) throw new Error(data.statusText);
+    const json = await data.json();
 
-    const sections = (json && (json as any).sections) || json || {};
+    // Map backend sections into flat items for our interface
+    const sections = json.sections || json;
     const items: ProductionChecklistItem[] = [];
     let idCounter = 1;
-    for (const key in sections) {
-      if (!Object.prototype.hasOwnProperty.call(sections, key)) continue;
-      const tasks = (sections as any)[key];
-      if (Array.isArray(tasks)) {
-        for (let i = 0; i < tasks.length; i++) {
-          const t = tasks[i];
-          items.push({ id: String(idCounter++), category: key, task: t, priority: 'medium', completed: false });
-        }
-      }
-    }
+    Object.entries(sections).forEach(([sectionName, tasks]: any) => {
+      (tasks as string[]).forEach((t: string) => {
+        items.push({ id: String(idCounter++), category: sectionName, task: t, priority: 'medium', completed: false });
+      });
+    });
 
     const total = items.length || 0;
     const highPriority = items.filter(i => i.priority === 'high').length;
@@ -204,6 +200,7 @@ export async function getProductionChecklist(
     };
   } catch (error) {
     console.error('[CodetteAdvancedAPI] getProductionChecklist error:', error);
+    // Fallback simple checklist
     const fallbackItems: ProductionChecklistItem[] = [
       { id: '1', category: 'Setup', task: 'Set BPM and project template', priority: 'high', completed: false },
       { id: '2', category: 'Recording', task: 'Check input levels', priority: 'high', completed: false },
@@ -228,9 +225,8 @@ export async function getInstrumentGuide(
   instrument: string
 ): Promise<InstrumentGuideResult> {
   try {
-    const resp = await fetch(`${API_BASE_URL}/api/analysis/instrument-info?category=${category}&instrument=${encodeURIComponent(instrument)}`);
-    if (!resp.ok) throw new Error(resp.statusText);
-    const info = await resp.json();
+    // Try shared client first
+    const info = await codetteApi.getInstrumentInfo(category, instrument);
     return {
       success: true,
       category: info.category || category,
@@ -264,21 +260,23 @@ export async function getEarTrainingExercise(
   difficulty: 'beginner' | 'intermediate' | 'advanced'
 ): Promise<EarTrainingResult> {
   try {
-    const resp = await fetch(`${API_BASE_URL}/api/analysis/ear-training?exercise_type=${exerciseType}&difficulty=${difficulty}`);
-    if (!resp.ok) throw new Error(resp.statusText);
-    const json = await resp.json();
-    const items: EarTrainingQuizItem[] = (json.intervals || []).map((it: any) => ({ name: it.name, semitones: it.semitones, example: it.visualization }));
+    const response = await fetch(`${API_BASE_URL}/api/analysis/ear-training?exercise_type=${exerciseType}&difficulty=${difficulty}`);
+    if (!response.ok) throw new Error(response.statusText);
+    const json = await response.json();
+
+    const items: EarTrainingQuizItem[] = (json.intervals || json.quiz_items || []).map((it: any) => ({ name: it.name, semitones: it.semitones, example: it.visualization }))
 
     return {
       success: true,
       exercise_type: (json.exercise_type as any) || exerciseType,
-      difficulty: (json as any).difficulty || difficulty,
+      difficulty: (json.difficulty as any) || difficulty,
       quiz_items: items,
-      instructions: (json as any).instructions || 'Listen and identify the interval.',
+      instructions: json.instructions || 'Listen and identify the interval.',
       total_exercises: items.length,
     };
   } catch (error) {
     console.error('[CodetteAdvancedAPI] getEarTrainingExercise error:', error);
+    // Fallback simple intervals
     const fallbackItems: EarTrainingQuizItem[] = [
       { name: 'Minor Third', semitones: 3, example: 'C ? Eb' },
       { name: 'Perfect Fifth', semitones: 7, example: 'C ? G' },
@@ -302,9 +300,11 @@ export async function calculateDelaySync(
   noteDivision: 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth' | 'dotted_quarter' | 'dotted_eighth' | 'triplet_quarter' | 'triplet_eighth'
 ): Promise<DelaySyncResult> {
   try {
-    const resp = await fetch(`${API_BASE_URL}/api/analysis/delay-sync?bpm=${bpm}`);
-    if (resp.ok) {
-      const table = await resp.json();
+    // Prefer backend full-table if available
+    const backend = await fetch(`${API_BASE_URL}/api/analysis/delay-sync?bpm=${bpm}`);
+    if (backend.ok) {
+      const table = await backend.json();
+      // Try to map incoming noteDivision to one of the table keys
       const keyMap: Record<string, string> = {
         whole: 'Whole Note',
         half: 'Half Note',
@@ -317,14 +317,14 @@ export async function calculateDelaySync(
         triplet_eighth: 'Triplet Eighth',
       };
       const name = keyMap[noteDivision] || noteDivision;
-      const delayMs = Number((table as any)[name] ?? (table as any)['Quarter Note'] ?? Math.round((60000 / bpm) * 100) / 100);
+      const delayMs = Number(table[name] ?? table['Quarter Note'] ?? Math.round((60000 / bpm) * 1 * 100) / 100);
       return {
         success: true,
         bpm,
         note_division: noteDivision,
         delay_ms: delayMs,
         delay_seconds: Math.round((delayMs / 1000) * 1000) / 1000,
-        beat_value: delayMs / (60000 / bpm),
+        beat_value: (delayMs / (60000 / bpm)),
         formula: `delay_ms = (60000 / bpm) * multiplier`,
         use_case: 'Tempo-synced delay for musical timing',
       };
@@ -333,6 +333,7 @@ export async function calculateDelaySync(
     // ignore and compute locally
   }
 
+  // Local calculation (reliable math)
   const divisionMap: Record<string, number> = {
     whole: 4,
     half: 2,
