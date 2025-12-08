@@ -178,6 +178,12 @@ export interface CacheMetrics {
   response_times: Record<string, number>;
 }
 
+export interface GenreDetectRequest {
+  bpm?: number;
+  tracks?: Array<{ name?: string; type?: string }>;
+  project_name?: string;
+}
+
 // ============================================================================
 // API CLIENT - Singleton Pattern
 // ============================================================================
@@ -344,50 +350,60 @@ class CodetteApiClient {
   }
 
   // =========================================================================
-  // TRANSPORT ENDPOINTS
+  // TRANSPORT & STATUS ENDPOINTS
   // =========================================================================
 
-  async transportPlay(): Promise<TransportCommandResponse> {
-    return this.request<TransportCommandResponse>('POST', '/transport/play');
+  /**
+   * The backend exposes transport state via the websocket status endpoint and
+   * via codette status routes. There are no dedicated REST transport control
+   * endpoints in the current backend. Expose methods to fetch transport state
+   * and websocket status so the frontend can use WS for control and poll if
+   * needed.
+   */
+  async getWebsocketStatus(): Promise<Record<string, any>> {
+    return this.request<Record<string, any>>('GET', '/ws/status');
   }
 
-  async transportStop(): Promise<TransportCommandResponse> {
-    return this.request<TransportCommandResponse>('POST', '/transport/stop');
+  async getCodetteStatus(): Promise<Record<string, any>> {
+    return this.request<Record<string, any>>('GET', '/codette/status');
   }
 
-  async transportPause(): Promise<TransportCommandResponse> {
-    return this.request<TransportCommandResponse>('POST', '/transport/pause');
+  async getHealthStatus(): Promise<Record<string, any>> {
+    return this.request<Record<string, any>>('GET', '/health');
   }
 
-  async transportResume(): Promise<TransportCommandResponse> {
-    return this.request<TransportCommandResponse>('POST', '/transport/resume');
+  // =========================================================================
+  // MIXING SUGGESTIONS
+  // =========================================================================
+
+  async getMixingSuggestions(payload: {
+    track_type: string;
+    audio_data?: number[] | null;
+    sample_rate?: number;
+    track_info: Record<string, any>;
+    context: Record<string, any>;
+  }): Promise<Record<string, any>> {
+    return this.request<Record<string, any>>('POST', '/codette/mixing-suggestions', payload);
   }
 
-  async transportSeek(seconds: number): Promise<TransportCommandResponse> {
-    return this.request<TransportCommandResponse>('GET', `/transport/seek?seconds=${seconds}`);
+  // =========================================================================
+  // GENRE & ANALYSIS ENDPOINTS
+  // =========================================================================
+
+  async detectGenre(request: GenreDetectRequest): Promise<Record<string, any>> {
+    return this.request<Record<string, any>>('POST', '/api/analysis/detect-genre', request);
   }
 
-  async transportSetTempo(bpm: number): Promise<TransportCommandResponse> {
-    return this.request<TransportCommandResponse>('POST', `/transport/tempo?bpm=${bpm}`);
+  async getFrequencyQuiz(difficulty: string = 'beginner'): Promise<Record<string, any>> {
+    return this.request<Record<string, any>>('GET', `/api/analysis/frequency-quiz?difficulty=${encodeURIComponent(difficulty)}`);
   }
 
-  async transportSetLoop(
-    enabled: boolean,
-    startSeconds: number = 0,
-    endSeconds: number = 10
-  ): Promise<TransportCommandResponse> {
-    return this.request<TransportCommandResponse>(
-      'POST',
-      `/transport/loop?enabled=${enabled}&start_seconds=${startSeconds}&end_seconds=${endSeconds}`
-    );
-  }
+  // =========================================================================
+  // MIX CREATION (Agent-driven)
+  // =========================================================================
 
-  async getTransportStatus(): Promise<TransportState> {
-    return this.request<TransportState>('GET', '/transport/status');
-  }
-
-  async getTransportMetrics(): Promise<Record<string, any>> {
-    return this.request<Record<string, any>>('GET', '/transport/metrics');
+  async createMixFromTracks(request: { track_identifiers: string[]; project_path?: string; options?: Record<string, any> }) {
+    return this.request<Record<string, any>>('POST', '/api/mixes/create_from_tracks', request);
   }
 
   // =========================================================================

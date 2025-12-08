@@ -385,6 +385,16 @@ async def query_openai_assistant(message: str, daw_context: Optional[Dict[str, A
     try:
         # Get or create thread for this user
         thread_id = await get_or_create_thread(user_id)
+
+        # If a run is currently active for this thread, avoid posting a new message
+        if _is_thread_run_active(thread_id):
+            logger.warning(f"[OpenAI Assistant] Thread {thread_id} has an active run; skipping message post and falling back to local engine")
+            return {
+                "response": None,
+                "source": "assistant_busy",
+                "confidence": 0.0,
+                "error": "Assistant thread busy with an active run"
+            }
         
         # Build context-aware message
         full_message = message
@@ -404,14 +414,28 @@ async def query_openai_assistant(message: str, daw_context: Optional[Dict[str, A
             
             full_message += context_str
         
-        # Add message to thread
+        # Add message to thread with safe error handling
         logger.info(f"[OpenAI Assistant] Adding message to thread {thread_id}")
-        openai_client.beta.threads.messages.create(
-            thread_id=thread_id,
-            role="user",
-            content=full_message
-        )
-        
+        try:
+            openai_client.beta.threads.messages.create(
+                thread_id=thread_id,
+                role="user",
+                content=full_message
+            )
+        except Exception as e:
+            # Detect specific invalid_request_error mentioning active run to fast-fail
+            msg = str(e)
+            if "Can't add messages to thread" in msg or "while a run" in msg:
+                logger.error(f"[OpenAI Assistant] Error posting message (thread busy): {e}")
+                return {
+                    "response": None,
+                    "source": "assistant_error",
+                    "confidence": 0.0,
+                    "error": f"Assistant thread busy: {e}"
+                }
+            # Unknown error - re-raise to outer handler which will fallback
+            raise
+
         # Build tools array (include intelligent mixing + advanced features)
         tools = []
         if INTELLIGENT_MIXING_AVAILABLE:
@@ -1160,6 +1184,20 @@ class GenreDetectRequest(BaseModel):
     tracks: Optional[List[Dict[str, Any]]] = None
     project_name: Optional[str] = None
 
+# New: Mix creation request model
+class MixCreateRequest(BaseModel):
+    track_identifiers: List[str]
+    project_path: Optional[str] = None
+    options: Optional[Dict[str, Any]] = None
+
+# New: Mixdown render request model
+class MixdownRenderRequest(BaseModel):
+    tracks: List[Dict[str, Any]]
+    sample_rate: Optional[int] = 44100
+    format: Optional[str] = "wav"
+    loop_start: Optional[float] = 0.0
+    loop_end: Optional[float] = None
+
 # ============================================================================
 # HEALTH & STATUS
 # ============================================================================
@@ -1213,6 +1251,12 @@ async def codette_chat(request: ChatRequest):
             source = openai_result["source"]
             confidence = openai_result["confidence"]
             logger.info(f"[Chat] ✅ OpenAI Assistant successful ({source}, {len(response)} chars)")
+
+            # Ingest exchange into Codette memory asynchronously (best-effort)
+            try:
+                asyncio.create_task(ingest_chat_to_codette(user_id=str(request.daw_context.get('user_id', 'default')) if request.daw_context else 'default', user_message=request.message, assistant_response=response, source=source))
+            except Exception as e:
+                logger.debug(f"Failed to schedule ingest task: {e}")
             
             return {
                 "response": response,
@@ -1235,7 +1279,13 @@ async def codette_chat(request: ChatRequest):
             source = codette_engine_type or "codette"
             confidence = 0.85  # Slightly lower than OpenAI
             logger.info(f"[Chat] ✅ Local Codette response ({source}, {len(response)} chars)")
-            
+
+            # Ingest local Codette exchange into Codette memory (if engine supports it)
+            try:
+                asyncio.create_task(ingest_chat_to_codette(user_id=str(request.daw_context.get('user_id', 'default')) if request.daw_context else 'default', user_message=request.message, assistant_response=response, source=source))
+            except Exception as e:
+                logger.debug(f"Failed to schedule ingest task for local codette: {e}")
+
             return {
                 "response": response,
                 "perspective": request.perspective,
@@ -1314,7 +1364,7 @@ async def codette_analyze(request: AudioAnalysisRequest):
 @app.post("/codette/process")
 @app.post("/api/codette/process")
 async def codette_process(request: ProcessRequest):
-    return {"id": request.id, "status": "success", "data": {"processed": True}, "processingTime": 0.05}
+    return {"id": request.id, "status": "success", "data": {"processed": True}, "processing_time": 0.05}
 
 # ============================================================================
 # INTELLIGENT MIXING SUGGESTIONS ENDPOINT
@@ -1755,37 +1805,46 @@ async def detect_genre(request: GenreDetectRequest):
     }
 
 # ============================================================================
-# MEMORY/COCOON ENDPOINTS
+# MIX CREATION (Agent-driven) - Create mix from selected tracks
 # ============================================================================
 
-@app.get("/api/codette/history")
-async def get_history(limit: int = 50):
-    mgr = get_cocoon_manager()
-    return {"status": "ok", "interactions": mgr.get_latest_cocoons(limit), "total": len(mgr.cocoon_data), "timestamp": get_timestamp()}
 
-@app.get("/api/codette/memory/{cocoon_id}")
-async def get_cocoon(cocoon_id: str):
-    mgr = get_cocoon_manager()
-    cocoon = mgr.get_cocoon_by_id(cocoon_id)
-    if cocoon: return cocoon
-    raise HTTPException(status_code=404, detail="Cocoon not found")
+@app.post("/api/mixes/create_from_tracks")
+@app.post("/codette/mixes/create_from_tracks")
+async def create_mix_from_tracks(request: MixCreateRequest):
+    """Create new mix variants from provided track buffers.
 
-@app.post("/api/codette/memory/save")
-async def save_cocoon(content: str, emotion_tag: str = "neutral"):
-    mgr = get_cocoon_manager()
-    cid = mgr.save_cocoon({"content": content, "emotion_tag": emotion_tag})
-    return {"status": "ok", "cocoon_id": cid, "timestamp": get_timestamp()}
+    This endpoint delegates to the real Codette engine if available. It
+    performs safe fallbacks when engine or project data are missing.
+    """
+    try:
+        # Lazy import to avoid hard dependency on real engine at module load
+        try:
+            from codette_real_engine import get_real_codette_engine
+        except Exception:
+            get_real_codette_engine = None
 
-@app.get("/api/codette/quantum-state")
-async def quantum_state():
-    mgr = get_cocoon_manager()
-    return {"status": "ok", "quantum_state": mgr.get_latest_quantum_state(), "timestamp": get_timestamp()}
+        if get_real_codette_engine:
+            engine = get_real_codette_engine()
+            # Engine method is async - call and return result
+            try:
+                result = await engine.create_mix_from_tracks(request.track_identifiers, project_path=request.project_path, options=request.options)
+                return {"success": True, "data": result, "timestamp": get_timestamp()}
+            except Exception as e:
+                logger.error(f"Mix creation failed: {e}")
+                return {"success": False, "error": str(e), "timestamp": get_timestamp()}
 
-@app.post("/api/codette/music-guidance")
-async def music_guidance(guidance_type: str = "mixing"):
-    advice = {"mixing": ["Set levels to -6dB peaks", "High-pass everything", "Use reference tracks"],
-              "mastering": ["Leave -1dB headroom", "Target -14 LUFS", "Use linear phase EQ"]}
-    return {"status": "ok", "guidance_type": guidance_type, "advice": advice.get(guidance_type, [])}
+        # Fallback: minimal offline behavior (simulate variants)
+        variants = [
+            {"id": "fallback_safe", "name": "Safe Blend", "description": "Fallback safe blend", "actions": []},
+            {"id": "fallback_creative", "name": "Creative Wash", "description": "Fallback creative variant", "actions": []}
+        ]
+
+        return {"success": True, "data": {"mix_id": f"mix_fallback_{int(time.time())}", "variants": variants, "source_tracks": request.track_identifiers}, "timestamp": get_timestamp()}
+
+    except Exception as e:
+        logger.error(f"Unexpected error in create_mix_from_tracks: {e}")
+        return {"success": False, "error": str(e), "timestamp": get_timestamp()}
 
 # ============================================================================
 # CLOUD SYNC (STUBS)
@@ -2125,3 +2184,155 @@ async def shutdown_event():
         except Exception as e:
             logger.warning(f"Error while cancelling broadcast task: {e}")
     logger.info("Shutdown complete")
+
+
+def _is_thread_run_active(thread_id: str) -> bool:
+    """Return True if a non-terminal run exists for the given thread.
+
+    Best-effort: supports different SDK shapes. Returns False on any error.
+    """
+    if not OPENAI_AVAILABLE or not openai_client or not thread_id:
+        return False
+
+    try:
+        runs_resp = None
+        # Try common SDK shapes
+        try:
+            runs_resp = openai_client.beta.threads.runs.list(thread_id=thread_id, limit=10)
+        except Exception:
+            try:
+                runs_resp = openai_client.beta.threads.runs(thread_id=thread_id).list(limit=10)
+            except Exception:
+                try:
+                    # Some older clients provide list_runs
+                    runs_resp = openai_client.list_runs(thread_id=thread_id)
+                except Exception:
+                    runs_resp = None
+
+        if runs_resp is None:
+            return False
+
+        # Normalize to iterable
+        runs = []
+        if hasattr(runs_resp, 'data') and getattr(runs_resp, 'data') is not None:
+            runs = list(runs_resp.data)
+        elif isinstance(runs_resp, (list, tuple)):
+            runs = list(runs_resp)
+        else:
+            try:
+                runs = list(runs_resp)
+            except Exception:
+                runs = [runs_resp]
+
+        for r in runs:
+            try:
+                status = None
+                if isinstance(r, dict):
+                    status = r.get('status')
+                else:
+                    status = getattr(r, 'status', None)
+                if status and status.lower() in ("queued", "in_progress", "running", "processing", "requires_action"):
+                    return True
+            except Exception:
+                continue
+
+        return False
+    except Exception:
+        # Be conservative: assume no active run if we cannot determine
+        return False
+
+# Ensure helper to access real engine exists for other endpoints
+try:
+    from codette_real_engine import get_real_codette_engine as _get_real_engine
+    def get_real_engine():
+        try:
+            return _get_real_engine()
+        except Exception:
+            return None
+    logger.info("✅ codette_real_engine helper available")
+except Exception:
+    def get_real_engine():
+        return None
+    logger.info("ℹ️ codette_real_engine not available; get_real_engine will return None")
+
+async def ingest_chat_to_codette(user_id: str, user_message: str, assistant_response: str, source: str = "unknown"):
+    """Ingest chat exchange into Codette's memory if engine supports learning.
+
+    This function is best-effort and will not raise if Codette lacks methods.
+    It runs asynchronously and logs failures.
+    """
+    try:
+        if not codette_engine:
+            logger.debug("Ingest skipped: no codette engine available")
+            return False
+
+        # Prefer known ingestion API shapes
+        # 1) codette_engine.learn_from_chat(user_id, user_message, assistant_response)
+        # 2) codette_engine.append_memory({...})
+        # 3) codette_engine.context_memory.append({...}) or similar
+        data = {
+            "user_id": user_id,
+            "user_message": user_message,
+            "assistant_response": assistant_response,
+            "source": source,
+            "timestamp": get_timestamp()
+        }
+
+        # Try dedicated method
+        if hasattr(codette_engine, 'learn_from_chat') and callable(getattr(codette_engine, 'learn_from_chat')):
+            try:
+                maybe = codette_engine.learn_from_chat(data)
+                # If coroutine, await it
+                if asyncio.iscoroutine(maybe):
+                    await maybe
+                logger.info("Ingested chat to codette via learn_from_chat")
+                return True
+            except Exception as e:
+                logger.debug(f"learn_from_chat failed: {e}")
+
+        # Try append to context memory method used by hybrid
+        if hasattr(codette_engine, 'context_memory') and isinstance(getattr(codette_engine, 'context_memory'), list):
+            try:
+                codette_engine.context_memory.append({
+                    'input': user_message,
+                    'response': assistant_response,
+                    'source': source,
+                    'timestamp': get_timestamp()
+                })
+                logger.info("Appended chat to codette.context_memory")
+                return True
+            except Exception as e:
+                logger.debug(f"Appending to context_memory failed: {e}")
+
+        # Try generic memory attribute names
+        for attr in ('memory', 'conversation_history', 'conversation', 'chat_history'):
+            try:
+                mem = getattr(codette_engine, attr, None)
+                if isinstance(mem, list):
+                    mem.append({
+                        'user': user_message,
+                        'assistant': assistant_response,
+                        'source': source,
+                        'timestamp': get_timestamp()
+                    })
+                    logger.info(f"Appended chat to codette.{attr}")
+                    return True
+            except Exception as e:
+                logger.debug(f"Failed to append to {attr}: {e}")
+
+        # Try a generic upsert method
+        if hasattr(codette_engine, 'upsert_memory') and callable(getattr(codette_engine, 'upsert_memory')):
+            try:
+                maybe = codette_engine.upsert_memory(data)
+                if asyncio.iscoroutine(maybe):
+                    await maybe
+                logger.info("Ingested chat via upsert_memory")
+                return True
+            except Exception as e:
+                logger.debug(f"upsert_memory failed: {e}")
+
+        logger.debug("No supported ingestion method found on codette_engine")
+        return False
+    except Exception as e:
+        logger.warning(f"Failed to ingest chat to Codette: {e}")
+        return False

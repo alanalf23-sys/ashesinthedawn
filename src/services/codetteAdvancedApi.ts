@@ -1,15 +1,18 @@
-﻿/**
- * Codette Advanced API - OpenAI Assistant Function Calls
- * Service layer for 5 advanced music production features
- */
+﻿// Codette Advanced API - service layer for advanced music production features
 
-// Read API base from globalThis or fallback URL to avoid import.meta parsing issues
-const API_BASE_URL = (globalThis as any)?.VITE_CODETTE_API || 'http://localhost:8001';
+// Read API base from globalThis only to avoid import.meta usage that can cause TS errors
+const API_BASE_URL: string | null = (globalThis as any)?.VITE_CODETTE_API ? String((globalThis as any).VITE_CODETTE_API).trim() : null;
+export const API_ENABLED = Boolean(API_BASE_URL && API_BASE_URL.length > 0);
 
 import codetteApi from '@/lib/codetteApi';
 
 // Helper: if primary fails with 404 or network error, retry with alternate port (8000/8001)
 async function fetchWithFallback(url: string, init?: RequestInit): Promise<Response> {
+  if (!API_ENABLED) {
+    // Avoid attempting network requests when API is not configured
+    return Promise.reject(new Error('Codette API disabled (no VITE_CODETTE_API configured)'));
+  }
+
   const tryPrimary = async () => fetch(url, init);
 
   try {
@@ -200,6 +203,23 @@ export async function detectGenre(
 export async function getProductionChecklist(
   stage: 'recording' | 'arrangement' | 'mixing' | 'mastering'
 ): Promise<ProductionChecklistResult> {
+  // If API is disabled, return fallback quickly without attempting any network calls
+  if (!API_ENABLED) {
+    const fallbackItems: ProductionChecklistItem[] = [
+      { id: '1', category: 'Setup', task: 'Set BPM and project template', priority: 'high', completed: false },
+      { id: '2', category: 'Recording', task: 'Check input levels', priority: 'high', completed: false },
+      { id: '3', category: 'Mixing', task: 'Set rough balances', priority: 'medium', completed: false },
+    ];
+    return {
+      success: false,
+      stage,
+      items: fallbackItems,
+      total_tasks: fallbackItems.length,
+      high_priority_count: fallbackItems.filter(i => i.priority === 'high').length,
+      completion_percentage: 0,
+    };
+  }
+
   try {
     const url = `${API_BASE_URL}/api/analysis/production-checklist?stage=${stage}`;
     const response = await fetchWithFallback(url, { method: 'GET' });

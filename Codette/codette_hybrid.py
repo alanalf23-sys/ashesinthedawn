@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Codette Hybrid System - Best of Both Worlds
 ===========================================
@@ -18,6 +19,92 @@ logger = logging.getLogger(__name__)
 _current_dir = Path(__file__).parent
 if str(_current_dir) not in sys.path:
     sys.path.insert(0, str(_current_dir))
+
+# --- SAFE IMPORTS FOR CODFETTE AI MODULES ---
+REAL_AICORE_AVAILABLE = False
+REAL_COGNITIVE_AVAILABLE = False
+REAL_DEFENSE_AVAILABLE = False
+REAL_HEALTH_AVAILABLE = False
+REAL_FRACTAL_AVAILABLE = False
+SENTIMENT_AVAILABLE = False
+
+AICore = None
+CognitiveProcessor = None
+DefenseSystem = None
+HealthMonitor = None
+FractalIdentity = None
+sentiment_analyzer = None
+
+try:
+    from ai_core import AICore
+    REAL_AICORE_AVAILABLE = True
+    logger.info("AICore loaded (ai_core)")
+except Exception:
+    try:
+        from Codette.src.components.ai_core import AICore
+        REAL_AICORE_AVAILABLE = True
+        logger.info("AICore loaded (Codette.src.components.ai_core)")
+    except Exception:
+        logger.debug("AICore not available")
+
+try:
+    from cognitive_processor import CognitiveProcessor
+    REAL_COGNITIVE_AVAILABLE = True
+    logger.info("CognitiveProcessor loaded")
+except Exception:
+    try:
+        from Codette.src.components.cognitive_processor import CognitiveProcessor
+        REAL_COGNITIVE_AVAILABLE = True
+        logger.info("CognitiveProcessor loaded (Codette.src.components)")
+    except Exception:
+        logger.debug("CognitiveProcessor not available")
+
+try:
+    from defense_system import DefenseSystem
+    REAL_DEFENSE_AVAILABLE = True
+    logger.info("DefenseSystem loaded")
+except Exception:
+    try:
+        from Codette.src.components.defense_system import DefenseSystem
+        REAL_DEFENSE_AVAILABLE = True
+        logger.info("DefenseSystem loaded (Codette.src.components)")
+    except Exception:
+        logger.debug("DefenseSystem not available")
+
+try:
+    from health_monitor import HealthMonitor
+    REAL_HEALTH_AVAILABLE = True
+    logger.info("HealthMonitor loaded")
+except Exception:
+    try:
+        from Codette.src.components.health_monitor import HealthMonitor
+        REAL_HEALTH_AVAILABLE = True
+        logger.info("HealthMonitor loaded (Codette.src.components)")
+    except Exception:
+        logger.debug("HealthMonitor not available")
+
+try:
+    from fractal import FractalIdentity
+    REAL_FRACTAL_AVAILABLE = True
+    logger.info("FractalIdentity loaded")
+except Exception:
+    try:
+        from Codette.src.components.fractal import FractalIdentity
+        REAL_FRACTAL_AVAILABLE = True
+        logger.info("FractalIdentity loaded (Codette.src.components)")
+    except Exception:
+        logger.debug("FractalIdentity not available")
+
+# Sentiment (optional)
+try:
+    from nltk.sentiment import SentimentIntensityAnalyzer
+    import nltk
+    nltk.download('vader_lexicon', quiet=True)
+    sentiment_analyzer = SentimentIntensityAnalyzer()
+    SENTIMENT_AVAILABLE = True
+    logger.info("Sentiment analyzer available")
+except Exception:
+    logger.debug("Sentiment analyzer not available")
 
 # Import base systems - try multiple import strategies
 CODETTE_ADVANCED_AVAILABLE = False
@@ -236,11 +323,64 @@ class CodetteHybrid:
         else:
             self._use_advanced = False
         
+        # Initialize real Codette modules if available
+        self.ai_core = None
+        self.cognitive = None
+        self.real_defense = None
+        self.health_monitor = None
+        self.fractal = None
+        self.sentiment = sentiment_analyzer if SENTIMENT_AVAILABLE else None
+
+        if REAL_AICORE_AVAILABLE:
+            try:
+                self.ai_core = AICore()
+                logger.info("Initialized AICore inside CodetteHybrid")
+            except Exception as e:
+                logger.warning(f"Failed to init AICore: {e}")
+                self.ai_core = None
+
+        if REAL_COGNITIVE_AVAILABLE:
+            try:
+                self.cognitive = CognitiveProcessor()
+                logger.info("Initialized CognitiveProcessor inside CodetteHybrid")
+            except Exception as e:
+                logger.debug(f"Cognitive init failed: {e}")
+                self.cognitive = None
+
+        if REAL_DEFENSE_AVAILABLE:
+            try:
+                # prefer real defense system; fall back to lightweight modifier system below
+                self.real_defense = DefenseSystem(strategies=["barrier", "adaptability"]) 
+                logger.info("Initialized real DefenseSystem inside CodetteHybrid")
+            except Exception as e:
+                logger.debug(f"Defense init failed: {e}")
+                self.real_defense = None
+
+        if REAL_HEALTH_AVAILABLE:
+            try:
+                self.health_monitor = HealthMonitor()
+                logger.info("Initialized HealthMonitor inside CodetteHybrid")
+            except Exception as e:
+                logger.debug(f"HealthMonitor init failed: {e}")
+                self.health_monitor = None
+
+        if REAL_FRACTAL_AVAILABLE:
+            try:
+                self.fractal = FractalIdentity()
+                logger.info("Initialized FractalIdentity inside CodetteHybrid")
+            except Exception as e:
+                logger.debug(f"Fractal init failed: {e}")
+                self.fractal = None
+
         # Lightweight enhancements
         self.defense_system = DefenseModifierSystem()
         self.defense_system.add_sanitization_filter()
         self.defense_system.add_tone_modifier("professional")
         self.defense_system.add_length_limiter(400)
+        
+        # If we have a real defense system prefer it for applying modifications
+        if self.real_defense:
+            logger.info("CodetteHybrid will prefer real DefenseSystem for runtime modifications")
         
         self.vector_search = VectorSearchEngine()
         self.prompt_engineer = PromptEngineer()
@@ -300,7 +440,15 @@ class CodetteHybrid:
                     else:
                         engineered_query = filtered_query
                     response = self._advanced.respond(engineered_query)
-                return self.defense_system.apply_modifiers(response)
+                # If real defense is available, apply it, otherwise use lightweight modifiers
+                if self.real_defense:
+                    try:
+                        response = self.real_defense.apply_defenses(response, {"m_score": 0.7})
+                    except Exception:
+                        pass
+                else:
+                    response = self.defense_system.apply_modifiers(response)
+                return response
             except TypeError as e:
                 # Handle case where respond() doesn't accept daw_context
                 if "positional arguments" in str(e):
@@ -313,7 +461,14 @@ class CodetteHybrid:
                         else:
                             engineered_query = filtered_query
                         response = self._advanced.respond(engineered_query)
-                        return self.defense_system.apply_modifiers(response)
+                        if self.real_defense:
+                            try:
+                                response = self.real_defense.apply_defenses(response, {"m_score": 0.7})
+                            except Exception:
+                                pass
+                        else:
+                            response = self.defense_system.apply_modifiers(response)
+                        return response
                     except Exception as e2:
                         logger.warning(f"Advanced respond (no context) failed: {e2}")
                 else:
@@ -415,8 +570,66 @@ class CodetteHybrid:
                 # Use lightweight respond method
                 base_response = self.respond(engineered_query, daw_context)
             
-            # 5. Apply response modifiers
-            final_response = self.defense_system.apply_modifiers(base_response)
+            # 4b. Optionally enrich with AICore if available
+            ai_enriched = False
+            ai_insights = None
+            try:
+                if self.ai_core:
+                    # Prefer async generate_response if available
+                    if hasattr(self.ai_core, 'generate_response'):
+                        gen = self.ai_core.generate_response
+                        if asyncio.iscoroutinefunction(gen):
+                            try:
+                                ai_out = await gen(user_id, engineered_query)
+                            except TypeError:
+                                # try swapped args
+                                ai_out = await gen(engineered_query, user_id)
+                        else:
+                            try:
+                                ai_out = gen(user_id, engineered_query)
+                            except TypeError:
+                                ai_out = gen(engineered_query, user_id)
+
+                        if isinstance(ai_out, dict):
+                            ai_text = ai_out.get('response') or ai_out.get('message') or str(ai_out)
+                        else:
+                            ai_text = str(ai_out)
+                    elif hasattr(self.ai_core, 'generate_text'):
+                        try:
+                            ai_text = self.ai_core.generate_text(engineered_query)
+                        except Exception:
+                            ai_text = None
+                    else:
+                        ai_text = None
+
+                    if ai_text:
+                        # Apply defenses to ai_text if real defense exists
+                        if self.real_defense:
+                            try:
+                                ai_text = self.real_defense.apply_defenses(ai_text, {"m_score": 0.7})
+                            except Exception:
+                                pass
+                        # Apply cognitive insights if available
+                        if self.cognitive:
+                            try:
+                                ai_insights = self.cognitive.generate_insights(ai_text)
+                            except Exception:
+                                ai_insights = None
+
+                        # Merge ai_text with base response
+                        base_response = f"{base_response}\n\n[AI Core] {ai_text}"
+                        ai_enriched = True
+            except Exception as e:
+                logger.debug(f"AICore enrichment failed: {e}")
+            
+            # 5. Apply response modifiers (prefer real defense if present)
+            if self.real_defense:
+                try:
+                    final_response = self.real_defense.apply_defenses(base_response, {"m_score": 0.7})
+                except Exception:
+                    final_response = self.defense_system.apply_modifiers(base_response)
+            else:
+                final_response = self.defense_system.apply_modifiers(base_response)
             
             # 6. Store in context memory
             self.context_memory.append({
@@ -430,6 +643,8 @@ class CodetteHybrid:
                 "response": final_response,
                 "engineered_prompt": engineered_query != query,
                 "ml_enhanced": self.use_ml,
+                "ai_enriched": ai_enriched,
+                "ai_insights": ai_insights,
                 "security_filtered": True,
                 "source": "codette-hybrid",
                 "timestamp": datetime.now().isoformat()
@@ -438,7 +653,13 @@ class CodetteHybrid:
             # Add advanced features if available
             if self._use_advanced:
                 result["health_status"] = "healthy"
-                result["sentiment"] = {"overall_mood": "neutral"}
+                if self.sentiment:
+                    try:
+                        result["sentiment"] = self.sentiment.polarity_scores(filtered_query)
+                    except Exception:
+                        result["sentiment"] = {"compound": 0.0}
+                else:
+                    result["sentiment"] = {"compound": 0.0}
             
             return result
             

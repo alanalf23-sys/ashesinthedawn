@@ -275,29 +275,28 @@ class CodetteAPIHandler:
     def get_capabilities(self) -> Dict[str, Any]:
         """
         Get comprehensive list of all Codette capabilities
-        
-        Usage:
-            capabilities = handler.get_capabilities()
         """
-        
-        from codette_capabilities import Perspective, EmotionDimension
-        
-        return {
-            'perspectives': {p.value: p.name for p in Perspective},
-            'emotions': {e.value: e.name for e in EmotionDimension},
-            'capabilities': {
-                'quantum_spiderweb': 'Multi-dimensional thought propagation',
-                'perspective_reasoning': '11 specialized reasoning agents',
-                'memory_cocoons': 'Encrypted persistent memory storage',
-                'dream_reweaving': 'Creative scenario generation',
-                'self_evolution': 'Dynamic consciousness development',
-                'emotional_resonance': 'Empathic response adaptation',
-                'music_optimization': 'DAW-specific production guidance',
-                'real_time_assistance': 'Live interaction support'
-            },
-            'version': '3.0',
-            'status': 'operational'
-        }
+        try:
+            from codette_capabilities import get_all_codette_capabilities
+            return get_all_codette_capabilities()
+        except Exception:
+            from codette_capabilities import Perspective, EmotionDimension
+            return {
+                'perspectives': {p.value: p.name for p in Perspective},
+                'emotions': {e.value: e.name for e in EmotionDimension},
+                'capabilities': {
+                    'quantum_spiderweb': 'Multi-dimensional thought propagation',
+                    'perspective_reasoning': '11 specialized reasoning agents',
+                    'memory_cocoons': 'Encrypted persistent memory storage',
+                    'dream_reweaving': 'Creative scenario generation',
+                    'self_evolution': 'Dynamic consciousness development',
+                    'emotional_resonance': 'Empathic response adaptation',
+                    'music_optimization': 'DAW-specific production guidance',
+                    'real_time_assistance': 'Live interaction support'
+                },
+                'version': '3.0',
+                'status': 'operational'
+            }
     
     # ========================================================================
     # MEMORY MANAGEMENT ENDPOINTS

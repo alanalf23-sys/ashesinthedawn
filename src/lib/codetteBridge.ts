@@ -436,11 +436,13 @@ class CodetteBridge {
    */
   async getTransportState(): Promise<CodetteTransportState> {
     try {
-      const response = await fetch(`${CODETTE_API_BASE}/transport/status`, {
+      // Server exposes /ws/status REST endpoint with transport data
+      const response = await fetch(`${CODETTE_API_BASE}/ws/status`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
+        signal: AbortSignal.timeout(5000),
       });
 
       if (!response.ok) {
@@ -448,14 +450,16 @@ class CodetteBridge {
       }
 
       const data = await response.json();
+      const transport = data.transport || data;
+
       return {
-        is_playing: data.playing ?? false,
-        current_time: data.time_seconds ?? 0,
-        bpm: data.bpm ?? 120,
+        is_playing: transport.playing ?? false,
+        current_time: transport.time_seconds ?? 0,
+        bpm: transport.bpm ?? 120,
         time_signature: [4, 4],
-        loop_enabled: data.loop_enabled ?? false,
-        loop_start: data.loop_start_seconds ?? 0,
-        loop_end: data.loop_end_seconds ?? 10,
+        loop_enabled: transport.loop_enabled ?? false,
+        loop_start: transport.loop_start_seconds ?? 0,
+        loop_end: transport.loop_end_seconds ?? 10,
       };
     } catch (error) {
       console.error("[CodetteBridge] Failed to get transport state:", error);
@@ -473,29 +477,22 @@ class CodetteBridge {
 
   /**
    * Control transport: Play
+   * Backend does not expose REST endpoints for transport control in current release.
+   * Prefer WebSocket control if available; fallback to local simulated state.
    */
   async transportPlay(): Promise<CodetteTransportState> {
     try {
-      const response = await fetch(`${CODETTE_API_BASE}/transport/play`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          is_playing: data.state?.playing ?? true,
-          current_time: data.state?.time_seconds ?? 0,
-          bpm: data.state?.bpm ?? 120,
-          time_signature: [4, 4],
-          loop_enabled: data.state?.loop_enabled ?? false,
-          loop_start: data.state?.loop_start_seconds ?? 0,
-          loop_end: data.state?.loop_end_seconds ?? 10,
-        };
+      if (this.ws && this.wsConnected) {
+        this.sendWebSocketMessage({ type: 'transport', data: { command: 'play' } });
       }
-    } catch (error) {
-      console.error("[CodetteBridge] transportPlay failed:", error);
+    } catch (e) {
+      console.debug('[CodetteBridge] WS transport play send failed', e);
     }
-    return this.getTransportState();
+
+    const state = await this.getTransportState();
+    // Simulate play state
+    state.is_playing = true;
+    return state;
   }
 
   /**
@@ -503,26 +500,17 @@ class CodetteBridge {
    */
   async transportStop(): Promise<CodetteTransportState> {
     try {
-      const response = await fetch(`${CODETTE_API_BASE}/transport/stop`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          is_playing: data.state?.playing ?? false,
-          current_time: data.state?.time_seconds ?? 0,
-          bpm: data.state?.bpm ?? 120,
-          time_signature: [4, 4],
-          loop_enabled: data.state?.loop_enabled ?? false,
-          loop_start: data.state?.loop_start_seconds ?? 0,
-          loop_end: data.state?.loop_end_seconds ?? 10,
-        };
+      if (this.ws && this.wsConnected) {
+        this.sendWebSocketMessage({ type: 'transport', data: { command: 'stop' } });
       }
-    } catch (error) {
-      console.error("[CodetteBridge] transportStop failed:", error);
+    } catch (e) {
+      console.debug('[CodetteBridge] WS transport stop send failed', e);
     }
-    return this.getTransportState();
+
+    const state = await this.getTransportState();
+    state.is_playing = false;
+    state.current_time = 0;
+    return state;
   }
 
   /**
@@ -530,26 +518,16 @@ class CodetteBridge {
    */
   async transportSeek(timeSeconds: number): Promise<CodetteTransportState> {
     try {
-      const response = await fetch(`${CODETTE_API_BASE}/transport/seek?seconds=${timeSeconds}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          is_playing: data.state?.playing ?? false,
-          current_time: data.state?.time_seconds ?? timeSeconds,
-          bpm: data.state?.bpm ?? 120,
-          time_signature: [4, 4],
-          loop_enabled: data.state?.loop_enabled ?? false,
-          loop_start: data.state?.loop_start_seconds ?? 0,
-          loop_end: data.state?.loop_end_seconds ?? 10,
-        };
+      if (this.ws && this.wsConnected) {
+        this.sendWebSocketMessage({ type: 'transport', data: { command: 'seek', position: timeSeconds } });
       }
-    } catch (error) {
-      console.error("[CodetteBridge] transportSeek failed:", error);
+    } catch (e) {
+      console.debug('[CodetteBridge] WS transport seek send failed', e);
     }
-    return this.getTransportState();
+
+    const state = await this.getTransportState();
+    state.current_time = timeSeconds;
+    return state;
   }
 
   /**
@@ -557,26 +535,16 @@ class CodetteBridge {
    */
   async setTempo(bpm: number): Promise<CodetteTransportState> {
     try {
-      const response = await fetch(`${CODETTE_API_BASE}/transport/tempo?bpm=${bpm}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          is_playing: data.state?.playing ?? false,
-          current_time: data.state?.time_seconds ?? 0,
-          bpm: data.state?.bpm ?? bpm,
-          time_signature: [4, 4],
-          loop_enabled: data.state?.loop_enabled ?? false,
-          loop_start: data.state?.loop_start_seconds ?? 0,
-          loop_end: data.state?.loop_end_seconds ?? 10,
-        };
+      if (this.ws && this.wsConnected) {
+        this.sendWebSocketMessage({ type: 'transport', data: { command: 'set_tempo', bpm } });
       }
-    } catch (error) {
-      console.error("[CodetteBridge] setTempo failed:", error);
+    } catch (e) {
+      console.debug('[CodetteBridge] WS setTempo send failed', e);
     }
-    return this.getTransportState();
+
+    const state = await this.getTransportState();
+    state.bpm = bpm;
+    return state;
   }
 
   /**
@@ -588,29 +556,18 @@ class CodetteBridge {
     endTime: number = 10
   ): Promise<CodetteTransportState> {
     try {
-      const response = await fetch(
-        `${CODETTE_API_BASE}/transport/loop?enabled=${enabled}&start_seconds=${startTime}&end_seconds=${endTime}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          is_playing: data.state?.playing ?? false,
-          current_time: data.state?.time_seconds ?? 0,
-          bpm: data.state?.bpm ?? 120,
-          time_signature: [4, 4],
-          loop_enabled: data.state?.loop_enabled ?? enabled,
-          loop_start: data.state?.loop_start_seconds ?? startTime,
-          loop_end: data.state?.loop_end_seconds ?? endTime,
-        };
+      if (this.ws && this.wsConnected) {
+        this.sendWebSocketMessage({ type: 'transport', data: { command: 'set_loop', enabled, startTime, endTime } });
       }
-    } catch (error) {
-      console.error("[CodetteBridge] setLoop failed:", error);
+    } catch (e) {
+      console.debug('[CodetteBridge] WS setLoop send failed', e);
     }
-    return this.getTransportState();
+
+    const state = await this.getTransportState();
+    state.loop_enabled = enabled;
+    state.loop_start = startTime;
+    state.loop_end = endTime;
+    return state;
   }
 
   /**

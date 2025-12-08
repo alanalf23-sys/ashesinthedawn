@@ -16,6 +16,7 @@ import { CodetteSuggestion, getCodetteBridge } from "../lib/codetteBridge";
 import { supabase } from "../lib/supabase";
 import { useEffectChainAPI, EffectChainContextAPI } from "../lib/effectChainContextAdapter";
 import { getAudioEngine } from "../lib/audioEngine";
+import { loadProjectFromStorage, saveProjectToStorage } from "../lib/projectStorage";
 
 // Create context (may be undefined before provider mounts)
 const DAWContext = React.createContext<DAWContextType | undefined>(undefined);
@@ -503,13 +504,52 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const loadProject = async (projectId: string) => {
     setIsUploadingFile(true);
     try {
+      // Try localStorage first
+      try {
+        const local = loadProjectFromStorage();
+        if (local && local.id === projectId) {
+          setCurrentProject(local);
+          setTracks(local.tracks || []);
+          setBuses(local.buses || []);
+          _setLoopRegion(local.loopRegion || null);
+          _setMetronomeSettings(local.metronomeSettings || metronomeSettings);
+          console.log("[DAWContext] Project loaded from localStorage:", projectId);
+          return;
+        }
+      } catch (e) {
+        console.debug("[DAWContext] localStorage load failed:", e);
+      }
+
+      // Fallback to Supabase
       const { data, error } = await supabase
         .from("projects")
         .select("*")
         .eq("id", projectId)
-        .single();
-      if (error) throw error;
-      setCurrentProject(data);
+        .maybeSingle();
+
+      if (error || !data) {
+        console.warn("[DAWContext] Project not found in Supabase:", error);
+        setUploadError("Project not found");
+        return;
+      }
+
+      const project: Project = {
+        id: data.id,
+        name: data.name || "Untitled Project",
+        sampleRate: data.sample_rate || 44100,
+        bitDepth: data.bit_depth || 24,
+        bpm: data.bpm || 120,
+        timeSignature: data.time_signature || "4/4",
+        tracks: data.session_data?.tracks || [],
+        buses: data.buses || [],
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      } as Project;
+
+      setCurrentProject(project);
+      setTracks(project.tracks || []);
+      setBuses(project.buses || []);
+      console.log("[DAWContext] Project loaded from Supabase:", projectId);
     } catch (error) {
       console.error("Error loading project:", error);
       setUploadError("Error loading project. Please try again.");

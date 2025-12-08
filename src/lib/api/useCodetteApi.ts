@@ -238,99 +238,82 @@ export function useTransport() {
   const client = getApiClient();
 
   const play = useCallback(async () => {
+    console.warn('[useTransport] Transport control via REST is not supported; use CodetteBridge WebSocket for realtime control');
     try {
-      const response = await client.transportPlay();
-      if (response.state) setState(response.state);
+      const status = await client.getCodetteStatus();
+      setState(status.transport ?? status);
     } catch (err) {
-      setError({
-        message: err instanceof Error ? err.message : 'Play failed',
-        code: 'TRANSPORT_ERROR',
-      });
+      setError({ message: err instanceof Error ? err.message : 'Play (status) failed', code: 'TRANSPORT_ERROR' });
     }
   }, [client]);
 
   const stop = useCallback(async () => {
+    console.warn('[useTransport] Transport control via REST is not supported; use CodetteBridge WebSocket for realtime control');
     try {
-      const response = await client.transportStop();
-      if (response.state) setState(response.state);
+      const status = await client.getCodetteStatus();
+      setState(status.transport ?? status);
     } catch (err) {
-      setError({
-        message: err instanceof Error ? err.message : 'Stop failed',
-        code: 'TRANSPORT_ERROR',
-      });
+      setError({ message: err instanceof Error ? err.message : 'Stop (status) failed', code: 'TRANSPORT_ERROR' });
     }
   }, [client]);
 
   const pause = useCallback(async () => {
+    console.warn('[useTransport] Transport control via REST is not supported; use CodetteBridge WebSocket for realtime control');
     try {
-      const response = await client.transportPause();
-      if (response.state) setState(response.state);
+      const status = await client.getCodetteStatus();
+      setState(status.transport ?? status);
     } catch (err) {
-      setError({
-        message: err instanceof Error ? err.message : 'Pause failed',
-        code: 'TRANSPORT_ERROR',
-      });
+      setError({ message: err instanceof Error ? err.message : 'Pause (status) failed', code: 'TRANSPORT_ERROR' });
     }
   }, [client]);
 
   const resume = useCallback(async () => {
+    console.warn('[useTransport] Transport control via REST is not supported; use CodetteBridge WebSocket for realtime control');
     try {
-      const response = await client.transportResume();
-      if (response.state) setState(response.state);
+      const status = await client.getCodetteStatus();
+      setState(status.transport ?? status);
     } catch (err) {
-      setError({
-        message: err instanceof Error ? err.message : 'Resume failed',
-        code: 'TRANSPORT_ERROR',
-      });
+      setError({ message: err instanceof Error ? err.message : 'Resume (status) failed', code: 'TRANSPORT_ERROR' });
     }
   }, [client]);
 
   const seek = useCallback(async (seconds: number) => {
+    console.warn('[useTransport] Use CodetteBridge.transportSeek for realtime seek via WebSocket');
     try {
-      const response = await client.transportSeek(seconds);
-      if (response.state) setState(response.state);
+      const status = await client.getCodetteStatus();
+      setState(status.transport ?? status);
     } catch (err) {
-      setError({
-        message: err instanceof Error ? err.message : 'Seek failed',
-        code: 'TRANSPORT_ERROR',
-      });
+      setError({ message: err instanceof Error ? err.message : 'Seek (status) failed', code: 'TRANSPORT_ERROR' });
     }
   }, [client]);
 
   const setTempo = useCallback(async (bpm: number) => {
+    console.warn('[useTransport] Use CodetteBridge.setTempo for realtime tempo control via WebSocket');
     try {
-      const response = await client.transportSetTempo(bpm);
-      if (response.state) setState(response.state);
+      const status = await client.getCodetteStatus();
+      setState(status.transport ?? status);
     } catch (err) {
-      setError({
-        message: err instanceof Error ? err.message : 'Tempo change failed',
-        code: 'TRANSPORT_ERROR',
-      });
+      setError({ message: err instanceof Error ? err.message : 'Tempo change (status) failed', code: 'TRANSPORT_ERROR' });
     }
   }, [client]);
 
   const setLoop = useCallback(async (enabled: boolean, start: number = 0, end: number = 10) => {
+    console.warn('[useTransport] Use CodetteBridge.setLoop for realtime loop control via WebSocket');
     try {
-      const response = await client.transportSetLoop(enabled, start, end);
-      if (response.state) setState(response.state);
+      const status = await client.getCodetteStatus();
+      setState(status.transport ?? status);
     } catch (err) {
-      setError({
-        message: err instanceof Error ? err.message : 'Loop configuration failed',
-        code: 'TRANSPORT_ERROR',
-      });
+      setError({ message: err instanceof Error ? err.message : 'Loop (status) failed', code: 'TRANSPORT_ERROR' });
     }
   }, [client]);
 
   const getStatus = useCallback(async () => {
     setLoading(true);
     try {
-      const status = await client.getTransportStatus();
-      setState(status);
+      const status = await client.getCodetteStatus();
+      setState(status.transport ?? status);
     } catch (err) {
-      setError({
-        message: err instanceof Error ? err.message : 'Status update failed',
-        code: 'TRANSPORT_ERROR',
-      });
+      setError({ message: err instanceof Error ? err.message : 'Status update failed', code: 'TRANSPORT_ERROR' });
     } finally {
       setLoading(false);
     }

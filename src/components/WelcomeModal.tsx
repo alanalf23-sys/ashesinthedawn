@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { X, FileText, FolderOpen, Play, AlertCircle, CheckCircle } from 'lucide-react';
 import { useDAW } from '../contexts/DAWContext';
 import { Project } from '../types';
+import { saveProjectToStorage } from '../lib/projectStorage';
 
 interface WelcomeModalProps {
   onClose: () => void;
@@ -16,7 +17,7 @@ export default function WelcomeModal({ onClose }: WelcomeModalProps) {
   const [openProjectError, setOpenProjectError] = useState<string | null>(null);
   const [openProjectSuccess, setOpenProjectSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { setCurrentProject } = useDAW();
+  const { setCurrentProject, loadProject } = useDAW();
 
   const handleBrowseLocalFiles = () => {
     console.log('Browse clicked, file input ref:', fileInputRef.current);
@@ -42,7 +43,22 @@ export default function WelcomeModal({ onClose }: WelcomeModalProps) {
       }
 
       console.log('Project loaded:', projectData.name);
-      setCurrentProject(projectData);
+      // Save to local storage and call DAW context loader so tracks/state are populated
+      try {
+        saveProjectToStorage(projectData);
+      } catch (err) {
+        console.warn('[WelcomeModal] Failed to save project to storage, continuing with in-memory load', err);
+      }
+
+      // Use DAWContext loadProject to ensure tracks and related state are set
+      try {
+        await loadProject(projectData.id);
+      } catch (err) {
+        // Fallback: set current project directly
+        console.warn('[WelcomeModal] loadProject failed, falling back to setCurrentProject', err);
+        setCurrentProject(projectData);
+      }
+
       setOpenProjectSuccess(true);
       setTimeout(() => {
         setOpenProjectSuccess(false);

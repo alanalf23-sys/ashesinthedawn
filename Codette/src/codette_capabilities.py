@@ -504,10 +504,51 @@ class QuantumConsciousness:
         }
 
 
+def get_all_codette_capabilities() -> Dict[str, Any]:
+    """
+    Aggregate and return a comprehensive capabilities manifest for Codette.
+    This inspects the local `Codette/src` directory for modules and reports
+    configured perspectives, emotions, quantum math status and high-level
+    capability descriptions.
+    """
+    base_dir = Path(__file__).parent
+
+    # Discover python modules in the same directory
+    modules = []
+    try:
+        for p in sorted(base_dir.glob('*.py')):
+            if p.name in ('__init__.py',):
+                continue
+            modules.append(p.name)
+    except Exception:
+        modules = []
+
+    capabilities_map = {
+        'perspectives': {p.value: p.name for p in Perspective},
+        'emotions': {e.value: e.name for e in EmotionDimension},
+        'modules': modules,
+        'quantum_math_active': QUANTUM_MATH_AVAILABLE,
+        'capabilities': {
+            'quantum_spiderweb': 'Multi-dimensional thought propagation',
+            'perspective_reasoning': '11 specialized reasoning agents',
+            'memory_cocoons': 'Encrypted persistent memory storage',
+            'dream_reweaving': 'Creative scenario generation',
+            'self_evolution': 'Dynamic consciousness development',
+            'emotional_resonance': 'Empathic response adaptation',
+            'music_optimization': 'DAW-specific production guidance',
+            'real_time_assistance': 'Live interaction support'
+        },
+        'version': '3.1',
+        'updated': datetime.now().isoformat()
+    }
+
+    return capabilities_map
+
+
 if __name__ == "__main__":
     async def test():
         qc = QuantumConsciousness()
         result = await qc.respond("What is consciousness?")
         print(json.dumps(result, indent=2))
-    
+
     asyncio.run(test())
