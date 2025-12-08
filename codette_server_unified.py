@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 from pydantic import BaseModel
+from fastapi.responses import JSONResponse
 
 # Suppress all non-critical warnings
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -1025,7 +1026,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000", "*"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1396,7 +1397,7 @@ async def ear_training(exercise_type: str = "interval", difficulty: str = "begin
         ]
     }
     
-    # Chord exercises
+    # Chord exercises / production checklist-like guidance (reused content)
     chords = {
         "beginner": [
             {"category": "Gain Staging", "task": "Set input gain to avoid clipping (peaks -12dB to -6dB)", "priority": "high"},
@@ -1426,21 +1427,41 @@ async def ear_training(exercise_type: str = "interval", difficulty: str = "begin
         ],
     }
 
-    # Get items for requested stage, fallback to mixing if stage not found
-    items = base.get(stage_lower, base["mixing"])[:]
+    # Normalize inputs
+    ex_type = (exercise_type or "interval").lower()
+    diff = (difficulty or "beginner").lower()
+
+    # Select items based on requested exercise type
+    if ex_type == "interval":
+        items = intervals.get(diff, intervals.get("beginner", []))[:]
+    elif ex_type == "chord":
+        items = chords.get(diff, chords.get("beginner", []))[:]
+    else:
+        # Fallback: provide a mixed checklist-like set
+        items = chords.get(diff, chords.get("mixing", []))[:]
 
     # Mark all as incomplete by default and add ids
     for i, it in enumerate(items):
+        # Ensure it's a dictionary
+        if not isinstance(it, dict):
+            continue
         it["completed"] = False
-        it["id"] = f"{stage_lower}-{i}"
+        it_id_prefix = ex_type if ex_type in ("interval", "chord") else "exercise"
+        it["id"] = f"{it_id_prefix}-{i}"
 
-    return {
+    response_payload = {
         "success": True,
-        "stage": stage_lower,
+        "stage": ex_type,
         "items": items,
         "completionPercentage": 0,
         "timestamp": get_timestamp(),
     }
+
+    return JSONResponse(content=response_payload, headers={
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+    })
 
 
 @app.get("/api/analysis/frequency-quiz")
