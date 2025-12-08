@@ -54,6 +54,25 @@ export interface Send {
   enabled: boolean;
 }
 
+// Router and ProjectMeta mapping for manage_daw_project schema
+export interface RoutingDestination {
+  destinationId: string;
+  level_db?: number;
+  pre_fader?: boolean;
+}
+
+export interface Router {
+  routing_matrix: Record<string, string[]>;
+  buses?: Record<string, { name?: string }>;
+
+}
+
+export interface ProjectMeta {
+  name?: string;
+  bpm?: number;
+  [key: string]: any;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -65,6 +84,9 @@ export interface Project {
   buses: Track[];
   createdAt: string;
   updatedAt: string;
+  // optional router/meta fields coming from manage_daw_project schema
+  router?: Router;
+  meta?: ProjectMeta;
 }
 
 export type LogicCoreMode = "ON" | "SILENT" | "OFF";
@@ -230,14 +252,6 @@ export interface BusNode {
 export interface RoutingMatrix {
   fromTrackId: string;
   toDestinations: RoutingDestination[];
-}
-
-export interface RoutingDestination {
-  type: 'track' | 'bus' | 'master';
-  destinationId: string;
-  level: number;
-  pan: number;
-  preFader: boolean;
 }
 
 export interface SidechainConfig {

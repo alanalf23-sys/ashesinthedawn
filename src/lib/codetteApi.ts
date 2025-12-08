@@ -4,7 +4,38 @@
  * All methods call actual Codette endpoints - no demo data
  */
 
-const API_BASE_URL = import.meta.env.VITE_CODETTE_API || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_CODETTE_API || "http://localhost:8001";
+
+// Helper: if primary fails with 404 or network error, retry with alternate port (8000/8001)
+async function fetchWithFallback(input: RequestInfo, init?: RequestInit): Promise<Response> {
+  const primaryUrl = typeof input === 'string' ? input : (input as Request).url;
+  const tryPrimary = async () => fetch(primaryUrl, init);
+
+  try {
+    const res = await tryPrimary();
+    if (res.status === 404) {
+      // compute alternate
+      const alt = primaryUrl.replace(':8001', ':8000').replace(':8000', ':8001');
+      try {
+        const altRes = await fetch(alt, init);
+        return altRes;
+      } catch (err) {
+        return res; // return original 404 response
+      }
+    }
+
+    return res;
+  } catch (err) {
+    // network error, try alternate
+    try {
+      const alt = primaryUrl.replace(':8001', ':8000').replace(':8000', ':8001');
+      const altRes = await fetch(alt, init);
+      return altRes;
+    } catch (err2) {
+      throw err;
+    }
+  }
+}
 
 interface GenreDetectionResult {
   detected_genre: string;
@@ -59,11 +90,10 @@ export const codetteApi = {
     keySignature?: string;
   }): Promise<GenreDetectionResult> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/analysis/detect-genre`, {
+      const url = `${API_BASE_URL}/api/analysis/detect-genre`;
+      const response = await fetchWithFallback(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(audioMetadata),
       });
 
@@ -89,15 +119,8 @@ export const codetteApi = {
    */
   async calculateDelaySyncTimes(bpm: number): Promise<DelaySyncResult> {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/analysis/delay-sync?bpm=${bpm}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const url = `${API_BASE_URL}/api/analysis/delay-sync?bpm=${bpm}`;
+      const response = await fetchWithFallback(url, { method: "GET", headers: { "Content-Type": "application/json" } });
 
       if (!response.ok) {
         throw new Error(`Delay sync failed: ${response.statusText}`);
@@ -117,15 +140,8 @@ export const codetteApi = {
    */
   async getEarTrainingData(exerciseType: string, _intervalOrChord?: string): Promise<EarTrainingData> {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/analysis/ear-training?exercise_type=${exerciseType}&interval=Major%20Third`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const url = `${API_BASE_URL}/api/analysis/ear-training?exercise_type=${exerciseType}&interval=Major%20Third`;
+      const response = await fetchWithFallback(url, { method: "GET", headers: { "Content-Type": "application/json" } });
 
       if (!response.ok) {
         throw new Error(`Ear training data failed: ${response.statusText}`);
@@ -145,15 +161,8 @@ export const codetteApi = {
    */
   async getProductionChecklist(stage: string): Promise<ProductionWorkflowStage> {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/analysis/production-checklist?stage=${stage}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const url = `${API_BASE_URL}/api/analysis/production-checklist?stage=${stage}`;
+      const response = await fetchWithFallback(url, { method: "GET", headers: { "Content-Type": "application/json" } });
 
       if (!response.ok) {
         throw new Error(`Production checklist failed: ${response.statusText}`);
@@ -173,15 +182,8 @@ export const codetteApi = {
    */
   async getInstrumentInfo(category: string, instrument: string): Promise<InstrumentInfo> {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/analysis/instrument-info?category=${category}&instrument=${instrument}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const url = `${API_BASE_URL}/api/analysis/instrument-info?category=${category}&instrument=${instrument}`;
+      const response = await fetchWithFallback(url, { method: "GET", headers: { "Content-Type": "application/json" } });
 
       if (!response.ok) {
         throw new Error(`Instrument info failed: ${response.statusText}`);
@@ -201,15 +203,8 @@ export const codetteApi = {
    */
   async getAllInstruments(): Promise<Record<string, string[]>> {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/analysis/instruments-list`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const url = `${API_BASE_URL}/api/analysis/instruments-list`;
+      const response = await fetchWithFallback(url, { method: "GET", headers: { "Content-Type": "application/json" } });
 
       if (!response.ok) {
         throw new Error(`Instruments list failed: ${response.statusText}`);
@@ -229,9 +224,8 @@ export const codetteApi = {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/health`, {
-        method: "GET",
-      });
+      const url = `${API_BASE_URL}/api/health`;
+      const response = await fetchWithFallback(url, { method: "GET" });
       return response.ok;
     } catch (error) {
       console.warn("[CodetteAPI] Backend not accessible:", error);

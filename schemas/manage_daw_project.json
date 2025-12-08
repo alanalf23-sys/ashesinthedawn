@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "manage_daw_project",
+  "description": "Load or save a DAW project as JSON, returning or accepting router state and metadata.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": ["load", "save"],
+      "description": "Action to perform: 'load' or 'save'."
+    },
+    "path": {
+      "type": "string",
+      "description": "Path to the project.json file. Optional for load when default path is used."
+    },
+    "router": {
+      "type": ["object", "null"],
+      "description": "Serialized router object, containing track and routing info (required for save).",
+      "additionalProperties": true
+    },
+    "meta": {
+      "type": ["object", "null"],
+      "description": "Project metadata such as name and bpm (required for save).",
+      "additionalProperties": true
+    }
+  },
+  "required": ["action"],
+  "if": {
+    "properties": { "action": { "const": "save" } }
+  },
+  "then": {
+    "required": ["router", "meta"]
+  }
+}

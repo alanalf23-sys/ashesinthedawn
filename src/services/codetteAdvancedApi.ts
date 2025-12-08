@@ -1,12 +1,40 @@
-/**
+﻿/**
  * Codette Advanced API - OpenAI Assistant Function Calls
  * Service layer for 5 advanced music production features
  */
 
 // Read API base from globalThis or fallback URL to avoid import.meta parsing issues
-const API_BASE_URL = (globalThis as any)?.VITE_CODETTE_API || 'http://localhost:8000';
+const API_BASE_URL = (globalThis as any)?.VITE_CODETTE_API || 'http://localhost:8001';
 
 import codetteApi from '@/lib/codetteApi';
+
+// Helper: if primary fails with 404 or network error, retry with alternate port (8000/8001)
+async function fetchWithFallback(url: string, init?: RequestInit): Promise<Response> {
+  const tryPrimary = async () => fetch(url, init);
+
+  try {
+    const res = await tryPrimary();
+    if (res.status === 404) {
+      const alt = url.replace(':8001', ':8000').replace(':8000', ':8001');
+      try {
+        const altRes = await fetch(alt, init);
+        return altRes;
+      } catch (err) {
+        return res;
+      }
+    }
+    return res;
+  } catch (err) {
+    // Network error - try alternate
+    try {
+      const alt = url.replace(':8001', ':8000').replace(':8000', ':8001');
+      const altRes = await fetch(alt, init);
+      return altRes;
+    } catch (err2) {
+      throw err;
+    }
+  }
+}
 
 // TypeScript Interfaces
 
@@ -173,9 +201,10 @@ export async function getProductionChecklist(
   stage: 'recording' | 'arrangement' | 'mixing' | 'mastering'
 ): Promise<ProductionChecklistResult> {
   try {
-    const data = await fetch(`${API_BASE_URL}/api/analysis/production-checklist?stage=${stage}`);
-    if (!data.ok) throw new Error(data.statusText);
-    const json = await data.json();
+    const url = `${API_BASE_URL}/api/analysis/production-checklist?stage=${stage}`;
+    const response = await fetchWithFallback(url, { method: 'GET' });
+    if (!response.ok) throw new Error(response.statusText);
+    const json = await response.json();
 
     // Map backend sections into flat items for our interface
     const sections = json.sections || json;
@@ -260,7 +289,8 @@ export async function getEarTrainingExercise(
   difficulty: 'beginner' | 'intermediate' | 'advanced'
 ): Promise<EarTrainingResult> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/analysis/ear-training?exercise_type=${exerciseType}&difficulty=${difficulty}`);
+    const url = `${API_BASE_URL}/api/analysis/ear-training?exercise_type=${exerciseType}&difficulty=${difficulty}`;
+    const response = await fetchWithFallback(url, { method: 'GET' });
     if (!response.ok) throw new Error(response.statusText);
     const json = await response.json();
 
@@ -278,8 +308,8 @@ export async function getEarTrainingExercise(
     console.error('[CodetteAdvancedAPI] getEarTrainingExercise error:', error);
     // Fallback simple intervals
     const fallbackItems: EarTrainingQuizItem[] = [
-      { name: 'Minor Third', semitones: 3, example: 'C ? Eb' },
-      { name: 'Perfect Fifth', semitones: 7, example: 'C ? G' },
+      { name: 'Minor Third', semitones: 3, example: 'C → Eb' },
+      { name: 'Perfect Fifth', semitones: 7, example: 'C → G' },
     ];
     return {
       success: false,
@@ -301,7 +331,8 @@ export async function calculateDelaySync(
 ): Promise<DelaySyncResult> {
   try {
     // Prefer backend full-table if available
-    const backend = await fetch(`${API_BASE_URL}/api/analysis/delay-sync?bpm=${bpm}`);
+    const url = `${API_BASE_URL}/api/analysis/delay-sync?bpm=${bpm}`;
+    const backend = await fetchWithFallback(url, { method: 'GET' });
     if (backend.ok) {
       const table = await backend.json();
       // Try to map incoming noteDivision to one of the table keys

@@ -138,33 +138,39 @@ LAST_BROADCAST_AT: Optional[str] = None
 
 async def broadcast_status_periodically(interval_seconds: float = 2.0):
     """Broadcast server health and transport status to all WS clients periodically."""
-    import asyncio
     global LAST_BROADCAST_AT
-    while True:
-        try:
-            payload = {
-                "type": "server_status",
-                "data": {
-                    "health": {"status": "healthy", "timestamp": get_timestamp()},
-                    "transport": transport_manager.get_state(),
-                    "connections": len(active_websockets),
-                },
-            }
-            LAST_BROADCAST_AT = get_timestamp()
-            # Send to all active websockets
-            for ws in list(active_websockets):
-                try:
-                    await ws.send_json(payload)
-                except Exception:
-                    # Drop dead sockets
+    try:
+        while True:
+            try:
+                payload = {
+                    "type": "server_status",
+                    "data": {
+                        "health": {"status": "healthy", "timestamp": get_timestamp()},
+                        "transport": transport_manager.get_state(),
+                        "connections": len(active_websockets),
+                    },
+                }
+                LAST_BROADCAST_AT = get_timestamp()
+                # Send to all active websockets
+                for ws in list(active_websockets):
                     try:
-                        active_websockets.remove(ws)
-                    except ValueError:
-                        pass
-            await asyncio.sleep(interval_seconds)
-        except Exception:
-            # Continue loop on any unexpected error
-            await asyncio.sleep(interval_seconds)
+                        await ws.send_json(payload)
+                    except Exception:
+                        # Drop dead sockets
+                        try:
+                            active_websockets.remove(ws)
+                        except ValueError:
+                            pass
+                await asyncio.sleep(interval_seconds)
+            except asyncio.CancelledError:
+                # Task was cancelled; exit cleanly
+                break
+            except Exception:
+                # Continue loop on any unexpected error
+                await asyncio.sleep(interval_seconds)
+    except asyncio.CancelledError:
+        # Prevent CancelledError from bubbling further
+        return
 
 # Mock quantum state for fallback
 MOCK_QUANTUM_STATE = {
@@ -679,58 +685,115 @@ async def query_openai_assistant(message: str, daw_context: Optional[Dict[str, A
         }
 
 async def handle_assistant_function_calls(run) -> List[Dict[str, Any]]:
-    """Handle function calls from OpenAI Assistant"""
+    """Handle function calls from OpenAI Assistant with compatibility for multiple SDK response shapes"""
     tool_outputs = []
-    
-    if not run.required_action or not run.required_action.submit_tool_outputs:
+
+    if not getattr(run, "required_action", None) or not getattr(run.required_action, "submit_tool_outputs", None):
         return tool_outputs
-    
-    for tool_call in run.required_action.submit_tool_outputs.tool_calls:
-        function_name = tool_call.function.name
-        function_args = json.loads(tool_call.function.arguments)
-        
+
+    for idx, tool_call in enumerate(run.required_action.submit_tool_outputs.tool_calls):
+        # Try to extract function name from several possible shapes
+        function_name = None
+        try:
+            if hasattr(tool_call, "function") and getattr(tool_call.function, "name", None):
+                function_name = tool_call.function.name
+            elif getattr(tool_call, "function_name", None):
+                function_name = tool_call.function_name
+            elif getattr(tool_call, "name", None):
+                function_name = tool_call.name
+            elif hasattr(tool_call, "function_call") and getattr(tool_call.function_call, "name", None):
+                function_name = tool_call.function_call.name
+        except Exception:
+            function_name = None
+
+        # Safely extract raw function arguments which may be stored under different attributes
+        raw_args = None
+        try:
+            if hasattr(tool_call, "function_arguments"):
+                raw_args = tool_call.function_arguments
+            elif hasattr(tool_call, "function_args"):
+                raw_args = tool_call.function_args
+            elif hasattr(tool_call, "arguments"):
+                raw_args = tool_call.arguments
+            elif hasattr(tool_call, "function") and hasattr(tool_call.function, "arguments"):
+                raw_args = tool_call.function.arguments
+            elif hasattr(tool_call, "function_call") and hasattr(tool_call.function_call, "arguments"):
+                raw_args = tool_call.function_call.arguments
+            else:
+                raw_args = "{}"
+        except Exception:
+            raw_args = "{}"
+
+        # Normalize arguments into a dict
+        try:
+            if isinstance(raw_args, (dict, list)):
+                function_args = raw_args
+            elif isinstance(raw_args, bytes):
+                function_args = json.loads(raw_args.decode("utf-8"))
+            else:
+                # raw_args is likely a string
+                if raw_args is None:
+                    function_args = {}
+                else:
+                    # Some SDKs return Python repr with single quotes - try to fix common issues
+                    if isinstance(raw_args, str):
+                        try:
+                            function_args = json.loads(raw_args)
+                        except Exception:
+                            try:
+                                function_args = json.loads(raw_args.replace("'", '"'))
+                            except Exception:
+                                function_args = {}
+                    else:
+                        function_args = {}
+        except Exception:
+            function_args = {}
+
+        # Extract tool_call id (compatibility)
+        tool_call_id = getattr(tool_call, "id", None) or getattr(tool_call, "tool_call_id", None) or getattr(tool_call, "call_id", None) or f"toolcall_{idx}"
+
         logger.info(f"[OpenAI Assistant] Function call: {function_name}")
-        
+
         try:
             # Existing intelligent mixing function
             if function_name == "generate_intelligent_mixing_suggestions":
                 result = await execute_mixing_suggestions(function_args)
-            
+
             # NEW ADVANCED FEATURE FUNCTIONS
             elif function_name == "detect_genre":
                 result = await execute_genre_detection(function_args)
-                
+
             elif function_name == "get_production_checklist":
                 result = await execute_production_checklist(function_args)
-                
+
             elif function_name == "get_instrument_processing_guide":
                 result = await execute_instrument_guide(function_args)
-                
+
             elif function_name == "get_ear_training_exercise":
                 result = await execute_ear_training(function_args)
-                
+
             elif function_name == "calculate_delay_sync":
                 result = await execute_delay_sync(function_args)
-            
+
             else:
                 logger.warning(f"[OpenAI Assistant] Unknown function: {function_name}")
                 tool_outputs.append({
-                    "tool_call_id": tool_call.id,
+                    "tool_call_id": tool_call_id,
                     "output": json.dumps({"error": f"Unknown function: {function_name}"})
                 })
                 continue
-            
+
             tool_outputs.append({
-                "tool_call_id": tool_call.id,
+                "tool_call_id": tool_call_id,
                 "output": json.dumps(result)
             })
         except Exception as e:
             logger.error(f"[OpenAI Assistant] Function call error: {e}")
             tool_outputs.append({
-                "tool_call_id": tool_call.id,
+                "tool_call_id": tool_call_id,
                 "output": json.dumps({"error": str(e)})
             })
-    
+
     return tool_outputs
 
 async def execute_mixing_suggestions(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -1435,7 +1498,7 @@ async def ear_training(exercise_type: str = "interval", difficulty: str = "begin
     if ex_type == "interval":
         items = intervals.get(diff, intervals.get("beginner", []))[:]
     elif ex_type == "chord":
-        items = chords.get(diff, chords.get("beginner", []))[:]
+        items = chords.get(diff, chords.get("beginning", []))[:]
     else:
         # Fallback: provide a mixed checklist-like set
         items = chords.get(diff, chords.get("mixing", []))[:]
@@ -2037,3 +2100,28 @@ async def startup_event():
     logger.info("======================================================================")
     logger.info("✅ CODETTE AI UNIFIED SERVER IS READY")
     logger.info("======================================================================")
+
+    # Start background status broadcaster and store task on app.state for shutdown cancellation
+    try:
+        # Avoid double-starting if already present
+        if not getattr(app.state, "broadcast_task", None):
+            app.state.broadcast_task = asyncio.create_task(broadcast_status_periodically())
+            logger.info("Started broadcast_status_periodically background task")
+    except Exception as e:
+        logger.warning(f"Failed to start broadcast task: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanly cancel background tasks on shutdown to avoid CancelledError bubbling."""
+    # Cancel broadcast task if running
+    task = getattr(app.state, "broadcast_task", None)
+    if task:
+        try:
+            task.cancel()
+            await task
+        except asyncio.CancelledError:
+            logger.info("broadcast_status_periodically task cancelled during shutdown")
+        except Exception as e:
+            logger.warning(f"Error while cancelling broadcast task: {e}")
+    logger.info("Shutdown complete")
