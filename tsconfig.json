@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "ES2022",
+    "moduleResolution": "node16",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "strict": true,
@@ -16,6 +16,28 @@
     },
     "types": ["vite/client", "react"]
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/temp/**",
+    "**/Temp/**",
+    "**/copilot-vs/**",
+    "**/CopilotBaseline/**",
+    "**/~*.*"
+  ],
+  "excludeFiles": [
+    "C:/Users/Jonathan/AppData/Local/Temp/**",
+    "C:/Users/*/AppData/Local/Temp/**"
+  ],
+  "watchOptions": {
+    "excludeFiles": [
+      "**/AppData/Local/Temp/**",
+      "C:/Users/Jonathan/AppData/Local/Temp/**",
+      "C:/Users/*/AppData/Local/Temp/**",
+      "**/CopilotBaseline/**",
+      "**/copilot-vs/**",
+      "**/~*.*"
+    ]
+  }
 }

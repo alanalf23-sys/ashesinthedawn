@@ -24,7 +24,13 @@ export function setDAWContext(context: any) {
 }
 
 export function getDAWContext() {
-  return dawContext;
+  if (dawContext) return dawContext;
+  // fallback to global window if set by DAWProvider
+  try {
+    return (window as any).__CORELOGIC_DAW_CONTEXT__ || null;
+  } catch (e) {
+    return null;
+  }
 }
 
 /**

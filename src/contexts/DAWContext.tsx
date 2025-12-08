@@ -17,6 +17,7 @@ import { supabase } from "../lib/supabase";
 import { useEffectChainAPI, EffectChainContextAPI } from "../lib/effectChainContextAdapter";
 import { getAudioEngine } from "../lib/audioEngine";
 import { loadProjectFromStorage, saveProjectToStorage } from "../lib/projectStorage";
+import { setDAWContext } from "../lib/actions/initializeActions";
 
 // Create context (may be undefined before provider mounts)
 const DAWContext = React.createContext<DAWContextType | undefined>(undefined);
@@ -393,6 +394,20 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   // Demo waveform and duration cache
   const waveformCacheRef = React.useRef<Map<string, number[]>>(new Map());
   const durationCacheRef = React.useRef<Map<string, number>>(new Map());
+  
+  // Derived values
+  const projectDuration = React.useMemo(() => {
+    try {
+      let max = 0;
+      tracks.forEach((t) => {
+        const d = durationCacheRef.current.get(t.id) ?? 0;
+        if (d > max) max = d;
+      });
+      return Math.max(max, 300);
+    } catch (e) {
+      return 300;
+    }
+  }, [tracks]);
 
   const ensureDemoDataForTrack = (trackId: string) => {
     if (!waveformCacheRef.current.has(trackId)) {
@@ -410,6 +425,9 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
 
   // Basic helper functions
   const getAudioContextStatus = () => "running";
+  const setZoom = (z: number) => {
+    _setZoom(z);
+  };
   const togglePlay = () => {
     if (!isPlaying) {
       // Starting playback
@@ -483,6 +501,8 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     console.log("?? Playback stopped and reset to start");
   };
   const toggleVoiceControl = () => setVoiceControlActive((prev) => !prev);
+  
+  const toggleMixerView = () => setShowMixerView((prev) => !prev);
 
   const saveProject = async () => {
     if (!currentProject) return;
@@ -1419,6 +1439,24 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
     hasActiveEffects: effectChainAPI.hasActiveEffects,
     loadedPlugins: new Map(),
   };
+
+  // Expose DAW context globally for action modules that read from window
+  React.useEffect(() => {
+    try {
+      (window as any).__CORELOGIC_DAW_CONTEXT__ = contextValue;
+      // also set module-local reference for action modules
+      try { setDAWContext && setDAWContext(contextValue); } catch (e) { /* ignore */ }
+    } catch (e) {
+      // ignore
+    }
+    return () => {
+      try {
+        (window as any).__CORELOGIC_DAW_CONTEXT__ = undefined;
+      } catch (e) {
+        // ignore
+      }
+    };
+  }, [contextValue]);
 
   return <DAWContext.Provider value={contextValue}>{children}</DAWContext.Provider>;
 }
