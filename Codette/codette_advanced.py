@@ -16,29 +16,49 @@ from typing import Any, Dict, List, Optional
 import asyncio
 from datetime import datetime
 import os
+import sys
+from pathlib import Path
+import importlib
 
 logger = logging.getLogger(__name__)
+
+# Ensure Codette package paths are on sys.path
+_current_dir = Path(__file__).parent
+if str(_current_dir) not in sys.path:
+    sys.path.insert(0, str(_current_dir))
+
+_parent_dir = _current_dir.parent
+if str(_parent_dir) not in sys.path:
+    sys.path.insert(0, str(_parent_dir))
 
 # Import base Codette - prefer codette_enhanced which supports daw_context
 CODETTE_AVAILABLE = False
 Codette = None
 
-# Try codette_enhanced first (supports daw_context parameter)
-try:
-    from codette_enhanced import Codette
-    CODETTE_AVAILABLE = True
-    logger.info("Codette Enhanced loaded (supports DAW context)")
-except ImportError:
-    pass
 
-# Fallback to codette_new (no daw_context support)
-if not CODETTE_AVAILABLE:
-    try:
-        from codette_new import Codette
+def _import_codette(module_names: List[str]) -> Optional[type]:
+    for module_name in module_names:
+        try:
+            module = importlib.import_module(module_name)
+            codette_cls = getattr(module, 'Codette', None)
+            if codette_cls:
+                logger.info(f"Codette base loaded ({module_name})")
+                return codette_cls
+        except ImportError as exc:
+            logger.debug(f"Codette import failed ({module_name}): {exc}")
+    return None
+
+
+# Load Codette variants
+Codette = _import_codette(['codette_enhanced', 'Codette.codette_enhanced'])
+if Codette:
+    CODETTE_AVAILABLE = True
+else:
+    Codette = _import_codette(['codette_new', 'Codette.codette_new'])
+    if Codette:
         CODETTE_AVAILABLE = True
-        logger.info("Codette New loaded (basic mode)")
-    except ImportError:
-        logger.error("No Codette base class available")
+    else:
+        logger.error('No Codette base class available')
 
 # Optional imports
 try:

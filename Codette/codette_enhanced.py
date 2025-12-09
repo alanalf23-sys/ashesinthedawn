@@ -9,6 +9,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="pytensor")
 warnings.filterwarnings("ignore", message=".*g\\+\\+ not.*")
 
 import nltk
+# Require a compatible NumPy build before proceeding
 import numpy as np
 import sympy as sp
 

@@ -303,84 +303,19 @@ class PromptEngineer:
         return query
 
 
-class CodetteHybrid:
+class CodetteHybrid(CodetteAdvanced):
     """
     Hybrid Codette combining lightweight quantum consciousness with AICore optimizations
     """
     
-    def __init__(self, user_name="User", use_ml_features: bool = False):
-        self.user_name = user_name
-        self.context_memory = []
+    def __init__(self, user_name="User", use_ml_features: bool = True):
+        super().__init__(user_name)
         
-        # Try to use CodetteAdvanced as base
-        if CODETTE_ADVANCED_AVAILABLE:
-            try:
-                self._advanced = CodetteAdvanced(user_name)
-                self._use_advanced = True
-            except Exception as e:
-                logger.warning(f"Could not initialize CodetteAdvanced: {e}")
-                self._use_advanced = False
-        else:
-            self._use_advanced = False
-        
-        # Initialize real Codette modules if available
-        self.ai_core = None
-        self.cognitive = None
-        self.real_defense = None
-        self.health_monitor = None
-        self.fractal = None
-        self.sentiment = sentiment_analyzer if SENTIMENT_AVAILABLE else None
-
-        if REAL_AICORE_AVAILABLE:
-            try:
-                self.ai_core = AICore()
-                logger.info("Initialized AICore inside CodetteHybrid")
-            except Exception as e:
-                logger.warning(f"Failed to init AICore: {e}")
-                self.ai_core = None
-
-        if REAL_COGNITIVE_AVAILABLE:
-            try:
-                self.cognitive = CognitiveProcessor()
-                logger.info("Initialized CognitiveProcessor inside CodetteHybrid")
-            except Exception as e:
-                logger.debug(f"Cognitive init failed: {e}")
-                self.cognitive = None
-
-        if REAL_DEFENSE_AVAILABLE:
-            try:
-                # prefer real defense system; fall back to lightweight modifier system below
-                self.real_defense = DefenseSystem(strategies=["barrier", "adaptability"]) 
-                logger.info("Initialized real DefenseSystem inside CodetteHybrid")
-            except Exception as e:
-                logger.debug(f"Defense init failed: {e}")
-                self.real_defense = None
-
-        if REAL_HEALTH_AVAILABLE:
-            try:
-                self.health_monitor = HealthMonitor()
-                logger.info("Initialized HealthMonitor inside CodetteHybrid")
-            except Exception as e:
-                logger.debug(f"HealthMonitor init failed: {e}")
-                self.health_monitor = None
-
-        if REAL_FRACTAL_AVAILABLE:
-            try:
-                self.fractal = FractalIdentity()
-                logger.info("Initialized FractalIdentity inside CodetteHybrid")
-            except Exception as e:
-                logger.debug(f"Fractal init failed: {e}")
-                self.fractal = None
-
         # Lightweight enhancements
         self.defense_system = DefenseModifierSystem()
         self.defense_system.add_sanitization_filter()
         self.defense_system.add_tone_modifier("professional")
         self.defense_system.add_length_limiter(400)
-        
-        # If we have a real defense system prefer it for applying modifications
-        if self.real_defense:
-            logger.info("CodetteHybrid will prefer real DefenseSystem for runtime modifications")
         
         self.vector_search = VectorSearchEngine()
         self.prompt_engineer = PromptEngineer()

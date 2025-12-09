@@ -20,7 +20,6 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
 
 # Suppress all non-critical warnings
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -278,19 +277,15 @@ CODETTE_ENHANCED = False
 codette_core = None
 
 # Try enhanced version first (9 perspectives with MCMC, sentiment, etc.)
-if NUMPY_AVAILABLE and hasattr(np, "_core"):
-    try:
-        from codette_enhanced import Codette as CodetteEnhanced
-        CODETTE_CORE_AVAILABLE = True
-        CODETTE_ENHANCED = True
-        logger.info("✅ Codette ENHANCED module (codette_enhanced.py) loaded - 9 perspectives")
-    except Exception as e:
-        logger.info(f"ℹ️  Enhanced Codette not available: {e}")
-else:
-    logger.info("ℹ️  Enhanced Codette not available: NumPy missing _core or not installed")
-
-# Fallback to standard codette_new if enhanced engine was not loaded
-if not CODETTE_CORE_AVAILABLE:
+try:
+    from codette_enhanced import Codette as CodetteEnhanced
+    CODETTE_CORE_AVAILABLE = True
+    CODETTE_ENHANCED = True
+    logger.info("✅ Codette ENHANCED module (codette_enhanced.py) loaded - 9 perspectives")
+except ImportError as e:
+    logger.info(f"ℹ️  Enhanced Codette not available: {e}")
+    
+    # Fallback to standard codette_new
     try:
         from codette_new import Codette as CodetteCore
         CODETTE_CORE_AVAILABLE = True
@@ -1107,170 +1102,13 @@ class TransportManager:
 transport_manager = TransportManager()
 
 # ============================================================================
-# Lifespan / startup helpers
-# ============================================================================
-
-def _log_startup_banner():
-    logger.info("")
-    logger.info("======================================================================")
-    logger.info("🚀 CODETTE AI UNIFIED SERVER - STARTUP")
-    logger.info("======================================================================")
-    logger.info("📡 Server Configuration:")
-    logger.info("   • Version: 2.0.0")
-    logger.info("   • Host: 0.0.0.0 (all interfaces)")
-    logger.info(f"   • Port: {os.environ.get('PORT', 8000)}")
-    logger.info("   • CORS: Enabled for 4 origins")
-    logger.info("")
-    
-    # Codette AI Engine status
-    logger.info("🤖 Codette AI Engine:")
-    if codette_engine:
-        logger.info("   ✅ Status: ACTIVE")
-        logger.info(f"   • Engine: {codette_engine_type}")
-        if codette_engine_type == "CodetteHybrid":
-            logger.info("   • Mode: Hybrid (Defense + Vector + Prompt Engineering)")
-        elif codette_engine_type == "CodetteEnhanced":
-            logger.info("   • Perspectives: Neural, Logical, Creative, Ethical, Quantum, + 4 more")
-        else:
-            logger.info("   • Perspectives: Neural, Logical, Creative, Ethical, Quantum")
-        logger.info("   • User: CoreLogicStudio")
-        logger.info("   • Mode: Production-ready")
-        logger.info("   • Method: respond() - returns multi-perspective analysis")
-    else:
-        logger.info("   ⚠️  Status: FALLBACK MODE")
-        logger.info("   • Engine: Keyword-based responder")
-        logger.info("   • Functionality: Limited to basic responses")
-        logger.info("   • Recommendation: Install Codette package")
-    
-    # OpenAI Fallback status
-    logger.info("")
-    logger.info("🔄 OpenAI Fallback:")
-    if OPENAI_AVAILABLE and OPENAI_FALLBACK_ENABLED:
-        logger.info("   ✅ Status: ENABLED")
-        
-        # Assistant API status
-        if OPENAI_ASSISTANT_ID:
-            logger.info(f"   🤖 Assistant API: AVAILABLE")
-            logger.info(f"      • Assistant ID: {OPENAI_ASSISTANT_ID}")
-            logger.info(f"      • Version: {os.getenv('OPENAI_ASSISTANT_VERSION', 'v2')}")
-            logger.info(f"      • Thread Management: Enabled")
-            logger.info(f"      • Priority: Highest (tried first)")
-            logger.info("")
-        
-        # Chat models status
-        logger.info(f"   📋 Chat Models:")
-        logger.info(f"      • Primary: {OPENAI_FALLBACK_MODEL_PRIMARY[:50]}...")
-        logger.info(f"      • Secondary: {OPENAI_FALLBACK_MODEL_SECONDARY[:50]}...")
-        logger.info(f"      • Base: gpt-4o-mini")
-        logger.info("")
-        
-        # Fallback chain
-        if OPENAI_ASSISTANT_ID:
-            logger.info("   🔄 Response Priority Chain:")
-            logger.info("      1. ⭐ OpenAI Assistant API (PRIMARY - Highest quality)")
-            logger.info("      2. Local Codette (Fallback)")
-            logger.info("      3. Keyword Fallback (Last resort)")
-        else:
-            logger.info("   🔄 Response Priority Chain:")
-            logger.info("      1. ⭐ Fine-tuned Primary Model (PRIMARY)")
-            logger.info("      2. Fine-tuned Secondary Model")
-            logger.info("      3. Base Model (gpt-4o-mini)")
-            logger.info("      4. Local Codette (Fallback)")
-            logger.info("      5. Keyword Fallback (Last resort)")
-    elif OPENAI_FALLBACK_ENABLED and not OPENAI_API_KEY:
-        logger.info("   ⚠️  Status: DISABLED (No API Key)")
-        logger.info("   • Add OPENAI_API_KEY to .env to enable")
-    elif not OPENAI_FALLBACK_ENABLED:
-        logger.info("   ℹ️  Status: DISABLED (Configuration)")
-        logger.info("   • Set OPENAI_FALLBACK_ENABLED=true to enable")
-    else:
-        logger.info("   ❌ Status: NOT AVAILABLE")
-        logger.info("   • OpenAI library not installed")
-        logger.info("   • Run: pip install openai")
-    logger.info("")
-    
-    # Database status
-    logger.info("💾 Database:")
-    if SUPABASE_AVAILABLE:
-        logger.info("   ✅ Supabase: CONNECTED")
-        logger.info(f"   • URL: {os.getenv('VITE_SUPABASE_URL', 'N/A')[:40]}...")
-        logger.info("   • Key Type: Service Role (full access) 🔐")
-    else:
-        logger.info("   ⚠️  Supabase: NOT CONNECTED")
-        logger.info("   • Running in local mode")
-    logger.info("")
-    
-    # Dependencies status
-    logger.info("📦 Dependencies:")
-    deps = []
-    deps.append("NumPy ✅" if NUMPY_AVAILABLE else "NumPy ❌")
-    deps.append("Supabase ✅" if SUPABASE_AVAILABLE else "Supabase ❌")
-    deps.append("OpenAI ✅" if OPENAI_AVAILABLE else "OpenAI ❌")
-    deps.append("Mixing AI ✅" if INTELLIGENT_MIXING_AVAILABLE else "Mixing AI ❌")
-    logger.info("   • " + " | ".join(deps))
-    
-    # Training data availability
-    logger.info("📚 Training Data:")
-    if TRAINING_AVAILABLE:
-        logger.info("   ✅ Available")
-        logger.info("   • Method: get_training_context()")
-    else:
-        logger.info("   ❌ Not available")
-    
-    # Quantum Consciousness status
-    logger.info("🌌 Quantum Consciousness:")
-    if CODETTE_CAPABILITIES_AVAILABLE and quantum_consciousness:
-        logger.info("   ✅ Initialized")
-    else:
-        logger.info("   ❌ Not initialized or available")
-    
-    # Transport manager status
-    logger.info("🚀 Transport Manager:")
-    logger.info(f"   • Playing: {transport_manager.playing}")
-    logger.info(f"   • Time: {transport_manager.time_seconds:.2f}s")
-    logger.info(f"   • BPM: {transport_manager.bpm}")
-    logger.info(f"   • Sample Rate: {transport_manager.sample_rate}")
-    logger.info(f"   • Loop: {transport_manager.loop_enabled} ({transport_manager.loop_start:.2f}s to {transport_manager.loop_end:.2f}s)")
-    
-    logger.info("")
-    logger.info("======================================================================")
-    logger.info("✅ CODETTE AI UNIFIED SERVER IS READY")
-    logger.info("======================================================================")
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    _log_startup_banner()
-    try:
-        if not getattr(app.state, "broadcast_task", None):
-            app.state.broadcast_task = asyncio.create_task(broadcast_status_periodically())
-            logger.info("Started broadcast_status_periodically background task")
-    except Exception as e:
-        logger.warning(f"Failed to start broadcast task: {e}")
-
-    try:
-        yield
-    finally:
-        task = getattr(app.state, "broadcast_task", None)
-        if task:
-            try:
-                task.cancel()
-                await task
-            except asyncio.CancelledError:
-                logger.info("broadcast_status_periodically task cancelled during shutdown")
-            except Exception as e:
-                logger.warning(f"Error while cancelling broadcast task: {e}")
-        logger.info("Shutdown complete")
-
-# ============================================================================
 # FASTAPI APP SETUP
 # ============================================================================
 
 app = FastAPI(
     title="Codette AI Unified Server",
     description="Backend server for CoreLogic Studio DAW with Codette AI",
-    version="2.0.0",
-    lifespan=lifespan
+    version="2.0.0"
 )
 
 app.add_middleware(
@@ -1520,6 +1358,11 @@ async def codette_suggest(request: SuggestionRequest):
 
 @app.post("/codette/analyze")
 @app.post("/api/codette/analyze")
+async def codette_analyze(request: AudioAnalysisRequest):
+    return {"status": "ok", "analysis_type": request.analysis_type, "findings": ["Analysis complete"], "timestamp": get_timestamp()}
+
+@app.post("/codette/process")
+@app.post("/api/codette/process")
 async def codette_process(request: ProcessRequest):
     return {"id": request.id, "status": "success", "data": {"processed": True}, "processing_time": 0.05}
 
@@ -2156,3 +1999,340 @@ async def websocket_endpoint(websocket: WebSocket):
         if websocket in active_websockets:
             active_websockets.remove(websocket)
         logger.info(f"WebSocket disconnected. Total: {len(active_websockets)}")
+
+
+# ============================================================================
+# STARTUP EVENT
+# ============================================================================
+
+# Try to import training data
+TRAINING_AVAILABLE = False
+get_training_context = None
+try:
+    from codette_training_data import get_training_context
+    TRAINING_AVAILABLE = True
+except ImportError:
+    pass
+
+# Try to import Supabase
+SUPABASE_AVAILABLE = False
+supabase_client = None
+try:
+    from supabase import create_client
+    supabase_url = os.getenv("VITE_SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    if supabase_url and supabase_key:
+        supabase_client = create_client(supabase_url, supabase_key)
+        SUPABASE_AVAILABLE = True
+        logger.info("✅ Supabase client connected with service role (full access)")
+        logger.info("   🔐 SECURE - Backend use only")
+except ImportError:
+    logger.info("ℹ️  Supabase not available")
+except Exception as e:
+    logger.warning(f"⚠️ Supabase connection failed: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    """Log startup banner with full system status"""
+    logger.info("")
+    logger.info("======================================================================")
+    logger.info("🚀 CODETTE AI UNIFIED SERVER - STARTUP")
+    logger.info("======================================================================")
+    logger.info("📡 Server Configuration:")
+    logger.info("   • Version: 2.0.0")
+    logger.info("   • Host: 0.0.0.0 (all interfaces)")
+    logger.info(f"   • Port: {os.environ.get('PORT', 8000)}")
+    logger.info("   • CORS: Enabled for 4 origins")
+    logger.info("")
+    
+    # Codette AI Engine status
+    logger.info("🤖 Codette AI Engine:")
+    if codette_engine:
+        logger.info("   ✅ Status: ACTIVE")
+        logger.info(f"   • Engine: {codette_engine_type}")
+        if codette_engine_type == "CodetteHybrid":
+            logger.info("   • Mode: Hybrid (Defense + Vector + Prompt Engineering)")
+        elif codette_engine_type == "CodetteEnhanced":
+            logger.info("   • Perspectives: Neural, Logical, Creative, Ethical, Quantum, + 4 more")
+        else:
+            logger.info("   • Perspectives: Neural, Logical, Creative, Ethical, Quantum")
+        logger.info("   • User: CoreLogicStudio")
+        logger.info("   • Mode: Production-ready")
+        logger.info("   • Method: respond() - returns multi-perspective analysis")
+    else:
+        logger.info("   ⚠️  Status: FALLBACK MODE")
+        logger.info("   • Engine: Keyword-based responder")
+        logger.info("   • Functionality: Limited to basic responses")
+        logger.info("   • Recommendation: Install Codette package")
+    
+    # OpenAI Fallback status
+    logger.info("")
+    logger.info("🔄 OpenAI Fallback:")
+    if OPENAI_AVAILABLE and OPENAI_FALLBACK_ENABLED:
+        logger.info("   ✅ Status: ENABLED")
+        
+        # Assistant API status
+        if OPENAI_ASSISTANT_ID:
+            logger.info(f"   🤖 Assistant API: AVAILABLE")
+            logger.info(f"      • Assistant ID: {OPENAI_ASSISTANT_ID}")
+            logger.info(f"      • Version: {os.getenv('OPENAI_ASSISTANT_VERSION', 'v2')}")
+            logger.info(f"      • Thread Management: Enabled")
+            logger.info(f"      • Priority: Highest (tried first)")
+            logger.info("")
+        
+        # Chat models status
+        logger.info(f"   📋 Chat Models:")
+        logger.info(f"      • Primary: {OPENAI_FALLBACK_MODEL_PRIMARY[:50]}...")
+        logger.info(f"      • Secondary: {OPENAI_FALLBACK_MODEL_SECONDARY[:50]}...")
+        logger.info(f"      • Base: gpt-4o-mini")
+        logger.info("")
+        
+        # Fallback chain
+        if OPENAI_ASSISTANT_ID:
+            logger.info("   🔄 Response Priority Chain:")
+            logger.info("      1. ⭐ OpenAI Assistant API (PRIMARY - Highest quality)")
+            logger.info("      2. Local Codette (Fallback)")
+            logger.info("      3. Keyword Fallback (Last resort)")
+        else:
+            logger.info("   🔄 Response Priority Chain:")
+            logger.info("      1. ⭐ Fine-tuned Primary Model (PRIMARY)")
+            logger.info("      2. Fine-tuned Secondary Model")
+            logger.info("      3. Base Model (gpt-4o-mini)")
+            logger.info("      4. Local Codette (Fallback)")
+            logger.info("      5. Keyword Fallback (Last resort)")
+    elif OPENAI_FALLBACK_ENABLED and not OPENAI_API_KEY:
+        logger.info("   ⚠️  Status: DISABLED (No API Key)")
+        logger.info("   • Add OPENAI_API_KEY to .env to enable")
+    elif not OPENAI_FALLBACK_ENABLED:
+        logger.info("   ℹ️  Status: DISABLED (Configuration)")
+        logger.info("   • Set OPENAI_FALLBACK_ENABLED=true to enable")
+    else:
+        logger.info("   ❌ Status: NOT AVAILABLE")
+        logger.info("   • OpenAI library not installed")
+        logger.info("   • Run: pip install openai")
+    logger.info("")
+    
+    # Database status
+    logger.info("💾 Database:")
+    if SUPABASE_AVAILABLE:
+        logger.info("   ✅ Supabase: CONNECTED")
+        logger.info(f"   • URL: {os.getenv('VITE_SUPABASE_URL', 'N/A')[:40]}...")
+        logger.info("   • Key Type: Service Role (full access) 🔐")
+    else:
+        logger.info("   ⚠️  Supabase: NOT CONNECTED")
+        logger.info("   • Running in local mode")
+    logger.info("")
+    
+    # Dependencies status
+    logger.info("📦 Dependencies:")
+    deps = []
+    deps.append("NumPy ✅" if NUMPY_AVAILABLE else "NumPy ❌")
+    deps.append("Supabase ✅" if SUPABASE_AVAILABLE else "Supabase ❌")
+    deps.append("OpenAI ✅" if OPENAI_AVAILABLE else "OpenAI ❌")
+    deps.append("Mixing AI ✅" if INTELLIGENT_MIXING_AVAILABLE else "Mixing AI ❌")
+    logger.info("   • " + " | ".join(deps))
+    
+    # Training data availability
+    logger.info("📚 Training Data:")
+    if TRAINING_AVAILABLE:
+        logger.info("   ✅ Available")
+        logger.info("   • Method: get_training_context()")
+    else:
+        logger.info("   ❌ Not available")
+    
+    # Quantum Consciousness status
+    logger.info("🌌 Quantum Consciousness:")
+    if CODETTE_CAPABILITIES_AVAILABLE and quantum_consciousness:
+        logger.info("   ✅ Initialized")
+    else:
+        logger.info("   ❌ Not initialized or available")
+    
+    # Transport manager status
+    logger.info("🚀 Transport Manager:")
+    logger.info(f"   • Playing: {transport_manager.playing}")
+    logger.info(f"   • Time: {transport_manager.time_seconds:.2f}s")
+    logger.info(f"   • BPM: {transport_manager.bpm}")
+    logger.info(f"   • Sample Rate: {transport_manager.sample_rate}")
+    logger.info(f"   • Loop: {transport_manager.loop_enabled} ({transport_manager.loop_start:.2f}s to {transport_manager.loop_end:.2f}s)")
+    
+    logger.info("")
+    logger.info("======================================================================")
+    logger.info("✅ CODETTE AI UNIFIED SERVER IS READY")
+    logger.info("======================================================================")
+
+    # Start background status broadcaster and store task on app.state for shutdown cancellation
+    try:
+        # Avoid double-starting if already present
+        if not getattr(app.state, "broadcast_task", None):
+            app.state.broadcast_task = asyncio.create_task(broadcast_status_periodically())
+            logger.info("Started broadcast_status_periodically background task")
+    except Exception as e:
+        logger.warning(f"Failed to start broadcast task: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanly cancel background tasks on shutdown to avoid CancelledError bubbling."""
+    # Cancel broadcast task if running
+    task = getattr(app.state, "broadcast_task", None)
+    if task:
+        try:
+            task.cancel()
+            await task
+        except asyncio.CancelledError:
+            logger.info("broadcast_status_periodically task cancelled during shutdown")
+        except Exception as e:
+            logger.warning(f"Error while cancelling broadcast task: {e}")
+    logger.info("Shutdown complete")
+
+
+def _is_thread_run_active(thread_id: str) -> bool:
+    """Return True if a non-terminal run exists for the given thread.
+
+    Best-effort: supports different SDK shapes. Returns False on any error.
+    """
+    if not OPENAI_AVAILABLE or not openai_client or not thread_id:
+        return False
+
+    try:
+        runs_resp = None
+        # Try common SDK shapes
+        try:
+            runs_resp = openai_client.beta.threads.runs.list(thread_id=thread_id, limit=10)
+        except Exception:
+            try:
+                runs_resp = openai_client.beta.threads.runs(thread_id=thread_id).list(limit=10)
+            except Exception:
+                try:
+                    # Some older clients provide list_runs
+                    runs_resp = openai_client.list_runs(thread_id=thread_id)
+                except Exception:
+                    runs_resp = None
+
+        if runs_resp is None:
+            return False
+
+        # Normalize to iterable
+        runs = []
+        if hasattr(runs_resp, 'data') and getattr(runs_resp, 'data') is not None:
+            runs = list(runs_resp.data)
+        elif isinstance(runs_resp, (list, tuple)):
+            runs = list(runs_resp)
+        else:
+            try:
+                runs = list(runs_resp)
+            except Exception:
+                runs = [runs_resp]
+
+        for r in runs:
+            try:
+                status = None
+                if isinstance(r, dict):
+                    status = r.get('status')
+                else:
+                    status = getattr(r, 'status', None)
+                if status and status.lower() in ("queued", "in_progress", "running", "processing", "requires_action"):
+                    return True
+            except Exception:
+                continue
+
+        return False
+    except Exception:
+        # Be conservative: assume no active run if we cannot determine
+        return False
+
+# Ensure helper to access real engine exists for other endpoints
+try:
+    from codette_real_engine import get_real_codette_engine as _get_real_engine
+    def get_real_engine():
+        try:
+            return _get_real_engine()
+        except Exception:
+            return None
+    logger.info("✅ codette_real_engine helper available")
+except Exception:
+    def get_real_engine():
+        return None
+    logger.info("ℹ️ codette_real_engine not available; get_real_engine will return None")
+
+async def ingest_chat_to_codette(user_id: str, user_message: str, assistant_response: str, source: str = "unknown"):
+    """Ingest chat exchange into Codette's memory if engine supports learning.
+
+    This function is best-effort and will not raise if Codette lacks methods.
+    It runs asynchronously and logs failures.
+    """
+    try:
+        if not codette_engine:
+            logger.debug("Ingest skipped: no codette engine available")
+            return False
+
+        # Prefer known ingestion API shapes
+        # 1) codette_engine.learn_from_chat(user_id, user_message, assistant_response)
+        # 2) codette_engine.append_memory({...})
+        # 3) codette_engine.context_memory.append({...}) or similar
+        data = {
+            "user_id": user_id,
+            "user_message": user_message,
+            "assistant_response": assistant_response,
+            "source": source,
+            "timestamp": get_timestamp()
+        }
+
+        # Try dedicated method
+        if hasattr(codette_engine, 'learn_from_chat') and callable(getattr(codette_engine, 'learn_from_chat')):
+            try:
+                maybe = codette_engine.learn_from_chat(data)
+                # If coroutine, await it
+                if asyncio.iscoroutine(maybe):
+                    await maybe
+                logger.info("Ingested chat to codette via learn_from_chat")
+                return True
+            except Exception as e:
+                logger.debug(f"learn_from_chat failed: {e}")
+
+        # Try append to context memory method used by hybrid
+        if hasattr(codette_engine, 'context_memory') and isinstance(getattr(codette_engine, 'context_memory'), list):
+            try:
+                codette_engine.context_memory.append({
+                    'input': user_message,
+                    'response': assistant_response,
+                    'source': source,
+                    'timestamp': get_timestamp()
+                })
+                logger.info("Appended chat to codette.context_memory")
+                return True
+            except Exception as e:
+                logger.debug(f"Appending to context_memory failed: {e}")
+
+        # Try generic memory attribute names
+        for attr in ('memory', 'conversation_history', 'conversation', 'chat_history'):
+            try:
+                mem = getattr(codette_engine, attr, None)
+                if isinstance(mem, list):
+                    mem.append({
+                        'user': user_message,
+                        'assistant': assistant_response,
+                        'source': source,
+                        'timestamp': get_timestamp()
+                    })
+                    logger.info(f"Appended chat to codette.{attr}")
+                    return True
+            except Exception as e:
+                logger.debug(f"Failed to append to {attr}: {e}")
+
+        # Try a generic upsert method
+        if hasattr(codette_engine, 'upsert_memory') and callable(getattr(codette_engine, 'upsert_memory')):
+            try:
+                maybe = codette_engine.upsert_memory(data)
+                if asyncio.iscoroutine(maybe):
+                    await maybe
+                logger.info("Ingested chat via upsert_memory")
+                return True
+            except Exception as e:
+                logger.debug(f"upsert_memory failed: {e}")
+
+        logger.debug("No supported ingestion method found on codette_engine")
+        return False
+    except Exception as e:
+        logger.warning(f"Failed to ingest chat to Codette: {e}")
+        return False

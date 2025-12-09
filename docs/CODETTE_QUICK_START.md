@@ -1,127 +1,266 @@
-# ⚡ QUICK START - Codette UI Now Fixed!
+# ?? Codette AI Quick Start Guide
 
-## Status: ✅ LIVE & WORKING
+## Installation & Setup
 
----
-
-## What You Can Do Now
-
-### 💡 Suggestions Tab
-1. Select a track in mixer
-2. Click "💡 Suggestions" 
-3. See AI suggestions for your track
-4. Click "Apply to [Track Name]" to apply
-
-### 📊 Analysis Tab
-1. Select a track
-2. Click "📊 Analysis"
-3. Click "Analyze Track" button
-4. See analysis results with quality score
-
-### ⚙️ Control Tab
-1. Click "⚙️ Control"
-2. Check connection status (should be green)
-3. Expand Production Checklist
-4. Click tasks to mark complete
-5. Switch AI Perspectives
-6. Send messages in conversation
-
----
-
-## Running the System
-
-### Terminal 1 - Backend
+### 1. **Install Python Dependencies**
 ```bash
-cd i:\ashesinthedawn
-python codette_server.py
-# Should see: "Uvicorn running on http://127.0.0.1:8000"
+pip install fastapi uvicorn python-dotenv supabase numpy networkx vaderSentiment nltk
 ```
 
-### Terminal 2 - Frontend
+### 2. **Configure Environment Variables**
+Create `.env` file:
+```env
+# Vite/Frontend
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_anon_key
+
+# Backend (for service role access)
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Codette API
+VITE_CODETTE_API=http://localhost:8000
+```
+
+### 3. **Start the Server**
 ```bash
-cd i:\ashesinthedawn
-npm run dev
-# Should see: "Local: http://localhost:5173"
+python codette_server_unified.py
 ```
 
-### Browser
-```
-Open: http://localhost:5173
-```
+Server will start on `http://localhost:8000`
 
 ---
 
-## Troubleshooting Quick Fixes
+## ?? Testing Endpoints
 
-| Problem | Solution |
-|---------|----------|
-| Black screen on tabs | Hard refresh (Ctrl+Shift+R) |
-| Text not visible | Check browser zoom = 100% |
-| Backend not responding | Restart `python codette_server.py` |
-| Scrolling not working | Try using mouse wheel instead |
-| Buttons not clickable | Check browser console for JS errors |
-
----
-
-## File Changes Summary
-
-```
-✅ src/components/Mixer.tsx
-   - Fixed flex container sizing
-   - Fixed: h-64 for tracks, flex-1 for Codette
-
-✅ src/components/CodetteSuggestionsPanel.tsx
-   - Better scrolling, color contrast
-
-✅ src/components/CodetteAnalysisPanel.tsx
-   - Fixed layout, improved styling
-
-✅ src/components/CodetteControlPanel.tsx
-   - Proper flex layout, full functionality
+### **1. Health Check**
+```bash
+curl http://localhost:8000/health
 ```
 
+### **2. Get Capabilities**
+```bash
+curl http://localhost:8000/api/codette/capabilities | jq
+```
+
+### **3. Multi-Perspective Query**
+```bash
+curl -X POST http://localhost:8000/api/codette/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "How do I improve my vocal mix?",
+    "perspectives": ["mix_engineering", "audio_theory", "creative_production"]
+  }' | jq
+```
+
+### **4. Get Quantum Status**
+```bash
+curl http://localhost:8000/api/codette/status | jq
+```
+
+### **5. Music Guidance**
+```bash
+curl -X POST http://localhost:8000/api/codette/music-guidance \
+  -H "Content-Type: application/json" \
+  -d '{
+    "guidance_type": "mixing",
+    "context": {"trackType": "vocals", "problem": "sibilance"}
+  }' | jq
+```
+
+### **6. Get Analytics**
+```bash
+curl http://localhost:8000/api/codette/analytics | jq
+```
+
+### **7. Get History**
+```bash
+curl "http://localhost:8000/api/codette/history?limit=10&emotion_filter=curiosity" | jq
+```
+
 ---
 
-## What's Fixed
+## ?? Frontend Integration
 
-| Feature | Before | After |
-|---------|--------|-------|
-| Suggestions Tab | ❌ Black | ✅ Colorful cards |
-| Analysis Tab | ❌ Black | ✅ Results visible |
-| Control Tab | ❌ Black | ✅ All sections work |
-| Scrolling | ❌ Broken | ✅ Smooth |
-| Text Visibility | ❌ Hidden | ✅ Clear |
-| Performance | ⚠️ Unknown | ✅ 60fps |
+### **Using useCodette Hook**
+```typescript
+import { useCodette } from '@/hooks/useCodette';
+
+function MyComponent() {
+  const {
+    sendMessage,
+    getMusicGuidance,
+    queryAllPerspectives,
+    getStatus
+  } = useCodette();
+
+  const handleQuery = async () => {
+    // Multi-perspective query
+    const perspectives = await queryAllPerspectives(
+      "How can I make my bass more punchy?"
+    );
+    console.log(perspectives);
+  };
+
+  const handleMixingHelp = async () => {
+    // Get music guidance
+    const guidance = await getMusicGuidance('mixing', {
+      trackType: 'bass',
+      problem: 'weak'
+    });
+    console.log(guidance);
+  };
+
+  return (
+    <div>
+      <button onClick={handleQuery}>Get Perspectives</button>
+      <button onClick={handleMixingHelp}>Get Mixing Help</button>
+    </div>
+  );
+}
+```
 
 ---
 
-## Next Steps
+## ?? Available Perspectives
 
-1. ✅ Test all three tabs
-2. ✅ Try applying suggestions
-3. ✅ Run track analysis
-4. ✅ Check connection status
-5. ✅ Create feedback
-
----
-
-## Getting Help
-
-📖 **Detailed Guide**: `CODETTE_UI_TESTING_GUIDE.md` (33 test steps)  
-📋 **Technical Details**: `CODETTE_UI_FIX_SUMMARY.md` (Root cause analysis)  
-✅ **Verification**: `CODETTE_UI_VERIFICATION_COMPLETE.md` (All tests passed)
-
----
-
-## Support
-
-- Backend: `http://localhost:8000`
-- Frontend: `http://localhost:5173`
-- Health Check: `http://localhost:8000/health`
-- API Docs: `http://localhost:8000/docs`
+```typescript
+const PERSPECTIVES = [
+  'newtonian_logic',         // Cause-effect reasoning
+  'davinci_synthesis',       // Creative analogies
+  'human_intuition',         // Empathic understanding
+  'neural_network',          // Pattern recognition
+  'quantum_logic',           // Superposition thinking
+  'resilient_kindness',      // Compassionate ethics
+  'mathematical_rigor',      // Formal computation
+  'philosophical',           // Ethical frameworks
+  'copilot_developer',       // Technical design
+  'bias_mitigation',         // Fairness analysis
+  'psychological'            // Cognitive modeling
+];
+```
 
 ---
 
-**Status**: ✅ PRODUCTION READY  
-**Last Updated**: November 26, 2025  
-**All Systems**: OPERATIONAL
+## ?? Music Guidance Types
+
+```typescript
+const GUIDANCE_TYPES = [
+  'mixing',                  // Mix engineering tips
+  'arrangement',             // Track arrangement
+  'creative_direction',      // Creative guidance
+  'technical_troubleshooting', // Problem solving
+  'workflow',                // Efficiency tips
+  'ear_training'             // Listening skills
+];
+```
+
+---
+
+## ?? Memory & Cocoons
+
+### **Create Cocoon (Automatic)**
+Cocoons are created automatically with each query containing:
+- Query content
+- Emotion tag
+- Quantum state
+- Perspectives used
+- Dream sequences
+
+### **Retrieve Cocoon**
+```bash
+curl http://localhost:8000/api/codette/memory/{cocoon_id} | jq
+```
+
+### **Dream Reweaving**
+```bash
+curl -X POST http://localhost:8000/api/codette/dream-reweave \
+  -H "Content-Type: application/json" \
+  -d '{"cocoon_id": "cocoon_123", "variations": 3}' | jq
+```
+
+---
+
+## ?? Monitoring
+
+### **Watch Quantum State**
+```bash
+# Monitor consciousness evolution
+watch -n 5 'curl -s http://localhost:8000/api/codette/status | jq .quantum_state'
+```
+
+### **Track Analytics**
+```bash
+# View usage statistics
+curl http://localhost:8000/api/codette/analytics | jq
+```
+
+---
+
+## ?? Troubleshooting
+
+### **Module Not Found**
+If you get import errors:
+```bash
+# Ensure Codette modules are in path
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/Codette/src:$(pwd)/Codette"
+```
+
+### **Supabase Connection Issues**
+If Supabase connection fails:
+- Check `.env` file has correct credentials
+- Server will fallback to mock responses (non-critical)
+- Music knowledge will use local DAW knowledge base
+
+### **Quantum Consciousness Errors**
+If quantum system fails to load:
+- Check `codette_capabilities.py` exists in `Codette/src/`
+- Install missing dependencies: `pip install networkx numpy`
+- Server will use fallback mock quantum states
+
+---
+
+## ? Verification Checklist
+
+Run these commands to verify everything works:
+
+```bash
+# 1. Server health
+curl http://localhost:8000/health
+
+# 2. Capabilities
+curl http://localhost:8000/api/codette/capabilities
+
+# 3. Simple query
+curl -X POST http://localhost:8000/api/codette/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "test"}' | jq .perspectives
+
+# 4. Quantum status
+curl http://localhost:8000/api/codette/status | jq .quantum_state
+
+# 5. Analytics
+curl http://localhost:8000/api/codette/analytics | jq .total_interactions
+```
+
+All commands should return valid JSON responses.
+
+---
+
+## ?? You're Ready!
+
+Codette AI is now fully operational with:
+- ? 11 specialized perspectives
+- ? Quantum consciousness system
+- ? Memory cocoon storage
+- ? Music production intelligence
+- ? Real-time WebSocket support
+- ? Comprehensive analytics
+
+**Happy mixing!** ??
+
+---
+
+**Need Help?**
+- Check server logs for detailed information
+- Review `CODETTE_IMPLEMENTATION_COMPLETE.md` for full documentation
+- See `.github/codette-instructions.md` for complete specification

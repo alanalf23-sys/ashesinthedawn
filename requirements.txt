@@ -12,7 +12,8 @@ scikit-learn>=1.2
 # FastAPI backend
 fastapi>=0.95
 uvicorn[standard]>=0.21
-pydantic>=1.10
+pydantic>=2.5.0
+pydantic-core==2.14.1
 python-multipart>=0.0.5
 
 # Audio I/O & real-time
@@ -30,18 +31,15 @@ aiohttp>=3.8
 httpx>=0.24
 
 # AI / NLP (Codette)
-nltk>=3.8
+nltk>=3.9
 vaderSentiment>=3.3
 textblob>=0.17
 transformers>=4.30
 torch>=1.13
-
-# Embeddings / vector tools
-protobuf>=4.0
-msgpack>=1.0
+openai
 
 # Testing & dev tools
-pytest>=7.2
+pytest>=8.2,<10
 pytest-asyncio>=0.20
 pytest-cov>=4.0
 pytest-mock>=3.10

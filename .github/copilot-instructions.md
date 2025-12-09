@@ -1,619 +1,516 @@
-# CoreLogic Studio - AI Coding Agent Instructions
+CoreLogic Studio
 
-**Last Updated**: November 24, 2025 (Production Ready)
-**Status**: ✅ Phase 7 Complete - Configuration System, UI Stable & VU Meter Integration
-**Version**: 7.0.0 - Vite-optimized, 0 TypeScript errors
+Codette-Aligned Architectural Specification
+Version 7.0.0 — Sovereign DAW Engine Build
+Status: Phase 7 Complete (Configuration Core, UI Stabilization, Telemetry Pipeline)
 
-## Project Overview
+1. System Identity
 
-CoreLogic Studio is a **dual-platform DAW** (Digital Audio Workstation):
+CoreLogic Studio is a sovereign dual-stack audio system modeled after the Codette architecture:
 
-- **Frontend**: React 18 + TypeScript UI with Web Audio API for real-time playback
-- **Backend**: Python DSP library (`daw_core/`) with 19 professional audio effects, automation framework, and metering tools
+• The UI governs intention.
+• The Context governs truth.
+• The Engine governs execution.
+• The DSP Core governs authority.
+• Telemetry governs verification.
 
-**Tech Stack**: React 18, TypeScript 5.5, Vite 5.4, Tailwind CSS 3.4, Supabase | Python 3.10+, NumPy, SciPy
+The system is shaped by the same design principles that define Codette and the Nexus Signal Engine:
 
-## Architecture Essentials
+Determinism — state transitions must be explicit, reproducible, auditable.
+Modular Isolation — no cross-contamination between UI, context, engine, and DSP.
+Contracts Over Guesswork — each subsystem exposes a narrow surface, never internal details.
+Verifiable State — every change in playback, routing, gain, metering, or automation has a traceable cause.
+Defensive Design — every external call is guarded; every internal assumption is validated.
 
-### Dual-Stack Architecture
+This shifts CoreLogic from a DAW into a governed, verifiable audio system.
 
-This is a **federated mono-repo** with separate frontend and backend concerns:
+2. High-Level Architecture (Codette Model)
 
-1. **React Frontend** (`src/`)
+CoreLogic Studio follows the same four-layered hierarchy used in Codette:
 
-   - Handles UI, state management, user interactions
-   - Uses Web Audio API for real-time playback/mixing
-   - Does NOT perform audio DSP - all effects processing would eventually call Python backend
+Intent Layer    → UI Components (React)
+Truth Layer     → DAWContext (State Authority)
+Execution Layer → AudioEngine (Web Audio)
+Authority Layer → Python DSP Core (daw_core/)
+Telemetry Layer → VUMeter System, Spectrum, LevelMeters
 
-2. **Python DSP Backend** (`daw_core/`)
-   - 19 audio effects across 5 categories (EQ, Dynamics, Saturation, Delays, Reverb)
-   - Automation framework (AutomationCurve, LFO, Envelope, AutomatedParameter)
-   - Metering tools (LevelMeter, SpectrumAnalyzer, VUMeter, Correlometer)
-   - Currently **not integrated** with React frontend (separate development phase)
-   - All effects tested via pytest (197 tests passing)
 
-### Frontend Three-Layer Design (React Only)
+Each layer has one job and one job only.
 
-1. **Context Layer** (`src/contexts/DAWContext.tsx` - 639 lines)
+No layer may reach across boundaries.
 
-   - Single source of truth for all DAW state (tracks, playback, recording, time)
-   - Audio engine reference held here (singleton pattern via `getAudioEngine()`)
-   - Branching functions for track creation by type (audio/instrument/midi/aux/vca)
-   - **Critical insight**: Volume sync effect (lines 100-115) keeps audio parameters in sync during playback
+No layer may mutate another layer’s state.
 
-2. **Audio Engine** (`src/lib/audioEngine.ts` - 500 lines)
+3. Signal Chain (Single Source of Truth)
 
-   - Wrapper around Web Audio API with methods: `playAudio()`, `stopAudio()`, `setTrackVolume()`, `seek()`
-   - **Key pattern**: dB ↔ Linear conversion via `dbToLinear()` (private method, line 475)
-   - Waveform caching in `waveformCache` Map for performance
-   - Source nodes stored per-track to enable resumable playback
+All audio flow in CoreLogic obeys the Sovereign Signal Chain:
 
-3. **UI Components** (18 components, all consume `useDAW()` hook)
-   - TopBar: Transport controls + time display + CPU/settings
-   - TrackList: Add/select/delete tracks with sequential numbering per type
-   - Timeline: Waveform visualization + playhead + click-to-seek
-   - Mixer: Volume/pan/input-gain sliders for selected track + plugin rack
-   - Sidebar: Multi-tab browser for files/plugins
-   - WelcomeModal: Project creation
-   - DraggableWindow, ResizableWindow: Detachable mixer UI
-   - PluginRack, AudioMeter: Effects and metering displays
-   - **VUMeterGfx**: Canvas-based analog VU meter (JSFX conversion) ✨ NEW
-   - **VUMeterPanel**: VU meter UI wrapper with controls ✨ NEW
+User Action
+   ↓
+UI Intent
+   ↓
+DAWContext (Truth Engine)
+   ↓  — commands →
+DAW Engine (Execution Engine)
+   ↓
+Web Audio Graph
+   ↓
+Output Bus / Telemetry Tap
+   ↓
+VU Meter / Spectrum / Level Meter
+   ↑
+UI Feedback
 
-### Data Flow
 
-```
-User Action → Component → useDAW() → DAWContext method → AudioEngine → Web Audio API
-   ↑                                                                        ↓
-   └────────────────── State update triggers component re-render ─────────┘
-```
+This replicates the Codette “Intention → Engine → Telemetry → Reflection” loop.
 
-## Component Communication Patterns
+Every mutation to playback, gain, pan, routing, waveform displays, or track structure must be triggered from the Context, never the UI.
 
-### Context Hook Usage
+4. Agent-Style Modularity (Codette-consistent)
 
-```typescript
-import { useDAW } from "../contexts/DAWContext";
+Each subsystem acts like a Codette agent: autonomous, isolated, and responsible only for its domain.
 
-export default function MyComponent() {
-  const { tracks, selectedTrack, togglePlay, seek } = useDAW();
-  // Use values and methods directly
-}
-```
+4.1 UI Agent (Intent)
 
-### VU Meter Integration Pattern ✨ NEW
+• Pure presentation
+• No business logic
+• No direct DSP handling
+• Reads only from Context via useDAW()
+• Sends events upward, never sideways
 
-```typescript
-// Basic usage with audio engine auto-connect
-import { VUMeterPanel } from './components/VUMeterPanel';
+4.2 Context Agent (Truth)
 
-<VUMeterPanel 
-  responseMs={50}      // Attack time (1-300ms)
-  release={5}          // Release speed (1-10)
-  showControls={true}  // Show sliders
-/>
+This is your CoreLogic equivalent of Codette's State Orchestrator.
 
-// Advanced usage with custom audio source
-import { VUMeterGfx } from './components/VUMeterGfx';
-import { useVUMeterData } from '../hooks/useVUMeterData';
+Responsibilities:
 
-function CustomMeter() {
-  const { leftLevel, rightLevel } = useVUMeterData();
-  
-  return (
-    <VUMeterGfx
-      leftLevel={leftLevel}
-      rightLevel={rightLevel}
-      responseMs={50}
-      release={5}
-    />
-  );
-}
-```
+Own all DAW state
 
-### Track Selection Model
+Validate all state transitions
 
-- Single selected track at a time (`selectedTrack` state)
-- All track modifications flow through `updateTrack(trackId, updates)`
-- Mixer component shows controls for `selectedTrack` only
+Govern playback lifecycle
 
-### Branching Functions (Anti-pattern to avoid)
+Manage track registry
 
-`DAWContext` uses branching factory functions (`createAudioTrack()`, `createInstrumentTrack()`, etc.) before calling `addTrack()`. This pattern is **already in place** - follow it for consistency if adding new track types.
+Synchronize UI with engine-level changes
 
-## Styling Conventions
+Perform cross-track logic (solo, mute, routing)
 
-### Colors & Tailwind
+4.3 Engine Agent (Execution)
 
-- **Background**: `bg-gray-950` (app), `bg-gray-900` (panels), `bg-gray-800` (controls)
-- **Borders**: `border-gray-700` (all dividers)
-- **Text**: `text-gray-300` (default), `text-gray-400` (secondary), `text-gray-100` (prominent)
-- **Accents**: `bg-blue-600` (play/primary), `bg-red-600` (record), `bg-yellow-600` (solo)
-- **Track colors**: 8-color palette in `DEVELOPMENT.md` line 289
+The AudioEngine is treated like a sovereign black box similar to NexusEngine:
 
-### Component Sizing
+It never holds UI state.
 
-- Left sidebar: `w-48` (tracks)
-- Center timeline: `flex-1` (takes remaining space)
-- Bottom mixer: `h-48` (fixed height for controls)
-- Right sidebar: `w-64` (browser panel)
+It never owns truth — only performs actions.
 
-## Critical Functions & Their Behavior
+It guarantees deterministic execution of:
 
-### Critical Functions & Their Behavior
+Playback
 
-### `togglePlay()`
+Seeking
 
-- **Status**: FIXED (native looping now handles continuous playback)
-- **Implementation** (DAWContext): Starts playback or stops it based on `isPlaying` state
-- **Audio wiring**: Plays all non-muted audio/instrument tracks from `currentTime`
-- **Key detail**: Relies on native `source.loop = true` in Web Audio API (audioEngine.ts:106)
+Gain staging (input/output)
 
-### `seek(timeSeconds)`
+Panning
 
-- Stops existing sources and creates new ones from seek time to enable resumable playback
-- **Not just updating currentTime**: Must restart audio from new position if playing
+Waveform caching
 
-### `uploadAudioFile(file)`
+Level extraction (for telemetry)
 
-- Validates MIME type + file size (100MB max, lines 406-418)
-- Calls `audioEngine.loadAudioFile()` which:
-  - Decodes audio file
-  - Caches AudioBuffer
-  - Pre-generates waveform data in `waveformCache`
+4.4 DSP Authority Agent (Python)
 
-### `setTrackInputGain()` vs `updateTrack({volume})`
+The Python DSP backend is the final authority on all professional audio effects.
 
-- **Input Gain** (pre-fader): Set via `setTrackInputGain()` - affects only audio engine pre-pan node
-- **Volume** (fader): Set via `updateTrack({volume})` - affects post-pan gain node
-- Both convert dB values to linear in audio engine
+19 DSP effects
 
-## Common Development Tasks
+Automation engine (Curve, LFO, Envelope)
 
-### Adding a Track Type
+Metering primitives
 
-1. Add type to `Track['type']` in `src/types/index.ts`
-2. Create branching function `createXyzTrack()` in DAWContext (copy pattern from lines 178-212)
-3. Add case in `addTrack()` switch statement
-4. Add icon + label in TrackList `getTrackTypeLabel()` if needed
+197/197 verified tests
 
-### Fixing Audio Playback Issues
+No shared code or state with React
 
-- Check `togglePlay()` state management (line 304)
-- Verify `playAudio()` call passes correct parameters: `(trackId, startTime, volumeDb, pan)`
-- Remember: `playAudio()` expects **dB values**, not linear - conversion happens in engine
+Treated as an external sovereign module
 
-### Adding UI Controls to Mixer
+4.5 Telemetry Agent (Meters)
 
-- Mixer shows only `selectedTrack` (if null, shows "Select a track")
-- Use `updateTrack(selectedTrack.id, {...})` to persist changes
-- Use `setTrackInputGain()` specifically for pre-fader gain
+Telemetry is a passive observer, never a controller.
 
-### Creating Waveform Display
+VU meters (JSFX → TS conversion)
 
-- Timeline.tsx (lines 32-40) shows the pattern: call `getWaveformData(trackId)` to retrieve cached data
-- Engine returns empty array `[]` if buffer not loaded or duration is 0
-- Waveform caching pre-generates on file load for performance
+RMS / Peak taps
 
-## Build & Deployment
+Real-time level extraction
 
-### Frontend Development
+Frame-accurate needle ballistics
 
-```bash
-npm install              # Install Node dependencies (Vite 7.2.4, React 18.3.1, TypeScript 5.5.3)
-npm run dev              # Vite dev server on port 5173 (or 5174/5175 if occupied)
-npm run build            # Production build (471.04 kB, gzip: 127.76 kB)
-npm run typecheck        # TypeScript validation (must pass with 0 errors before commit)
-npm run lint             # ESLint validation (ESLint 9.x with React plugin)
-npm run preview          # Preview production build locally
-npm run ci               # Full CI check (typecheck + lint)
-```
+60 FPS canvas renderer
 
-**Current Status**: Dev server running on port 5175 with HMR active ✅
+Telemetry must never influence state — only report it.
 
-### Backend Development
+5. Core Contracts (Codette Governance Applied)
+5.1 UI Contract
 
-```bash
-# One-time setup
-python -m venv venv
-venv\Scripts\activate  # Windows
+UI MUST:
 
-# Install dependencies
-pip install numpy scipy
+Send state changes upward only.
 
-# Run tests (197 tests currently passing)
-python -m pytest test_phase2_*.py -v                    # All tests
-python -m pytest test_phase2_effects.py -v --cov=daw_core  # With coverage
-```
+Render based on context state.
 
-### Testing Strategy
+Never bypass context for engine calls.
 
-- **Frontend**: Manual testing in dev server (no automated test suite yet)
-- **Backend**: pytest-based testing with 197 tests across 6 test files:
-  - `test_phase2_effects.py` - EQ filters
-  - `test_phase2_2_dynamics.py` - Compressor, Limiter, Expander, Gate
-  - `test_phase2_4_saturation.py` - Saturation, Distortion, WaveShaper
-  - `test_phase2_5_delays.py` - SimpleDelay, PingPong, MultiTap, Stereo
-  - `test_phase2_6_reverb.py` - Freeverb, Hall, Plate, Room presets
-  - `test_phase2_7_automation.py` - Curves, LFO, Envelopes
-  - `test_phase2_8_metering.py` - Level, Spectrum, VU, Correlometer
+Never mutate state directly.
 
-### Frontend-Backend Architecture
+Never store engine references.
 
-- **Currently**: Frontend and backend are separate concerns with independent test suites
-- **Future integration**: Python DSP backend will be called from DAWContext for effect processing
-- **Development workflow**: Work on frontend (npm) and backend (Python) independently
-- **Type definitions**: `src/types/index.ts` defines Plugin interface that will eventually call Python effects
+UI MUST NOT:
 
-### Known Issues & Limitations
+Create AudioContexts.
 
-- Supabase credentials optional - app runs in "demo mode" without auth
-- Python backend not yet integrated with React frontend (integration phase TBD)
-- Web Audio API playback limitations handled via native looping (`source.loop = true`)
-- sounddevice (audio I/O) and websockets are optional dependencies (installed, wrapped in try-except)
+Access raw audio nodes.
 
-## Recent Fixes (November 24, 2025 Session - Configuration & VU Meter Integration)
+Perform DSP.
 
-### Critical Fixes Applied
+Generate side effects beyond rendering.
 
-1. **JSON Configuration Files** (tsconfig.app.json, tsconfig.node.json)
-   - **Issue**: Invalid JSON comments (`/* Bundler mode */`, `/* Linting */`)
-   - **Fix**: Removed comment blocks for strict JSON validation ✅
+5.2 Context Contract (Authoritative Truth Layer)
 
-2. **Vite Migration** (appConfig.ts, .env.example)
-   - **Issue**: React CRA style `process.env.REACT_APP_*` incompatible with Vite
-   - **Fix**: Updated to `import.meta.env.VITE_*` prefix throughout
-   - **Config Sections**: Reduced from 10 to 4 core sections (system, display, theme, debug)
-   - **Result**: All environment variables now Vite-compatible ✅
+DAWContext MUST:
 
-3. **Component Configuration References** (Mixer.tsx, TrackList.tsx, TopBar.tsx, audioEngine.ts)
-   - **Issue**: Referencing non-existent APP_CONFIG properties
-   - **Fixes**:
-     - Mixer.tsx: `APP_CONFIG.audio.MAX_TRACKS` → hardcoded `256`
-     - TrackList.tsx: `APP_CONFIG.audio.MAX_TRACKS` → hardcoded `256`
-     - TopBar.tsx: `APP_CONFIG.transport.TIMER_FORMAT` → hardcoded `HH:MM:SS`
-     - audioEngine.ts: `APP_CONFIG.transport.METRONOME_ENABLED` → hardcoded `true`
-   - **Result**: 0 TypeScript errors, UI fully functional ✅
+Hold the entire DAW state graph.
 
-4. **VU Meter GFX Integration** ✨ NEW
-   - **Achievement**: Complete JSFX → React/TypeScript conversion
-   - **Files Created**:
-     - `src/components/VUMeterGfx.tsx` (1,050 lines) - Canvas rendering engine
-     - `src/components/VUMeterPanel.tsx` (150 lines) - UI wrapper
-     - `src/hooks/useVUMeterData.ts` (70 lines) - Audio engine integration
-   - **Documentation**: 7 comprehensive docs in `docs/VU_METER_*.md`
-   - **Formulas**: All 5 original JSFX formulas preserved exactly
-   - **Performance**: 60 FPS, < 1% CPU, < 10 MB memory
-   - **Status**: Production-ready, 0 TypeScript errors ✅
-
-## VU Meter GFX System ✨ NEW SECTION
-
-### Overview
+Expose state change methods as pure transitions.
 
-Professional analog VU meters converted from JSFX (VU Meter by Liteon, GPL) to React/TypeScript with exact formula preservation.
+Validate arguments before mutation.
 
-### Core Components
+Gate all audio engine calls.
 
-1. **VUMeterGfx.tsx** (1,050 lines)
-   - Canvas-based rendering engine
-   - 60 FPS animation loop
-   - Dual stereo meters (LEFT/RIGHT)
-   - RMS and Peak displays
-   - Red clip indicators (>0 dBFS)
-   - Authentic scale markings (-20 to +3 dB)
-   - Exponential needle decay (realistic ballistics)
-
-2. **VUMeterPanel.tsx** (150 lines)
-   - User-friendly wrapper
-   - Audio engine auto-connect
-   - Response time slider (1-300ms)
-   - Release speed slider (1-10)
-   - Settings panel toggle
-   - Numeric level readout
-
-3. **useVUMeterData.ts** (70 lines)
-   - Custom React hook
-   - Extracts real-time audio levels from `getAudioEngine().getAudioLevels()`
-   - RMS and peak calculations per channel
-   - 60 FPS refresh via `requestAnimationFrame`
-
-### Original JSFX Formulas Preserved
-
-All formulas from the original JSFX plugin are preserved exactly:
-
-```typescript
-// 1. dB Scale Conversion
-const sc = 6 / Math.log(2);  // 8.656170245
-
-// 2. Exponential X Position
-const xlt = Math.floor(Math.exp(Math.log(1.055) * 2.1 * ool) * 285);
-
-// 3. Needle Y from Radius
-const l = Math.sqrt(sqr(r) + sqr(212 - x));
-const h = ((l - r) * r) / l;
-const m = Math.sqrt(sqr(l - r) - sqr(h));
-const y = 35 + h;
-const adjustedX = x < 212 ? x + m : x - m;
-
-// 4. RMS Calculation
-const rmsVal = Math.sqrt(suml / cs);
-const rmsl = Math.floor(sc * Math.log(rmsVal) * 100) / 100;
-
-// 5. Exponential Fallback Decay
-const fallback = (rel / 2) * (samplesBlock / 1024);
-const fbi = Math.exp(x / 512) * fallback;
-```
-
-### Usage Examples
-
-**Quick Integration**:
-```typescript
-import { VUMeterPanel } from './components/VUMeterPanel';
-
-// Add to Mixer or any component
-<VUMeterPanel 
-  trackId={selectedTrack?.id}  // Optional: track-specific
-  responseMs={50}              // Attack time
-  release={5}                  // Release speed
-  showControls={true}          // Show sliders
-/>
-```
-
-**Custom Ballistics**:
-```typescript
-// Vintage VU (slow attack, slow release)
-<VUMeterPanel responseMs={300} release={2} />
-
-// Peak Program Meter (fast attack, fast release)
-<VUMeterPanel responseMs={10} release={8} />
-
-// BBC PPM Standard
-<VUMeterPanel responseMs={5} release={3} />
-```
-### Documentation Files
-
-Complete documentation available in `docs/`:
-- `EVERYTHING_READY.md` - Complete summary
-- `VU_METER_MASTER_INDEX.md` - Navigation hub
-- `VU_METER_README.md` - Quick start guide
-- `VU_METER_INTEGRATION_COMPLETE.md` - Full API reference
-- `VU_METER_FILE_MANIFEST.md` - File verification
-
-### Performance Specs
-
-- **Frame Rate**: 60 FPS (canvas 2D)
-- **CPU Usage**: < 1% (single core)
-- **Memory**: < 10 MB per instance
-- **Latency**: < 12ms
-- **Bundle Size**: +25 KB (gzipped)
-
-## Type Definitions
-
-### Environment Configuration Pattern (Vite-Compatible)
-
-**File**: `src/config/appConfig.ts`
-
-```typescript
-// ✅ CORRECT: Using Vite's import.meta.env
-const env = import.meta.env;
-export const SYSTEM_CONFIG = {
-  APP_NAME: env.VITE_APP_NAME || 'CoreLogic Studio',
-  VERSION: env.VITE_APP_VERSION || '7.0',
-  // ... 4 core sections: system, display, theme, debug
+Guarantee deterministic updates.
+
+Maintain a mapping of active tracks → engine state.
+
+DAWContext MUST NOT:
+
+Perform DSP.
+
+Access Web Audio primitives directly.
+
+Make assumptions about engine internals.
+
+5.3 Engine Contract (Execution Layer)
+
+AudioEngine MUST:
+
+Expose only deterministic commands (play, stop, setGain, seek).
+
+Maintain its own Web Audio graph.
+
+Own the AudioContext singleton.
+
+Guarantee consistent gain staging (via dB→linear).
+
+Provide telemetry taps (getAudioLevels).
+
+Cache waveform computation.
+
+AudioEngine MUST NOT:
+
+Modify UI state.
+
+Reach into DAWContext.
+
+Use randomness or non-deterministic branching.
+
+Store track metadata beyond what is required for execution.
+
+5.4 DSP Authority Contract (Python)
+
+daw_core MUST:
+
+Provide verified DSP algorithms (pytest enforced).
+
+Treat every effect as a pure function (input → output).
+
+Maintain API-level compatibility for future frontend integration.
+
+Preserve performance and numerical stability guarantees.
+
+daw_core MUST NOT:
+
+Handle UI logic.
+
+Store project state.
+
+Care about React or TypeScript.
+
+Manage audio playback.
+
+5.5 Telemetry Contract
+
+Telemetry MUST:
+
+Observe only.
+
+Never mutate state.
+
+Use engine-level taps exclusively.
+
+Maintain 60 FPS rendering.
+
+Preserve JSFX formula accuracy.
+
+Telemetry MUST NOT:
+
+Affect routing.
+
+Affect gain.
+
+Affect playback.
+
+Affect timing.
+
+6. Context-First Data Flow (Codette Principle)
+
+Your system follows the same control loop as Codette:
+
+Intent → Truth → Execution → Telemetry → Feedback
+
+
+Where:
+
+UI expresses intent
+
+Context validates and transforms intent into commands
+
+Engine executes
+
+Telemetry records the result
+
+UI re-renders based on truth
+
+This makes the system resilient, predictable, and debuggable.
+
+7. Sovereign DAW Engine (NexusEngine-equivalent)
+
+The AudioEngine in CoreLogic Studio is now formally treated as a sovereign execution module, mirroring your NexusEngine runtimes.
+
+Key properties:
+
+One AudioContext
+
+Immutable graph boundaries
+
+Deterministic gain staging
+
+Declarative playback model
+
+Caching as a formal contract
+
+No “implicit” operations
+
+No cross-layer memory leaks
+
+Engine Responsibilities
+
+loadAudioFile → decode + cache buffer + generate waveform
+
+playAudio → instantiate nodes, connect routing, set gain/pan, start
+
+stopAudio → stop and clean up node references
+
+seek → rebuild per-track sources at new offsets
+
+setTrackVolume → apply gain in dB
+
+getAudioLevels → telemetry only
+
+Engine Lifecycle Rules
+
+Engine MUST only respond to DAWContext
+
+Engine MUST never modify global state
+
+Engine MUST treat every play/seek/stop as a transaction
+
+Engine MUST produce the same output for the same inputs
+
+8. VU Meter Telemetry Pipeline (Codette Telemetry Model)
+
+The VU Meter System mirrors Codette's emotional/quantum telemetry pipeline:
+fast, accurate, lightweight, and always truthful.
+
+Layer Responsibilities:
+
+useVUMeterData → Level extraction agent
+
+VUMeterGfx → Rendering engine (canvas, 60 FPS)
+
+VUMeterPanel → Presentation wrapper
+
+Guarantees:
+
+No state mutation
+
+No impact on audio graph
+
+JSFX formulas preserved 1:1
+
+Attack/Release ballistics accurate
+
+<1% CPU overhead
+
+9. Track Model (Definitive Truth Schema)
+
+Codette-influenced track definition:
+
+Track {
+  id: string
+  name: string
+  type: "audio" | "instrument" | "midi" | "aux" | "vca" | "master"
+  routing: string
+
+  // Gain Structure
+  inputGain: number   // pre-fader (dB)
+  volume: number      // post-fader (dB)
+  pan: number         // -1 to +1
+
+  // Control & State
+  muted: boolean
+  soloed: boolean
+  armed: boolean
+  stereoWidth: number
+  phaseFlip: boolean
+
+  // Plugins
+  inserts: string[]
+  sends: string[]
+
+  // Automation
+  automationMode?: "off" | "read" | "write" | "touch"
+
+  color: string
 }
 
-// ❌ WRONG: Do not use process.env or React CRA style REACT_APP_*
-// process.env.REACT_APP_NAME  // Won't work with Vite
-```
 
-**Environment Variables**: All use `VITE_` prefix in `.env` and `.env.example`
+This becomes the Truth Layer Contract.
 
-**Component Integration Pattern** (see Mixer.tsx):
-- Don't import appConfig into components for constants
-- If needed, add to context (DAWContext) and expose via `useDAW()`
-- Fallback to hardcoded defaults (e.g., `const maxTracks = 256;`)
+10. Deterministic Playback Model
+togglePlay()
 
-### Track Interface (src/types/index.ts)
+State authority lives in DAWContext
 
-```typescript
-interface Track {
-  id: string; // Unique identifier
-  name: string; // Display name
-  type: "audio" | "instrument" | "midi" | "aux" | "vca" | "master";
-  color: string; // Hex color for UI
-  muted: boolean; // Mute state
-  soloed: boolean; // Solo state
-  armed: boolean; // Record arm
-  inputGain: number; // Pre-fader gain (dB)
-  volume: number; // Post-fader volume (dB)
-  pan: number; // -1 (L) to +1 (R)
-  stereoWidth: number; // 0-200% (100 = normal)
-  phaseFlip: boolean; // Phase invert
-  inserts: string[]; // Plugin chain IDs
-  sends: string[]; // Send destinations
-  routing: string; // Bus/output destination
-  automationMode?: "off" | "read" | "write" | "touch";
-}
-```
+Execution authority lives in AudioEngine
 
-### DAWContextType
+Looping handled natively (source.loop = true)
 
-- 13 state properties (tracks, selectedTrack, currentTime, isPlaying, etc.)
-- 20+ context functions (addTrack, togglePlay, uploadAudioFile, etc.)
-- All exported via `useDAW()` hook
+Guaranteed consistent behavior between play/pause cycles
 
-## Performance Considerations
+seek()
 
-1. **Waveform caching**: Pre-computed on file load, stored in `waveformCache` Map
-2. **Audio context singleton**: Use `getAudioEngine()` - don't create new contexts
-3. **Volume sync effect**: Runs during playback only to sync parameter changes (line 100)
-4. **Track number calculation**: O(n) filter operation - acceptable for <100 tracks
+Must always rebuild nodes
 
-## Debugging Tips
+Must treat seek-time as a new transaction
 
-### Console Logs Available
+Must not modify state outside of truth layer
 
-- `audioEngine.ts` logs: "Playing track...", "Stopped playback...", "Set volume..."
-- `DAWContext.tsx` logs: "Recording started", "Audio Engine initialized"
+Gain handling
 
-### Common Errors
+All fader operations must be performed in dB and converted only inside the engine.
 
-- `useDAW() must be used within DAWProvider` → Component not wrapped in `<DAWProvider>`
-- "No audio buffer found for track X" → File didn't upload successfully, check `uploadError` state
-- Volume not changing → Check if track is muted, verify `setTrackVolume()` called in audio engine
-- Waveform not displaying → Check browser console for "No waveform data for track" warnings
+11. Defensive Rules (Codette Governance Applied)
+Global DO-NOTs:
 
-### Real-Time Audio Patterns to Know
+No logic in components
 
-1. **Native Looping**: Web Audio `source.loop = true` handles continuous playback (no manual restart needed)
-2. **Volume Sync**: DAWContext effect syncs volume changes during playback (100-115 lines)
-3. **Waveform Cache**: Two-tier system - checks cache first, computes if missing, stores result
-4. **Audio State**: Managed in `playingTracksState` Map to track `isPlaying` + `currentOffset` per track
+No engine calls from UI
 
-## Files to Review First
+No new AudioContexts
 
-1. `src/contexts/DAWContext.tsx` - State management patterns, track factory functions
-2. `src/lib/audioEngine.ts` - Web Audio API wrapper, volume handling, playback logic
-3. `src/types/index.ts` - Data model definitions (Track, Plugin, Project)
-4. `src/config/appConfig.ts` - Vite environment configuration (newly updated)
-5. `daw_core/fx/*.py` - 19 professional audio effects implementations
-6. `daw_core/automation/*.py` - Automation framework (AutomationCurve, LFO, Envelope)
-7. `src/components/TopBar.tsx` - Transport controls and UI pattern reference
-8. `src/components/Mixer.tsx` - Selected-track editing pattern, configuration defaults
-9. **`src/components/VUMeterGfx.tsx`** - VU meter rendering engine ✨ NEW
-10. **`src/components/VUMeterPanel.tsx`** - VU meter UI wrapper ✨ NEW
-11. **`src/hooks/useVUMeterData.ts`** - VU meter audio hook ✨ NEW
-12. `DEVELOPMENT.md` - Common development tasks and setup instructions
-13. **`docs/EVERYTHING_READY.md`** - VU Meter integration summary ✨ NEW
+No linear gain passed to engine
 
-## Common Mistakes to Avoid
+No random behavior in engine
 
-### Configuration & Environment
+No DSP executed in JS
 
-1. **❌ Importing appConfig directly in components for constants**
-   ```typescript
-   // WRONG
-   import { APP_CONFIG } from '../config/appConfig';
-   const maxTracks = APP_CONFIG.audio.MAX_TRACKS; // Will fail - property doesn't exist
-   
-   // ✅ CORRECT
-   const maxTracks = 256; // Hardcoded default, safe
-   // Or pass from context/props if needed at runtime
-   ```
+No configuration read outside appConfig
 
-2. **❌ Using React CRA environment variable format with Vite**
-   ```bash
-   # WRONG - Won't work with Vite
-   REACT_APP_NAME=CoreLogic Studio
-   
-   # ✅ CORRECT - Use Vite format
-   VITE_APP_NAME=CoreLogic Studio
-   ```
+No cross-layer mutation
 
-3. **❌ Accessing environment at module level**
-   ```typescript
-   // WRONG - appConfig.ts tries to read config properties at import time
-   const featureEnabled = process.env.REACT_APP_FEATURE_X; // May be undefined
-   
-   // ✅ CORRECT - Read from import.meta.env
-   const env = import.meta.env;
-   const featureEnabled = env.VITE_FEATURE_X || false;
-   ```
+Violations are considered architectural faults.
 
-### Audio Engine
+12. Performance Governance
+Guarantees:
 
-1. **❌ Creating multiple AudioContext instances**
-   ```typescript
-   // WRONG
-   const ctx = new (window.AudioContext || window.webkitAudioContext)();
-   
-   // ✅ CORRECT - Use singleton via getAudioEngine()
-   import { getAudioEngine } from './lib/audioEngine';
-   const engine = getAudioEngine();
-   ```
+Waveform generation: O(n), cached
 
-2. **❌ Passing linear volume values to playAudio()**
-   ```typescript
-   // WRONG - playAudio expects dB
-   engine.playAudio(trackId, 0, 0.8); // 0.8 is linear, not dB
-   
-   // ✅ CORRECT - Convert to dB first or pass dB directly
-   engine.playAudio(trackId, 0, -6); // -6 dB
-   ```
+Track selection: O(1)
 
-### Component State
+State updates: O(1)
 
-1. **❌ Calling updateTrack() without proper context**
-   ```typescript
-   // WRONG - Component imports DAWContext directly
-   const daw = useContext(DAWContext);
-   daw.updateTrack(...); // May not be in provider
-   
-   // ✅ CORRECT - Use the hook
-   const { updateTrack } = useDAW();
-   updateTrack(trackId, {...});
-   ```
+Telemetry render: 60 FPS
 
-### VU Meter Integration ✨ NEW
+TypeScript: 0 errors required
 
-1. **❌ Creating multiple VU meter instances for same audio source**
-   ```typescript
-   // WRONG - Creates redundant processing
-   <VUMeterPanel trackId="track-1" />
-   <VUMeterPanel trackId="track-1" />
-   
-   // ✅ CORRECT - One meter per audio source
-   <VUMeterPanel trackId="track-1" />
-   ```
+Python tests: 197/197 passing
 
-2. **❌ Passing incorrect level values**
-   ```typescript
-   // WRONG - VU meter expects 0-1 normalized
-   <VUMeterGfx leftLevel={-6} rightLevel={-3} />  // dB values won't work
-   
-   // ✅ CORRECT - Use normalized 0-1 values
-   <VUMeterGfx leftLevel={0.5} rightLevel={0.7} />
-   ```
+13. Development Procedures (Codette Workflow)
 
-3. **❌ Not using the custom hook for audio data**
-   ```typescript
-   // WRONG - Manual audio extraction
-   const levels = getAudioEngine().getAudioLevels();
-   
-   // ✅ CORRECT - Use the hook
-   const { leftLevel, rightLevel } = useVUMeterData();
-   ```
+Modify truth layer (DAWContext)
 
-## When Modifying Code
+Update execution layer only when necessary
 
-### Frontend Changes (React/TypeScript)
+Write contracts before implementing features
 
-- Always maintain `useDAW()` hook pattern for context access
-- Keep audio engine calls in DAWContext (not components directly)
-- Update state via context methods, not by importing context directly
-- **MUST achieve 0 TypeScript errors**: `npm run typecheck` (required before commit)
-- Preserve branching function structure for track factory pattern
-- Use Tailwind dark theme utilities (bg-gray-950, text-gray-300, border-gray-700)
-- **Environment Variables**: Use `import.meta.env.VITE_*` (Vite-style), not `process.env` (React CRA)
-- **Configuration Access**: Environment variables only; hardcode essential defaults in component level (see Mixer.tsx pattern)
-- **Avoid**: Importing appConfig.ts directly into components (use context instead)
-- **VU Meters**: Use `VUMeterPanel` for ready-to-use integration, `VUMeterGfx` for custom implementations ✨ NEW
+Run typecheck → must return 0 errors
 
-### Backend Changes (Python DSP)
+Validate engine determinism
 
-- Follow existing effects structure in `daw_core/fx/` (class per effect)
-- All effects inherit from base Effect class
-- Include comprehensive docstrings with parameters and examples
-- Write pytest tests in matching `test_phase2_*.py` files (keep 197/197 passing)
-- Use NumPy for array operations, SciPy for signal processing
-- Return audio in same dtype as input (prevents clipping through format conversion)
-- **Command**: `python -m pytest test_phase2_*.py -v` (verify no test regressions)
-- **No integration yet**: Python backend separate from React frontend (development phase TBD)
+Validate telemetry output
 
-### Cross-Layer Integration
+Document new contracts
 
-- Frontend Plugin type matches Python effect parameters
-- dB conversion happens in audio engine, not components or effects
-- Automation framework in Python can be consumed by React via API layer (future)
-- Test Python effects independently before integration with React UI
-- **VU Meter displays audio levels from Web Audio API, not Python backend** ✨ NEW
+14. Files to Read in Correct Order
+
+To understand the system as a governed entity:
+
+src/contexts/DAWContext.tsx — authority layer
+
+src/lib/audioEngine.ts — execution engine
+
+src/types/index.ts — truth schema
+
+src/config/appConfig.ts — environment governance
+
+src/components/Mixer.tsx — canonical UI→context pattern
+
+src/components/VUMeterGfx.tsx — telemetry engine
+
+15. Summary (Codette Doctrine Applied to a DAW)
+
+CoreLogic Studio now expresses the same core principles as Codette:
+
+• Truth belongs to the Context
+• Execution belongs to the Engine
+• Authority belongs to DSP
+• Intent belongs to UI
+• Verification belongs to Telemetry
+
+This produces a DAW that is:
+
+deterministic
+
+modular
+
+predictable
+
+debuggable
+
+sovereign
+
+safe
+
+future-proof
+
+Exactly the way you build systems.
