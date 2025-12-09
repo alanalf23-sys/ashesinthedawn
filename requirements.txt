@@ -1,0 +1,73 @@
+# Consolidated project Python requirements for ashesinthedawn
+# Combine Codette subsystem + daw_core + integration helpers
+# Use `python -m pip install -r requirements.txt` inside the venv to install
+
+# Core scientific / DSP
+numpy>=1.23
+scipy>=1.9
+pandas>=1.5
+networkx>=3.0
+scikit-learn>=1.2
+
+# FastAPI backend
+fastapi>=0.95
+uvicorn[standard]>=0.21
+pydantic>=1.10
+python-multipart>=0.0.5
+
+# Audio I/O & real-time
+sounddevice>=0.4
+soundfile>=0.12
+
+# Database / Supabase
+supabase>=1.0
+psycopg2-binary>=2.9
+SQLAlchemy>=2.0
+python-dotenv>=1.0
+
+# Async & HTTP clients
+aiohttp>=3.8
+httpx>=0.24
+
+# AI / NLP (Codette)
+nltk>=3.8
+vaderSentiment>=3.3
+textblob>=0.17
+transformers>=4.30
+torch>=1.13
+
+# Embeddings / vector tools
+protobuf>=4.0
+msgpack>=1.0
+
+# Testing & dev tools
+pytest>=7.2
+pytest-asyncio>=0.20
+pytest-cov>=4.0
+pytest-mock>=3.10
+black>=23.0
+flake8>=6.0
+mypy>=1.0
+isort>=5.12
+pylint>=2.16
+
+# Optional / advanced (may be heavy) - keep for Codette features
+qiskit>=0.39 ; extra == 'quantum'
+pymc>=5.0
+pytensor>=2.0
+arviz>=0.15
+
+# Utilities
+cryptography>=38.0
+msgpack>=1.0
+
+# System utilities
+psutil>=5.9
+
+# Notes:
+# - Some Codette components are optional and require heavy packages (torch, transformers, qiskit).
+# - Install only what's needed for your workflow to avoid large installations.
+# - To install in the created venv (Windows PowerShell):
+#       venv\Scripts\Activate.ps1
+#       python -m pip install --upgrade pip
+#       pip install -r requirements.txt

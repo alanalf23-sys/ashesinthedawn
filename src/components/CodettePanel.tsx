@@ -3,10 +3,10 @@
  * Full integration with all backend capabilities
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useCodette } from '@/hooks/useCodette';
-import { useDAW } from '@/contexts/DAWContext';
-import type { Plugin } from '@/types';
+import * as React from 'react';
+import { useCodette } from '../hooks/useCodette';
+import { useDAW } from '../contexts/DAWContext';
+import type { Plugin } from '../types';
 import {
   MessageCircle,
   Send,
@@ -98,33 +98,31 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
     currentTime,
   } = useDAW();
 
-  const [inputValue, setInputValue] = useState('');
-  const [activeTab, setActiveTab] = useState<'suggestions' | 'analysis' | 'chat' | 'actions' | 'perspectives' | 'memory' | 'advanced'>('suggestions');
-  const [selectedContext, setSelectedContext] = useState('general');
-  const [expanded, setExpanded] = useState(true);
-  const [confidenceFilter, setConfidenceFilter] = useState(0);
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
-  const [favoriteSuggestions, setFavoriteSuggestions] = useState<Set<string>>(new Set());
-  const [showPersonalityMenu, setShowPersonalityMenu] = useState(false);
-  const [activePerspectives, setActivePerspectivesLocal] = useState<string[]>(
-    PERSPECTIVES.slice(0, 5).map(p => p.id)
-  );
-  const [cocoonHistory, setCocoonHistory] = useState<any[]>([]);
-  const [loadingCocoons, setLoadingCocoons] = useState(false);
-  const [selectedCocoon, setSelectedCocoon] = useState<any>(null);
-  const [dreamText, setDreamText] = useState<string>('');
-  const [quantumMetrics, setQuantumMetrics] = useState<any>(null);
-  const [delaySyncData, setDelaySyncData] = useState<any>(null);
-  const [genreData, setGenreData] = useState<any>(null);
-  const [earTrainingExercises, setEarTrainingExercises] = useState<any[]>([]);
-  const [productionChecklist, setProductionChecklist] = useState<any>(null);
-  const [instrumentData, setInstrumentData] = useState<any>(null);
+  const [inputValue, setInputValue] = React.useState('');
+  const [activeTab, setActiveTab] = React.useState('suggestions' as 'suggestions' | 'analysis' | 'chat' | 'actions' | 'perspectives' | 'memory' | 'advanced');
+  const [selectedContext, setSelectedContext] = React.useState('general');
+  const [expanded, setExpanded] = React.useState(true);
+  const [confidenceFilter, setConfidenceFilter] = React.useState(0);
+  const [showOnlyFavorites, setShowOnlyFavorites] = React.useState(false);
+  const [favoriteSuggestions, setFavoriteSuggestions] = React.useState(new Set() as Set<string>);
+  const [showPersonalityMenu, setShowPersonalityMenu] = React.useState(false);
+  const [activePerspectives, setActivePerspectivesLocal] = React.useState(PERSPECTIVES.slice(0, 5).map((p: any) => p.id) as string[]);
+  const [cocoonHistory, setCocoonHistory] = React.useState([] as any[]);
+  const [loadingCocoons, setLoadingCocoons] = React.useState(false);
+  const [selectedCocoon, setSelectedCocoon] = React.useState(null as any);
+  const [dreamText, setDreamText] = React.useState('' as string);
+  const [quantumMetrics, setQuantumMetrics] = React.useState(null as any);
+  const [delaySyncData, setDelaySyncData] = React.useState(null as any);
+  const [genreData, setGenreData] = React.useState(null as any);
+  const [earTrainingExercises, setEarTrainingExercises] = React.useState([] as any[]);
+  const [productionChecklist, setProductionChecklist] = React.useState(null as any);
+  const [instrumentData, setInstrumentData] = React.useState(null as any);
   
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
+  const messagesEndRef = React.useRef(null as any);
+  const waveformCanvasRef = React.useRef(null as any);
 
   // Load favorites from localStorage on mount
-  useEffect(() => {
+  React.useEffect(() => {
     const saved = localStorage.getItem('codette_favorites');
     if (saved) {
       try {
@@ -136,33 +134,33 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
   }, []);
 
   // Auto-scroll chat
-  useEffect(() => {
+  React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory]);
 
   // Load initial suggestions
-  useEffect(() => {
+  React.useEffect(() => {
     if (isConnected && activeTab === 'suggestions') {
       handleLoadSuggestions(selectedContext);
     }
   }, [isConnected, selectedContext]);
 
   // Load cocoon history when memory tab opens
-  useEffect(() => {
+  React.useEffect(() => {
     if (activeTab === 'memory' && cocoonHistory.length === 0) {
       loadCocoonHistory();
     }
   }, [activeTab]);
 
   // Load quantum metrics
-  useEffect(() => {
+  React.useEffect(() => {
     if (isConnected) {
       loadQuantumMetrics();
     }
   }, [isConnected, activeTab]);
 
   // Auto-connect WebSocket
-  useEffect(() => {
+  React.useEffect(() => {
     if (isConnected && !websocketConnected) {
       connectWebSocket();
     }
@@ -174,7 +172,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
   }, [isConnected]);
 
   // Build DAW context from current state
-  const buildDAWContext = useCallback(() => {
+  const buildDAWContext = React.useCallback(() => {
     return {
       // Selected track info
       selected_track: selectedTrack ? {
@@ -191,7 +189,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
       } : null,
       
       // All tracks summary
-      tracks: tracks.map(t => ({
+      tracks: tracks.map((t: any) => ({
         id: t.id,
         name: t.name,
         type: t.type,
@@ -202,12 +200,12 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
       // Track counts by type
       track_counts: {
         total: tracks.length,
-        audio: tracks.filter(t => t.type === 'audio').length,
-        instrument: tracks.filter(t => t.type === 'instrument').length,
-        midi: tracks.filter(t => t.type === 'midi').length,
-        aux: tracks.filter(t => t.type === 'aux').length,
-        vca: tracks.filter(t => t.type === 'vca').length,
-        master: tracks.filter(t => t.type === 'master').length,
+        audio: tracks.filter((t: any) => t.type === 'audio').length,
+        instrument: tracks.filter((t: any) => t.type === 'instrument').length,
+        midi: tracks.filter((t: any) => t.type === 'midi').length,
+        aux: tracks.filter((t: any) => t.type === 'aux').length,
+        vca: tracks.filter((t: any) => t.type === 'vca').length,
+        master: tracks.filter((t: any) => t.type === 'master').length,
       },
       
       // Playback state
@@ -220,8 +218,8 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
     };
   }, [selectedTrack, tracks, isPlaying, currentTime]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = async (e: any) => {
+    e.preventDefault?.();
     if (!inputValue.trim() || isLoading) return;
 
     const message = inputValue;
@@ -251,9 +249,9 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
   };
 
   const handlePerspectiveToggle = (perspectiveId: string) => {
-    const newPerspectives = activePerspectives.includes(perspectiveId)
-      ? activePerspectives.filter(p => p !== perspectiveId)
-      : [...activePerspectives, perspectiveId];
+    const newPerspectives = (activePerspectives as string[]).includes(perspectiveId)
+      ? (activePerspectives as string[]).filter((p: any) => p !== perspectiveId)
+      : [...(activePerspectives as string[]), perspectiveId];
     
     setActivePerspectivesLocal(newPerspectives);
     setActivePerspectives(newPerspectives);
@@ -355,7 +353,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     
-    const samples = data instanceof Float32Array ? data : new Float32Array(data);
+    const samples = data instanceof Float32Array ? data : new Float32Array(data as any);
     const step = Math.max(1, Math.floor(samples.length / width));
     
     for (let i = 0; i < width; i++) {
@@ -373,7 +371,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
   };
 
   // Draw waveform when track selected or analysis tab opened
-  useEffect(() => {
+  React.useEffect(() => {
     // Only draw if we're on the analysis tab and have a selected track
     if (activeTab !== 'analysis' || !selectedTrack) return;
     
@@ -391,11 +389,11 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
             const t = (i / demoLength) * Math.PI * 8;
             demoData[i] = Math.sin(t) * 0.6 + Math.sin(t * 2.5) * 0.3 + Math.sin(t * 4) * 0.1;
           }
-          audioData = demoData;
+          audioData = demoData as any;
         }
         
-        console.log('[CodettePanel] Drawing waveform for track:', selectedTrack.name, 'samples:', audioData?.length || 0);
-        drawWaveform(waveformCanvasRef.current, audioData);
+        console.log('[CodettePanel] Drawing waveform for track:', selectedTrack.name, 'samples:', (audioData as any)?.length || 0);
+        drawWaveform(waveformCanvasRef.current, audioData as any);
       }
     }, 100);
     
@@ -404,7 +402,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
 
   if (!isVisible) return null;
 
-  const currentPersonalityMode = PERSONALITY_MODES.find(p => p.id === currentPersonality) || PERSONALITY_MODES[0];
+  const currentPersonalityMode = PERSONALITY_MODES.find((p: any) => p.id === currentPersonality) || PERSONALITY_MODES[0];
 
   return (
     <div className="flex flex-col h-full bg-gray-900 text-white text-xs">
@@ -421,20 +419,18 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
               className="flex items-center gap-1 px-2 py-1 bg-white/20 hover:bg-white/30 rounded transition text-xs"
               title="Change Personality Mode"
             >
-              <span>{currentPersonalityMode.emoji}</span>
-              <span className="hidden sm:inline">{currentPersonalityMode.label}</span>
+              <span>{(currentPersonalityMode as any).emoji}</span>
+              <span className="hidden sm:inline">{(currentPersonalityMode as any).label}</span>
               <ChevronDown className="w-3 h-3" />
             </button>
-            
+
             {showPersonalityMenu && (
               <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-[200px]">
-                {PERSONALITY_MODES.map((mode) => (
+                {PERSONALITY_MODES.map((mode: any) => (
                   <button
                     key={mode.id}
                     onClick={() => handlePersonalityChange(mode.id)}
-                    className={`w-full text-left px-3 py-2 hover:bg-gray-700 transition flex items-center gap-2 ${
-                      currentPersonality === mode.id ? 'bg-gray-700' : ''
-                    }`}
+                    className={`w-full text-left px-3 py-2 hover:bg-gray-700 transition flex items-center gap-2 ${(currentPersonality === mode.id ? 'bg-gray-700' : '')}`}
                   >
                     <span>{mode.emoji}</span>
                     <span className="text-xs">{mode.label}</span>
@@ -452,15 +448,10 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
               </div>
             )}
           </div>
-          
+
           {/* Connection Status Indicators */}
           <div className="flex items-center gap-1">
-            <div
-              className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'
-              }`}
-              title={isConnected ? 'API Connected' : 'API Disconnected'}
-            />
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${(isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400')}`} title={isConnected ? 'API Connected' : 'API Disconnected'} />
             <div title={websocketConnected ? 'WebSocket Connected' : 'WebSocket Disconnected'}>
               {websocketConnected ? (
                 <Wifi className="w-3 h-3 text-green-400 animate-pulse" />
@@ -470,21 +461,13 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="p-1 hover:bg-white/20 rounded transition"
-            title={expanded ? 'Collapse' : 'Expand'}
-          >
+          <button onClick={() => setExpanded(!expanded)} className="p-1 hover:bg-white/20 rounded transition" title={expanded ? 'Collapse' : 'Expand'}>
             {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
           </button>
           {onClose && (
-            <button
-              onClick={onClose}
-              className="p-1 hover:bg-white/20 rounded transition"
-              title="Minimize"
-            >
+            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded transition" title="Minimize">
               <Minimize2 className="w-3.5 h-3.5" />
             </button>
           )}
@@ -493,7 +476,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
 
       {!expanded && (
         <div className="px-3 py-2 text-center text-xs text-gray-400">
-          {isConnected ? `✓ ${currentPersonalityMode.emoji} ${currentPersonalityMode.label}` : '✗ Connecting...'}
+          {isConnected ? `✓ ${(currentPersonalityMode as any).emoji} ${(currentPersonalityMode as any).label}` : '✗ Connecting...'}
         </div>
       )}
 
@@ -503,77 +486,49 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
           <div className="flex border-b border-gray-700 bg-gray-850 flex-shrink-0 overflow-x-auto">
             <button
               onClick={() => setActiveTab('suggestions')}
-              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${
-                activeTab === 'suggestions'
-                  ? 'border-b-2 border-blue-400 text-blue-400'
-                  : 'text-gray-400 hover:text-gray-300'
-              }`}
+              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${(activeTab === 'suggestions' ? 'border-b-2 border-blue-400 text-blue-400' : 'text-gray-400 hover:text-gray-300')}`}
             >
               <Lightbulb className="w-3 h-3" />
               Tips
             </button>
             <button
               onClick={() => setActiveTab('analysis')}
-              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${
-                activeTab === 'analysis'
-                  ? 'border-b-2 border-blue-400 text-blue-400'
-                  : 'text-gray-400 hover:text-gray-300'
-              }`}
+              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${(activeTab === 'analysis' ? 'border-b-2 border-blue-400 text-blue-400' : 'text-gray-400 hover:text-gray-300')}`}
             >
               <Zap className="w-3 h-3" />
               Analysis
             </button>
             <button
               onClick={() => setActiveTab('chat')}
-              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${
-                activeTab === 'chat'
-                  ? 'border-b-2 border-blue-400 text-blue-400'
-                  : 'text-gray-400 hover:text-gray-300'
-              }`}
+              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${(activeTab === 'chat' ? 'border-b-2 border-blue-400 text-blue-400' : 'text-gray-400 hover:text-gray-300')}`}
             >
               <MessageCircle className="w-3 h-3" />
               Chat
             </button>
             <button
               onClick={() => setActiveTab('actions')}
-              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${
-                activeTab === 'actions'
-                  ? 'border-b-2 border-blue-400 text-blue-400'
-                  : 'text-gray-400 hover:text-gray-300'
-              }`}
+              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${(activeTab === 'actions' ? 'border-b-2 border-blue-400 text-blue-400' : 'text-gray-400 hover:text-gray-300')}`}
             >
               <Zap className="w-3 h-3" />
               Actions
             </button>
             <button
               onClick={() => setActiveTab('perspectives')}
-              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${
-                activeTab === 'perspectives'
-                  ? 'border-b-2 border-purple-400 text-purple-400'
-                  : 'text-gray-400 hover:text-gray-300'
-              }`}
+              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${(activeTab === 'perspectives' ? 'border-b-2 border-purple-400 text-purple-400' : 'text-gray-400 hover:text-gray-300')}`}
             >
               <Brain className="w-3 h-3" />
               Perspectives
             </button>
             <button
               onClick={() => setActiveTab('memory')}
-              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${
-                activeTab === 'memory'
-                  ? 'border-b-2 border-purple-400 text-purple-400'
-                  : 'text-gray-400 hover:text-gray-300'
-              }`}
+              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${(activeTab === 'memory' ? 'border-b-2 border-purple-400 text-purple-400' : 'text-gray-400 hover:text-gray-300')}`}
             >
               <Clock className="w-3 h-3" />
               Memory
             </button>
             <button
               onClick={() => setActiveTab('advanced')}
-              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${
-                activeTab === 'advanced'
-                  ? 'border-b-2 border-pink-400 text-pink-400'
-                  : 'text-gray-400 hover:text-gray-300'
-              }`}
+              className={`flex-shrink-0 px-3 py-2 text-xs font-medium transition flex items-center justify-center gap-1 ${(activeTab === 'advanced' ? 'border-b-2 border-pink-400 text-pink-400' : 'text-gray-400 hover:text-gray-300')}`}
             >
               <Sparkles className="w-3 h-3" />
               Advanced
@@ -584,7 +539,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
           {error && (
             <div className="bg-red-900 bg-opacity-30 border-b border-red-700 px-3 py-2 flex gap-2 text-xs text-red-200">
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-              <span>{error.message}</span>
+              <span>{(error as any).message}</span>
             </div>
           )}
 
@@ -595,16 +550,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-2">
                   {['general', 'gain-staging', 'mixing', 'mastering'].map((ctx) => (
-                    <button
-                      key={ctx}
-                      onClick={() => handleLoadSuggestions(ctx)}
-                      disabled={isLoading || !isConnected}
-                      className={`px-2 py-1 text-xs rounded transition ${
-                        selectedContext === ctx
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      } disabled:opacity-50`}
-                    >
+                    <button key={ctx} onClick={() => handleLoadSuggestions(ctx)} disabled={isLoading || !isConnected} className={`px-2 py-1 text-xs rounded transition ${(selectedContext === ctx ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600')} disabled:opacity-50`}>
                       {ctx === 'gain-staging' ? 'Gain' : ctx.charAt(0).toUpperCase() + ctx.slice(1)}
                     </button>
                   ))}
@@ -615,68 +561,37 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                     <div className="bg-gray-800 border border-gray-700 rounded p-3 space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-bold text-gray-200">CONFIDENCE FILTER</label>
-                        <span className="text-xs font-mono px-2 py-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-semibold">
-                          {confidenceFilter}%'
-                        </span>
+                        <span className="text-xs font-mono px-2 py-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full font-semibold">{confidenceFilter}%</span>
                       </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        step="5"
-                        value={confidenceFilter}
-                        onChange={(e) => setConfidenceFilter(parseInt(e.target.value))}
-                        className="w-full h-2 bg-gray-700 rounded appearance-none cursor-pointer accent-purple-500"
-                      />
-                      <button
-                        onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
-                        className={`w-full px-3 py-2 rounded transition font-semibold flex items-center justify-center gap-2 ${
-                          showOnlyFavorites
-                            ? 'bg-gradient-to-r from-yellow-600 to-yellow-500 text-white'
-                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        }`}
-                      >
-                        ⭐ Favorites ({favoriteSuggestions.size})
+                      <input type="range" min="0" max="100" step="5" value={confidenceFilter} onChange={(e: any) => setConfidenceFilter(parseInt(e.target.value))} className="w-full h-2 bg-gray-700 rounded appearance-none cursor-pointer accent-purple-500" />
+                      <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`w-full px-3 py-2 rounded transition font-semibold flex items-center justify-center gap-2 ${(showOnlyFavorites ? 'bg-gradient-to-r from-yellow-600 to-yellow-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600')}`}>
+                        ⭐ Favorites ({(favoriteSuggestions as Set<any>).size})
                       </button>
                     </div>
 
-                    {suggestions
-                      .filter(s => s.confidence * 100 >= confidenceFilter)
-                      .filter(s => !showOnlyFavorites || favoriteSuggestions.has(String(s.title)))
-                      .map((suggestion, idx) => {
-                        const titleText = String(suggestion.title);
-                        const descText = String(suggestion.description);
-                        const isFavorite = favoriteSuggestions.has(titleText);
-                        
-                        return (
-                          <div key={idx} className="p-2 bg-gray-800 border border-gray-700 rounded hover:border-purple-600 transition">
-                            <div className="flex items-start justify-between mb-1">
-                              <h4 className="font-medium text-xs text-blue-400 flex-1">{titleText}</h4>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => {
-                                    const newFavorites = new Set(favoriteSuggestions);
-                                    if (isFavorite) {
-                                      newFavorites.delete(titleText);
-                                    } else {
-                                      newFavorites.add(titleText);
-                                    }
-                                    setFavoriteSuggestions(newFavorites);
-                                    localStorage.setItem('codette_favorites', JSON.stringify(Array.from(newFavorites)));
-                                  }}
-                                  className="text-xl transition"
-                                >
-                                  {isFavorite ? '⭐' : '☆'}
-                                </button>
-                                <span className="text-xs px-2 py-1 bg-gradient-to-r from-purple-700 to-blue-700 text-white rounded-full font-semibold">
-                                  {Math.round(suggestion.confidence * 100)}%
-                                </span>
-                              </div>
+                    {suggestions.filter((s: any) => (s.confidence || 0) * 100 >= confidenceFilter).filter((s: any) => !showOnlyFavorites || (favoriteSuggestions as Set<any>).has(String(s.title))).map((suggestion: any, idx: number) => {
+                      const titleText = String(suggestion.title);
+                      const descText = String(suggestion.description);
+                      const isFavorite = (favoriteSuggestions as Set<any>).has(titleText);
+
+                      return (
+                        <div key={idx} className="p-2 bg-gray-800 border border-gray-700 rounded hover:border-purple-600 transition">
+                          <div className="flex items-start justify-between mb-1">
+                            <h4 className="font-medium text-xs text-blue-400 flex-1">{titleText}</h4>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => {
+                                const newFavorites = new Set(favoriteSuggestions as Set<any>);
+                                if (isFavorite) newFavorites.delete(titleText); else newFavorites.add(titleText);
+                                setFavoriteSuggestions(newFavorites as Set<string>);
+                                localStorage.setItem('codette_favorites', JSON.stringify(Array.from(newFavorites)));
+                              }} className="text-xl transition">{isFavorite ? '⭐' : '☆'}</button>
+                              <span className="text-xs px-2 py-1 bg-gradient-to-r from-purple-700 to-blue-700 text-white rounded-full font-semibold">{Math.round((suggestion.confidence || 0) * 100)}%</span>
                             </div>
-                            <p className="text-xs text-gray-300">{descText}</p>
                           </div>
-                        );
-                      })}
+                          <p className="text-xs text-gray-300">{descText}</p>
+                        </div>
+                      );
+                    })}
                   </>
                 )}
               </div>
@@ -686,47 +601,16 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
             {activeTab === 'analysis' && (
               <div className="space-y-3">
                 {!selectedTrack ? (
-                  <div className="p-2 bg-yellow-900/30 border border-yellow-700 rounded text-center">
-                    <p className="text-xs text-yellow-300">Select a track to analyze</p>
-                  </div>
+                  <div className="p-2 bg-yellow-900/30 border border-yellow-700 rounded text-center"><p className="text-xs text-yellow-300">Select a track to analyze</p></div>
                 ) : (
                   <>
-                    <div className="p-2 bg-gray-800 border border-gray-700 rounded">
-                      <div className="text-xs text-gray-400 mb-1">Analyzing:</div>
-                      <div className="text-xs font-medium text-blue-400">{selectedTrack.name}</div>
-                    </div>
-
-                    <div className="bg-gray-800 border border-gray-700 rounded p-3">
-                      <label className="text-xs font-bold text-gray-200 mb-2 block">WAVEFORM</label>
-                      <canvas
-                        ref={waveformCanvasRef}
-                        width={280}
-                        height={80}
-                        className="w-full border border-gray-700 rounded bg-gray-950"
-                      />
-                    </div>
-
+                    <div className="p-2 bg-gray-800 border border-gray-700 rounded"><div className="text-xs text-gray-400 mb-1">Analyzing:</div><div className="text-xs font-medium text-blue-400">{selectedTrack.name}</div></div>
+                    <div className="bg-gray-800 border border-gray-700 rounded p-3"><label className="text-xs font-bold text-gray-200 mb-2 block">WAVEFORM</label><canvas ref={waveformCanvasRef} width={280} height={80} className="w-full border border-gray-700 rounded bg-gray-950" /></div>
                     {analysis && (
                       <>
-                        <div className="p-2 bg-blue-900/30 border border-blue-700 rounded">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium">Score</span>
-                            <span className="text-lg font-bold text-blue-400">{analysis.score}/100</span>
-                          </div>
-                          <div className="w-full bg-gray-700 rounded-full h-2">
-                            <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${analysis.score}%` }} />
-                          </div>
-                        </div>
-
-                        {analysis.findings.length > 0 && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-gray-300 mb-1">Findings</h4>
-                            <ul className="space-y-0.5">
-                              {analysis.findings.map((finding, idx) => (
-                                <li key={idx} className="text-xs text-gray-400">• {String(finding)}</li>
-                              ))}
-                            </ul>
-                          </div>
+                        <div className="p-2 bg-blue-900/30 border border-blue-700 rounded"><div className="flex items-center justify-between mb-2"><span className="text-xs font-medium">Score</span><span className="text-lg font-bold text-blue-400">{(analysis as any).score}/100</span></div><div className="w-full bg-gray-700 rounded-full h-2"><div className="bg-blue-500 h-2 rounded-full" style={{ width: `${(analysis as any).score}%` }} /></div></div>
+                        {(analysis as any).findings && (analysis as any).findings.length > 0 && (
+                          <div><h4 className="text-xs font-semibold text-gray-300 mb-1">Findings</h4><ul className="space-y-0.5">{(analysis as any).findings.map((finding: any, idx: number) => (<li key={idx} className="text-xs text-gray-400">• {String(finding)}</li>))}</ul></div>
                         )}
                       </>
                     )}
@@ -739,78 +623,20 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
             {activeTab === 'chat' && (
               <div className="space-y-2">
                 {chatHistory.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-gray-500 py-6">
-                    <div className="text-center">
-                      <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-xs">Ask Codette about your production</p>
-                    </div>
-                  </div>
+                  <div className="h-full flex items-center justify-center text-gray-500 py-6"><div className="text-center"><MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-50" /><p className="text-xs">Ask Codette about your production</p></div></div>
                 ) : (
-                  chatHistory.map((msg, idx) => (
-                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div
-                        className={`max-w-[80%] px-2 py-1.5 rounded text-xs ${
-                          msg.role === 'user'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-800 text-gray-200 border border-gray-700'
-                        }`}
-                      >
-                        {msg.content}
-                      </div>
-                    </div>
+                  chatHistory.map((msg: any, idx: number) => (
+                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[80%] px-2 py-1.5 rounded text-xs ${(msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-200 border border-gray-700')}`}>{msg.content}</div></div>
                   ))
                 )}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-800 border border-gray-700 px-2 py-1.5 rounded flex items-center gap-2">
-                      <Loader className="w-3 h-3 animate-spin" />
-                      <span className="text-xs text-gray-400">Thinking...</span>
-                    </div>
-                  </div>
-                )}
+                {isLoading && (<div className="flex justify-start"><div className="bg-gray-800 border border-gray-700 px-2 py-1.5 rounded flex items-center gap-2"><Loader className="w-3 h-3 animate-spin" /><span className="text-xs text-gray-400">Thinking...</span></div></div>)}
                 <div ref={messagesEndRef} />
               </div>
             )}
 
             {/* Actions Tab */}
             {activeTab === 'actions' && (
-              <div className="space-y-2">
-                <div className="text-xs text-gray-400 mb-3">Execute DAW operations</div>
-                <div className="space-y-1.5">
-                  <button
-                    onClick={() => togglePlay()}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white text-xs py-1.5 px-2 rounded transition flex items-center justify-center gap-2"
-                  >
-                    <span>{isPlaying ? '⏸' : '▶'}</span> {isPlaying ? 'Pause' : 'Play'}
-                  </button>
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-gray-700">
-                  <h4 className="text-xs font-semibold text-blue-400 mb-1.5">Quick Effects</h4>
-                  <div className="space-y-1 text-xs">
-                    <button
-                      onClick={() => {
-                        if (selectedTrack) {
-                          const eqPlugin: Plugin = {
-                            id: `eq-${Date.now()}`,
-                            name: 'EQ',
-                            type: 'eq',
-                            enabled: true,
-                            parameters: {},
-                          };
-                          updateTrack(selectedTrack.id, {
-                            inserts: [...(selectedTrack.inserts || []), eqPlugin]
-                          });
-                        }
-                      }}
-                      disabled={!selectedTrack}
-                      className="w-full text-left px-2 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 border border-gray-700 rounded text-gray-300"
-                    >
-                      + Add EQ
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <div className="space-y-2"><div className="text-xs text-gray-400 mb-3">Execute DAW operations</div><div className="space-y-1.5"><button onClick={() => togglePlay()} className="w-full bg-green-600 hover:bg-green-700 text-white text-xs py-1.5 px-2 rounded transition flex items-center justify-center gap-2"><span>{isPlaying ? '⏸' : '▶'}</span> {isPlaying ? 'Pause' : 'Play'}</button></div><div className="mt-3 pt-3 border-t border-gray-700"><h4 className="text-xs font-semibold text-blue-400 mb-1.5">Quick Effects</h4><div className="space-y-1 text-xs"><button onClick={() => { if (selectedTrack) { const eqPlugin: any = { id: `eq-${Date.now()}`, name: 'EQ', type: 'eq', enabled: true, parameters: {}, }; updateTrack(selectedTrack.id, { inserts: [...(selectedTrack.inserts || []), eqPlugin] }); } }} disabled={!selectedTrack} className="w-full text-left px-2 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 border border-gray-700 rounded text-gray-300">+ Add EQ</button></div></div></div>
             )}
 
             {/* PERSPECTIVES TAB - NEW */}
@@ -819,7 +645,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                 <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-700 rounded p-3">
                   <h3 className="text-xs font-bold text-purple-300 mb-2 flex items-center gap-2">
                     <Brain className="w-4 h-4" />
-                    ACTIVE PERSPECTIVES ({activePerspectives.length}/11)
+                    ACTIVE PERSPECTIVES ({(activePerspectives as string[]).length}/11)
                   </h3>
                   <p className="text-xs text-gray-400 mb-3">
                     Toggle perspectives to shape Codette's analysis style
@@ -827,15 +653,13 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                 </div>
 
                 <div className="space-y-2">
-                  {PERSPECTIVES.map((perspective) => {
-                    const isActive = activePerspectives.includes(perspective.id);
+                  {PERSPECTIVES.map((perspective: any) => {
+                    const isActive = (activePerspectives as string[]).includes(perspective.id);
                     return (
                       <div
                         key={perspective.id}
                         className={`p-3 rounded border transition ${
-                          isActive
-                            ? 'bg-purple-900/30 border-purple-600'
-                            : 'bg-gray-800 border-gray-700'
+                          isActive ? 'bg-purple-900/30 border-purple-600' : 'bg-gray-800 border-gray-700'
                         }`}
                       >
                         <div className="flex items-start gap-2">
@@ -846,7 +670,10 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                             onChange={() => handlePerspectiveToggle(perspective.id)}
                             className="mt-0.5 w-4 h-4 rounded accent-purple-500 cursor-pointer"
                           />
-                          <label htmlFor={`perspective-${perspective.id}`} className="flex-1 cursor-pointer">
+                          <label
+                            htmlFor={`perspective-${perspective.id}`}
+                            className="flex-1 cursor-pointer"
+                          >
                             <div className="text-xs font-semibold text-gray-200">{perspective.label}</div>
                             <div className="text-xs text-gray-400 mt-0.5">{perspective.description}</div>
                           </label>
@@ -858,7 +685,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
 
                 <button
                   onClick={() => {
-                    const allPerspectives = PERSPECTIVES.map(p => p.id);
+                    const allPerspectives = PERSPECTIVES.map((p: any) => p.id);
                     setActivePerspectivesLocal(allPerspectives);
                     setActivePerspectives(allPerspectives);
                   }}
@@ -869,9 +696,10 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
               </div>
             )}
 
-            {/* MEMORY TAB - NEW */}
+            {/* Memory Tab - COCOON BROWSING & DREAM SEQUENCES */}
             {activeTab === 'memory' && (
               <div className="space-y-3">
+                {/* Memory Cocoon History */}
                 <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 border border-purple-700 rounded p-3">
                   <h3 className="text-xs font-bold text-purple-300 mb-2 flex items-center gap-2">
                     <Clock className="w-4 h-4" />
@@ -902,7 +730,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
 
                 {cocoonHistory.length > 0 && (
                   <div className="space-y-2">
-                    {cocoonHistory.map((cocoon, idx) => (
+                    {cocoonHistory.map((cocoon: any, idx: number) => (
                       <div key={idx} className="p-3 bg-gray-800 border border-gray-700 rounded hover:border-purple-600 transition">
                         <div className="text-xs font-semibold text-purple-400 mb-1">
                           Cocoon {cocoon.id?.slice(0, 8) || idx}
@@ -922,13 +750,9 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                       </div>
                     ))}
 
-                    {/* Show more button */}
                     {cocoonHistory.length > 5 && (
                       <div className="text-center">
-                        <button
-                          onClick={loadCocoonHistory}
-                          className="text-xs text-blue-400 hover:underline"
-                        >
+                        <button onClick={loadCocoonHistory} className="text-xs text-blue-400 hover:underline">
                           Show more cocoons...
                         </button>
                       </div>
@@ -936,6 +760,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                   </div>
                 )}
 
+                {/* Dream Sequence Preview */}
                 {dreamText && (
                   <div className="p-3 bg-gradient-to-br from-pink-900/30 to-purple-900/30 border border-pink-700 rounded">
                     <div className="text-xs font-bold text-pink-300 mb-2">✨ DREAM SEQUENCE</div>
@@ -943,7 +768,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                   </div>
                 )}
 
-                {/* Quantum State Visualization */}
+                {/* Quantum Metrics Display */}
                 {quantumMetrics && (
                   <div className="p-3 bg-gradient-to-br from-blue-900/30 to-purple-900/30 border border-blue-700 rounded">
                     <div className="text-xs font-bold text-blue-300 mb-3 flex items-center gap-2">
@@ -951,29 +776,32 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                       QUANTUM STATE
                     </div>
                     <div className="space-y-2">
-                      {Object.entries(quantumState).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between">
-                          <span className="text-xs text-gray-400 capitalize">{key}:</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 bg-gray-700 rounded-full h-1.5">
-                              <div
-                                className="bg-blue-500 h-1.5 rounded-full transition-all"
-                                style={{ width: `${(value as number) * 100}%` }}
-                              />
+                      {Object.keys(quantumState || {}).map((key: any) => {
+                        const value = (quantumState as any)[key];
+                        return (
+                          <div key={key} className="flex items-center justify-between">
+                            <span className="text-xs text-gray-400 capitalize">{key}:</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 bg-gray-700 rounded-full h-1.5">
+                                <div
+                                  className="bg-blue-500 h-1.5 rounded-full transition-all"
+                                  style={{ width: `${(value as number) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-mono text-blue-400 w-12 text-right">
+                                {(value as number * 100).toFixed(0)}%
+                              </span>
                             </div>
-                            <span className="text-xs font-mono text-blue-400 w-12 text-right">
-                              {((value as number) * 100).toFixed(0)}%
-                            </span>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* ADVANCED FEATURES TAB - NEW */}
+            {/* Advanced Features Tab - AI Tools and Analysis */}
             {activeTab === 'advanced' && (
               <div className="space-y-3">
                 <div className="bg-gradient-to-br from-pink-900/30 to-purple-900/30 border border-pink-700 rounded p-3">
@@ -986,7 +814,6 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                   </p>
                 </div>
 
-                {/* Genre Detection */}
                 <div className="p-3 bg-gray-800 border border-gray-700 rounded">
                   <h4 className="text-xs font-semibold text-purple-400 mb-2 flex items-center gap-2">
                     <Music className="w-3 h-3" />
@@ -1003,19 +830,20 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                     <div className="mt-2 p-2 bg-purple-900/30 border border-purple-700 rounded">
                       <div className="text-xs">
                         <span className="text-gray-400">Genre:</span>
-                        <span className="text-purple-300 font-semibold ml-2">{genreData.detected_genre}</span>
+                        <span className="text-purple-300 font-semibold ml-2">
+                          {(genreData as any).detected_genre}
+                        </span>
                       </div>
                       <div className="text-xs mt-1">
                         <span className="text-gray-400">Confidence:</span>
                         <span className="text-purple-300 font-semibold ml-2">
-                          {Math.round(genreData.confidence * 100)}%
+                          {Math.round(((genreData as any).confidence || 0) * 100)}%
                         </span>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Delay Sync Calculator */}
                 <div className="p-3 bg-gray-800 border border-gray-700 rounded">
                   <h4 className="text-xs font-semibold text-blue-400 mb-2">⏱️ Delay Sync</h4>
                   <button
@@ -1026,17 +854,19 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                   </button>
                   {delaySyncData && (
                     <div className="mt-2 space-y-1">
-                      {Object.entries(delaySyncData.divisions || {}).slice(0, 5).map(([division, ms]) => (
-                        <div key={division} className="flex justify-between text-xs">
-                          <span className="text-gray-400">{division}:</span>
-                          <span className="text-blue-300 font-mono">{(ms as number).toFixed(2)} ms</span>
-                        </div>
-                      ))}
+                      {Object.keys(((delaySyncData as any).divisions || {})).slice(0, 5).map((division: any) => {
+                        const ms = ((delaySyncData as any).divisions || {})[division];
+                        return (
+                          <div key={division} className="flex justify-between text-xs">
+                            <span className="text-gray-400">{division}:</span>
+                            <span className="text-blue-300 font-mono">{(ms as number).toFixed(2)} ms</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
-                {/* Ear Training */}
                 <div className="p-3 bg-gray-800 border border-gray-700 rounded">
                   <h4 className="text-xs font-semibold text-green-400 mb-2">🎵 Ear Training</h4>
                   <div className="flex gap-2 mb-2">
@@ -1055,7 +885,7 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                   </div>
                   {earTrainingExercises.length > 0 && (
                     <div className="space-y-1">
-                      {earTrainingExercises.slice(0, 3).map((ex, idx) => (
+                      {earTrainingExercises.slice(0, 3).map((ex: any, idx: number) => (
                         <div key={idx} className="text-xs p-2 bg-green-900/30 border border-green-700 rounded">
                           <div className="font-semibold text-green-300">{ex.name}</div>
                           <div className="text-gray-400 text-[10px]">{ex.example || ex.quality}</div>
@@ -1065,7 +895,6 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                   )}
                 </div>
 
-                {/* Production Checklist */}
                 <div className="p-3 bg-gray-800 border border-gray-700 rounded">
                   <h4 className="text-xs font-semibold text-yellow-400 mb-2">✅ Production Checklist</h4>
                   <div className="flex gap-2 mb-2">
@@ -1084,21 +913,23 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                   </div>
                   {productionChecklist && (
                     <div className="space-y-2">
-                      {Object.entries(productionChecklist).slice(0, 2).map(([section, items]) => (
-                        <div key={section} className="text-xs">
-                          <div className="font-semibold text-yellow-300 mb-1">{section}</div>
-                          <ul className="space-y-0.5">
-                            {(items as string[]).slice(0, 3).map((item, idx) => (
-                              <li key={idx} className="text-gray-400 text-[10px]">• {item}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
+                      {Object.keys(productionChecklist || {}).slice(0, 2).map((section: any) => {
+                        const items = (productionChecklist as any)[section] as string[];
+                        return (
+                          <div key={section} className="text-xs">
+                            <div className="font-semibold text-yellow-300 mb-1">{section}</div>
+                            <ul className="space-y-0.5">
+                              {items.slice(0, 3).map((item: any, idx: number) => (
+                                <li key={idx} className="text-gray-400 text-[10px]">• {item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
-                {/* Instrument Info */}
                 <div className="p-3 bg-gray-800 border border-gray-700 rounded">
                   <h4 className="text-xs font-semibold text-cyan-400 mb-2">🎹 Instrument Info</h4>
                   <button
@@ -1109,16 +940,17 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
                   </button>
                   {instrumentData && (
                     <div className="mt-2 p-2 bg-cyan-900/30 border border-cyan-700 rounded text-xs space-y-1">
-                      {Object.entries(instrumentData).slice(0, 1).map(([key, value]) => (
-                        <div key={key}>
-                          <div className="font-semibold text-cyan-300 capitalize">{key}:</div>
-                          <div className="text-gray-400 text-[10px]">
-                            {typeof value === 'object' && value !== null
-                              ? JSON.stringify(value).slice(0, 100)
-                              : String(value)}
+                      {Object.keys(instrumentData || {}).slice(0, 1).map((key: any) => {
+                        const value = (instrumentData as any)[key];
+                        return (
+                          <div key={key}>
+                            <div className="font-semibold text-cyan-300 capitalize">{key}:</div>
+                            <div className="text-gray-400 text-[10px]">
+                              {typeof value === 'object' && value !== null ? JSON.stringify(value).slice(0, 100) : String(value)}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1126,14 +958,13 @@ export function CodettePanel({ isVisible = true, onClose }: CodettePanelProps) {
             )}
           </div>
 
-          {/* Input Area */}
           <div className="bg-gray-800 border-t border-gray-700 p-2 space-y-1.5 flex-shrink-0">
             {activeTab === 'chat' ? (
               <form onSubmit={handleSendMessage} className="flex gap-1">
                 <input
                   type="text"
                   value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
+                  onChange={(e: any) => setInputValue(e.target.value)}
                   placeholder="Ask Codette..."
                   disabled={isLoading || !isConnected}
                   className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"

@@ -1,5 +1,5 @@
-import React from 'react';
-import { DAWProvider } from './contexts/DAWContext';
+import * as React from 'react';
+import { DAWProvider, useDAW } from './contexts/DAWContext';
 import { ThemeProvider } from './themes/ThemeContext';
 import TopBar from './components/TopBar';
 import MenuBar from './components/MenuBar';
@@ -7,12 +7,14 @@ import TrackList from './components/TrackList';
 import Timeline from './components/Timeline';
 import Mixer from './components/Mixer';
 import Sidebar from './components/Sidebar';
-import { CodettePanel } from './components/CodettePanel';
+import CodettePanel from './components/CodettePanel';
 import AudioSettingsModal from './components/modals/AudioSettingsModal';
 import { initializeActions } from './lib/actions/initializeActions';
 import { CommandPalette } from './components/CommandPalette';
 import { OnboardingTour } from './components/OnboardingTour';
 import { useToast, ToastNotification } from './components/Toast';
+import type { Toast } from './components/Toast';
+import { VUMeterPanel } from './components/VUMeterPanel';
 
 // Suppress 404 errors from missing Supabase tables in browser console
 if (typeof window !== 'undefined') {
@@ -27,14 +29,61 @@ if (typeof window !== 'undefined') {
 function AppContent() {
   const [mixerHeight, setMixerHeight] = React.useState(200);
   const [isResizingMixer, setIsResizingMixer] = React.useState(false);
-  const [rightSidebarTab, setRightSidebarTab] = React.useState<'files' | 'control'>('files');
+  const [rightSidebarTab, setRightSidebarTab] = React.useState('files' as 'files' | 'control');
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = React.useState(false);
-  const { toasts, removeToast } = useToast();
+  const { toasts, addToast, removeToast } = useToast();
+  const { openAudioSettingsModal } = useDAW();
+
+  // onboarding key to force remount of OnboardingTour when starting programmatically
+  const [onboardingKey, setOnboardingKey] = React.useState(0);
 
   // Initialize action system on mount
   React.useEffect(() => {
     initializeActions();
   }, []);
+
+  // Keyboard shortcut handler (Ctrl/Cmd+K to toggle command palette)
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (isMod && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev: boolean) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // Expose small global API for dev/testing
+  React.useEffect(() => {
+    try {
+      (window as any).app = {
+        openCommandPalette: () => setIsCommandPaletteOpen(true),
+        closeCommandPalette: () => setIsCommandPaletteOpen(false),
+        showToast: (message: string, type: 'success' | 'error' | 'info' = 'info', duration = 3000) => addToast(message, type, duration),
+        openAudioSettings: () => openAudioSettingsModal(),
+        toggleRightSidebar: (tab: 'files' | 'control') => setRightSidebarTab(tab),
+        startOnboarding: () => {
+          // clear completed flag and remount onboarding
+          try { localStorage.removeItem('onboarding-tour-completed'); } catch (e) { /* ignore */ }
+          setOnboardingKey((k: number) => k + 1);
+        },
+      };
+    } catch (e) {
+      // ignore in non-browser envs
+    }
+
+    return () => {
+      try { delete (window as any).app; } catch (e) { /* ignore */ }
+    };
+  }, [addToast, openAudioSettingsModal]);
+
+  // showToast wrapper for internal use
+  const showToast = React.useCallback((message: string, type: 'success' | 'error' | 'info' = 'info', duration = 3000) => {
+    addToast(message, type, duration);
+  }, [addToast]);
 
   React.useEffect(() => {
     if (!isResizingMixer) return;
@@ -58,6 +107,22 @@ function AppContent() {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizingMixer]);
+
+  // helper to toggle right sidebar
+  const toggleRightSidebar = React.useCallback((tab: 'files' | 'control') => {
+    setRightSidebarTab(tab);
+  }, []);
+
+  // helper to open audio settings modal
+  const openAudioSettings = React.useCallback(() => {
+    try { openAudioSettingsModal(); } catch (e) { console.debug('openAudioSettings failed', e); }
+  }, [openAudioSettingsModal]);
+
+  // helper to programmatically start onboarding
+  const startOnboarding = React.useCallback(() => {
+    try { localStorage.removeItem('onboarding-tour-completed'); } catch (e) { /* ignore */ }
+    setOnboardingKey((k: number) => k + 1);
+  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-gray-950 overflow-hidden">
@@ -129,7 +194,12 @@ function AppContent() {
             {/* Tab Content */}
             <div className="flex-1 overflow-auto pb-20">
               {rightSidebarTab === 'files' && <Sidebar />}
-              {rightSidebarTab === 'control' && <CodettePanel isVisible={true} />}
+              {rightSidebarTab === 'control' && (
+                <div className="p-3 space-y-3">
+                  <VUMeterPanel className="w-full" />
+                  <CodettePanel isVisible={true} />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -145,11 +215,11 @@ function AppContent() {
       />
 
       {/* ENHANCEMENT #10: Onboarding Tour */}
-      <OnboardingTour />
+      <OnboardingTour key={onboardingKey} />
 
       {/* ENHANCEMENT #3: Toast Notifications */}
       <div className="fixed bottom-4 right-4 z-40 space-y-2">
-        {toasts.map(toast => (
+        {toasts.map((toast: Toast) => (
           <ToastNotification
             key={toast.id}
             {...toast}
