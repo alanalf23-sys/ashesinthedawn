@@ -14,14 +14,12 @@ import type {
 } from "../types";
 import { CodetteSuggestion, getCodetteBridge } from "../lib/codetteBridge";
 import { supabase } from "../lib/supabase";
-import { useEffectChainAPI, EffectChainContextAPI } from "../lib/effectChainContextAdapter";
+import { useEffectChainAPI, type EffectChainContextAPI } from "../lib/effectChainContextAdapter";
 import { getAudioEngine } from "../lib/audioEngine";
 import { loadProjectFromStorage, saveProjectToStorage } from "../lib/projectStorage";
 import { setDAWContext } from "../lib/actions/initializeActions";
 
-// Create context (may be undefined before provider mounts)
-const DAWContext = React.createContext<DAWContextType | undefined>(undefined);
-
+// DAWContext type definition MUST come before createContext
 interface DAWContextType {
   currentProject: Project | null;
   tracks: Track[];
@@ -200,6 +198,9 @@ interface DAWContextType {
   permanentlyDeleteTrack: (trackId: string) => void;
 }
 
+// Create context (may be undefined before provider mounts)
+const DAWContext = React.createContext<DAWContextType | undefined>(undefined);
+
 // DAW Provider component
 export function DAWProvider({ children }: { children: React.ReactNode }) {
   // Singleton refs
@@ -227,6 +228,7 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const [tracks, setTracks] = React.useState<Track[]>([]);
   const [selectedTrack, setSelectedTrack] = React.useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = React.useState<boolean>(false);
+  const [improvedRecording, setImprovedRecording] = React.useState<boolean>(false); // New state for improved recording
   const [isRecording, setIsRecording] = React.useState<boolean>(false);
   const [currentTime, setCurrentTime] = React.useState<number>(0);
   const [zoom, _setZoom] = React.useState<number>(1);
@@ -502,8 +504,6 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   };
   const toggleVoiceControl = () => setVoiceControlActive((prev) => !prev);
   
-  const toggleMixerView = () => setShowMixerView((prev) => !prev);
-
   const saveProject = async () => {
     if (!currentProject) return;
     setIsUploadingFile(true);
@@ -1092,8 +1092,8 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
 
   // Plugin management functions
   const addPluginToTrack = (trackId: string, plugin: Plugin) => {
-    setTracks((prev) =>
-      prev.map((t) =>
+    setTracks((prev: Track[]) =>
+      prev.map((t: Track) =>
         t.id === trackId
           ? { ...t, inserts: [...(t.inserts || []), plugin] }
           : t
@@ -1103,10 +1103,10 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removePluginFromTrack = (trackId: string, pluginId: string) => {
-    setTracks((prev) =>
-      prev.map((t) =>
+    setTracks((prev: Track[]) =>
+      prev.map((t: Track) =>
         t.id === trackId
-          ? { ...t, inserts: (t.inserts || []).filter((p) => p.id !== pluginId) }
+          ? { ...t, inserts: (t.inserts || []).filter((p: Plugin) => p.id !== pluginId) }
           : t
       )
     );
@@ -1141,7 +1141,7 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
 
   // Clipboard functions
   const cutTrack = (trackId: string) => {
-    const track = tracks.find(t => t.id === trackId);
+    const track = tracks.find((t: Track) => t.id === trackId);
     if (track) {
       setClipboardData({ type: 'track', data: track });
       deleteTrack(trackId);
@@ -1149,7 +1149,7 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   };
 
   const copyTrack = (trackId: string) => {
-    const track = tracks.find(t => t.id === trackId);
+    const track = tracks.find((t: Track) => t.id === trackId);
     if (track) {
       setClipboardData({ type: 'track', data: track });
     }
@@ -1158,12 +1158,12 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const pasteTrack = () => {
     if (clipboardData.type === 'track' && clipboardData.data) {
       const newTrack = { ...clipboardData.data, id: getUniqueTrackId() };
-      setTracks(prev => [...prev, newTrack]);
+      setTracks((prev: Track[]) => [...prev, newTrack]);
     }
   };
 
   const selectAllTracks = () => {
-    setSelectedTracks(new Set(tracks.map(t => t.id)));
+    setSelectedTracks(new Set(tracks.map((t: Track) => t.id)));
   };
 
   const deselectAllTracks = () => {
@@ -1189,31 +1189,31 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
       sends: [],
       routing: '',
     };
-    setTracks((prev) => [...prev, t]);
+    setTracks((prev: Track[]) => [...prev, t]);
     ensureDemoDataForTrack(t.id);
   };
 
   const selectTrack = (trackId: string) => {
-    const t = tracks.find((tr) => tr.id === trackId) || null;
+    const t = tracks.find((tr: Track) => tr.id === trackId) || null;
     setSelectedTrack(t);
     if (t) ensureDemoDataForTrack(t.id);
   };
 
   const updateTrack = (trackId: string, updates: Partial<Track>) => {
-    setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, ...updates } : t)));
+    setTracks((prev: Track[]) => prev.map((t: Track) => (t.id === trackId ? { ...t, ...updates } : t)));
   };
 
   const deleteTrack = (trackId: string) => {
-    setTracks((prev) => prev.filter((t) => t.id !== trackId));
-    const del = tracks.find((t) => t.id === trackId);
-    if (del) _setDeletedTracks((prev) => [...prev, del]);
+    setTracks((prev: Track[]) => prev.filter((t: Track) => t.id !== trackId));
+    const del = tracks.find((t: Track) => t.id === trackId);
+    if (del) _setDeletedTracks((prev: Track[]) => [...prev, del]);
   };
 
   const duplicateTrack = async (trackId: string) => {
-    const source = tracks.find((t) => t.id === trackId);
+    const source = tracks.find((t: Track) => t.id === trackId);
     if (!source) return null;
     const copy: Track = { ...source, id: getUniqueTrackId() };
-    setTracks((prev) => [...prev, copy]);
+    setTracks((prev: Track[]) => [...prev, copy]);
     await audioEngineRef.current.duplicateTrackAudioBuffer(source.id, copy.id);
     const wf = waveformCacheRef.current.get(source.id);
     if (wf) waveformCacheRef.current.set(copy.id, wf);
@@ -1223,28 +1223,28 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   };
 
   const restoreTrack = (trackId: string) => {
-    const t = deletedTracks.find((tr) => tr.id === trackId);
+    const t = deletedTracks.find((tr: Track) => tr.id === trackId);
     if (!t) return;
-    setTracks((prev) => [...prev, { ...t }]);
-    _setDeletedTracks((prev) => prev.filter((tr) => tr.id !== trackId));
+    setTracks((prev: Track[]) => [...prev, { ...t }]);
+    _setDeletedTracks((prev: Track[]) => prev.filter((tr: Track) => tr.id !== trackId));
   };
 
   const permanentlyDeleteTrack = (trackId: string) => {
-    _setDeletedTracks((prev) => prev.filter((tr) => tr.id !== trackId));
+    _setDeletedTracks((prev: Track[]) => prev.filter((tr: Track) => tr.id !== trackId));
   };
 
   // Marker functions
   const addMarker = (time: number, name: string) => {
     const marker: Marker = { id: getUniqueMarkerId(), name, time, color: '#fff', locked: false };
-    _setMarkers((prev) => [...prev, marker]);
+    _setMarkers((prev: Marker[]) => [...prev, marker]);
   };
 
   const deleteMarker = (markerId: string) => {
-    _setMarkers((prev) => prev.filter((m) => m.id !== markerId));
+    _setMarkers((prev: Marker[]) => prev.filter((m: Marker) => m.id !== markerId));
   };
 
   const updateMarker = (markerId: string, updates: Partial<Marker>) => {
-    _setMarkers((prev) => prev.map((m) => (m.id === markerId ? { ...m, ...updates } : m)));
+    _setMarkers((prev: Marker[]) => prev.map((m: Marker) => (m.id === markerId ? { ...m, ...updates } : m)));
   };
 
   // Loop functions
@@ -1255,7 +1255,7 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
   const toggleLoop = () => {
     if (!loopRegion) return;
     const enabled = loopRegion.enabled;
-    _setLoopRegion((prev) => (prev ? { ...prev, enabled: !enabled } : prev));
+    _setLoopRegion((prev: LoopRegion | null) => (prev ? { ...prev, enabled: !enabled } : prev));
   };
 
   const clearLoopRegion = () => {
@@ -1264,15 +1264,15 @@ export function DAWProvider({ children }: { children: React.ReactNode }) {
 
   // Metronome functions
   const toggleMetronome = () => {
-    _setMetronomeSettings((prev) => ({ ...prev, enabled: !prev.enabled }));
+    _setMetronomeSettings((prev: MetronomeSettings) => ({ ...prev, enabled: !prev.enabled }));
   };
 
   const setMetronomeVolume = (volume: number) => {
-    _setMetronomeSettings((prev) => ({ ...prev, volume }));
+    _setMetronomeSettings((prev: MetronomeSettings) => ({ ...prev, volume }));
   };
 
   const setMetronomeBeatSound = (sound: MetronomeSettings["beatSound"]) => {
-    _setMetronomeSettings((prev) => ({ ...prev, beatSound: sound }));
+    _setMetronomeSettings((prev: MetronomeSettings) => ({ ...prev, beatSound: sound }));
   };
 
   // Context value assembly

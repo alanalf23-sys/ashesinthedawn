@@ -1,8 +1,14 @@
 import { Track } from "../types/index";
+import { getHybridAudioProcessor, type HybridProcessOptions } from "./hybridAudioProcessor";
 
 /**
  * Audio Engine - Handles Web Audio API playback, recording, and mixing
  * Provides core audio functionality for CoreLogic Studio
+ * 
+ * NOW WITH PYTHON DSP INTEGRATION:
+ * - Hybrid processing: Web Audio + Python DSP
+ * - Automatic effect routing based on quality requirements
+ * - Graceful fallback to Web Audio if Python unavailable
  */
 
 interface MixdownOptions {
@@ -53,6 +59,10 @@ export class AudioEngine {
   };
   private metronomeScheduler: number | null = null;
   private fallbackSampleRate = 44100;
+
+  // Python DSP Integration
+  private usePythonDSP: boolean = false; // Toggle for Python DSP processing
+  private hybridProcessingEnabled: boolean = false;
 
   /**
    * Initialize the Web Audio API context and master nodes
@@ -1184,6 +1194,59 @@ export class AudioEngine {
    */
   getAnalyserNode(): AnalyserNode | null {
     return this.analyser;
+  }
+
+  // ============================================================================
+  // PYTHON DSP INTEGRATION
+  // ============================================================================
+
+  /**
+   * Enable/disable Python DSP processing
+   */
+  setPythonDSPEnabled(enabled: boolean): void {
+    this.usePythonDSP = enabled;
+    console.log(`[AudioEngine] Python DSP ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  /**
+   * Check if Python DSP is enabled
+   */
+  isPythonDSPEnabled(): boolean {
+    return this.usePythonDSP;
+  }
+
+  /**
+   * Enable/disable hybrid processing (automatic routing)
+   */
+  setHybridProcessingEnabled(enabled: boolean): void {
+    this.hybridProcessingEnabled = enabled;
+    console.log(`[AudioEngine] Hybrid processing ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  /**
+   * Check if hybrid processing is enabled
+   */
+  isHybridProcessingEnabled(): boolean {
+    return this.hybridProcessingEnabled;
+  }
+
+  /**
+   * Get hybrid processor instance
+   */
+  getHybridProcessor() {
+    if (!this.audioContext) {
+      throw new Error('Audio context not initialized');
+    }
+    return getHybridAudioProcessor(this.audioContext);
+  }
+
+  /**
+   * Get hybrid processing statistics
+   */
+  getHybridStats() {
+    if (!this.audioContext) return null;
+    const processor = getHybridAudioProcessor(this.audioContext);
+    return processor.getStats();
   }
 
   /**

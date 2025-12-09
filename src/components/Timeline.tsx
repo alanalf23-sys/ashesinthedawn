@@ -1,5 +1,5 @@
 import { useDAW } from "../contexts/DAWContext";
-import { Track } from "../types";
+import type { Track, Marker } from "../types";
 import { useEffect, useRef, useState } from "react";
 import WaveformDisplay from "./WaveformDisplay";
 import { ChevronDown, ChevronUp, Zap } from "lucide-react";
@@ -52,18 +52,18 @@ export default function Timeline() {
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const waveformContainerRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(1.0);
-  const [showTrackHeaders, setShowTrackHeaders] = useState(false);
+  const [zoom, setZoom] = useState<number>(1.0);
+  const [showTrackHeaders, setShowTrackHeaders] = useState<boolean>(false);
   const [selectedTrackForWaveform, setSelectedTrackForWaveform] = useState<
     string | null
   >(null);
-  const [smartScaleEnabled, setSmartScaleEnabled] = useState(true);
+  const [smartScaleEnabled, setSmartScaleEnabled] = useState<boolean>(true);
   const basePixelsPerBar = 120;
 
   const maxDuration = Math.max(
-    ...tracks.map((t) => getAudioDuration(t.id)),
+    ...tracks.map((t: Track) => getAudioDuration(t.id)),
     loopRegion?.endTime || 0,
-    ...(markers.length > 0 ? markers.map((m) => m.time) : [0]),
+    ...(markers.length > 0 ? markers.map((m: Marker) => m.time) : [0]),
     30 // minimum
   );
 
@@ -79,7 +79,7 @@ export default function Timeline() {
       const desiredPixelsPerSecond = containerWidth / Math.max(maxDuration, 1);
       const desiredZoom = (desiredPixelsPerSecond * 4) / basePixelsPerBar;
       const clamped = Math.max(0.5, Math.min(4, Number(desiredZoom.toFixed(2))));
-      setZoom((prev) => (Math.abs(prev - clamped) < 0.01 ? prev : clamped));
+      setZoom((prev: number) => (Math.abs(prev - clamped) < 0.01 ? prev : clamped));
     };
 
     updateSmartScale();
@@ -189,7 +189,7 @@ export default function Timeline() {
 
   // Render markers
   const renderMarkers = () => {
-    return markers.map((marker) => {
+    return markers.map((marker: Marker) => {
       const x = marker.time * pixelsPerSecond;
       return (
         <div
@@ -368,7 +368,7 @@ export default function Timeline() {
         </div>
 
         <button
-          onClick={() => setSmartScaleEnabled((prev) => !prev)}
+          onClick={() => setSmartScaleEnabled((prev: boolean) => !prev)}
           className={`px-2 py-1 text-xs rounded border transition ${
             smartScaleEnabled
               ? "bg-blue-600 border-blue-500 text-white"
@@ -431,7 +431,7 @@ export default function Timeline() {
           {renderMarkers()}
 
           {/* Media Tracks - PARALLEL WITH TRACKLIST */}
-          {tracks.map((track, idx) => (
+          {tracks.map((track: Track, idx: number) => (
             <div
               key={`track-${track.id}`}
               className="relative bg-gray-900 border-b border-gray-800 group"
@@ -471,9 +471,9 @@ export default function Timeline() {
       {selectedTrackForWaveform && (
         <div className="h-32 bg-gray-900 border-t border-gray-700 p-2 flex-shrink-0 w-full overflow-hidden">
           <div className="text-xs text-gray-400 mb-1">
-            {tracks.find((t) => t.id === selectedTrackForWaveform)?.name || 'Unknown Track'} - Detailed Waveform
+            {tracks.find((t: Track) => t.id === selectedTrackForWaveform)?.name || 'Unknown Track'} - Detailed Waveform
           </div>
-          {tracks.find((t) => t.id === selectedTrackForWaveform) ? (
+          {tracks.find((t: Track) => t.id === selectedTrackForWaveform) ? (
             <div className="w-full h-24 flex-shrink-0">
               <WaveformDisplay
                 trackId={selectedTrackForWaveform}

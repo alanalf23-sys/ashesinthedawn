@@ -353,6 +353,42 @@ export interface LoudnessAnalysis {
   recommendations: string[];
 }
 
+// Python DSP Integration Types
+export interface PythonDSPEffect {
+  id: string;
+  type: string;
+  name: string;
+  category: "eq" | "dynamics" | "saturation" | "delay" | "reverb" | "modulation";
+  enabled: boolean;
+  parameters: Record<string, number>;
+  pythonClass?: string; // Python class name (e.g., "EQ3Band", "Compressor")
+}
+
+export interface PythonDSPProcessRequest {
+  effectType: string;
+  parameters: Record<string, number>;
+  audioData: Float32Array | number[];
+  sampleRate: number;
+  requestId?: string;
+}
+
+export interface PythonDSPProcessResponse {
+  success: boolean;
+  processedAudio?: Float32Array | number[];
+  effectType: string;
+  processingTime?: number;
+  error?: string;
+  requestId?: string;
+}
+
+export interface PythonDSPBridgeState {
+  connected: boolean;
+  serverUrl: string;
+  latency: number;
+  effectsProcessed: number;
+  lastError: string | null;
+}
+
 // Bus/Routing Types
 export interface Bus {
   id: string;

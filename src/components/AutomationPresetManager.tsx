@@ -1,15 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { Download, Upload, Plus, Trash2, Copy } from 'lucide-react';
-import {
+import type {
   AutomationPresetManager,
-  AutomationPreset,
-  AutomationCurveData,
+  AutomationPreset as AutomationPresetType,
+  AutomationCurveData as AutomationCurveDataType,
 } from '../lib/automationPresetManager';
+import { AutomationPresetManager as PresetManager } from '../lib/automationPresetManager';
 
 interface AutomationPresetManagerUIProps {
-  onExport?: (preset: AutomationPreset) => void;
-  onImport?: (preset: AutomationPreset) => void;
-  curves?: AutomationCurveData[];
+  onExport?: (preset: AutomationPresetType) => void;
+  onImport?: (preset: AutomationPresetType) => void;
+  curves?: AutomationCurveDataType[];
 }
 
 export const AutomationPresetManagerUI: React.FC<AutomationPresetManagerUIProps> = ({
@@ -17,8 +18,8 @@ export const AutomationPresetManagerUI: React.FC<AutomationPresetManagerUIProps>
   onImport,
   curves = [],
 }) => {
-  const [presets, setPresets] = useState<AutomationPreset[]>([]);
-  const [selectedPreset, setSelectedPreset] = useState<AutomationPreset | null>(null);
+  const [presets, setPresets] = useState<AutomationPresetType[]>([]);
+  const [selectedPreset, setSelectedPreset] = useState<AutomationPresetType | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportName, setExportName] = useState('New Preset');
   const [exportDescription, setExportDescription] = useState('');
@@ -32,7 +33,7 @@ export const AutomationPresetManagerUI: React.FC<AutomationPresetManagerUIProps>
       return;
     }
 
-    const preset = AutomationPresetManager.exportPreset(
+    const preset = PresetManager.exportPreset(
       curves,
       exportName,
       exportDescription,
@@ -49,8 +50,8 @@ export const AutomationPresetManagerUI: React.FC<AutomationPresetManagerUIProps>
     setExportDescription('');
   };
 
-  const handleDownload = (preset: AutomationPreset) => {
-    AutomationPresetManager.downloadPreset(preset);
+  const handleDownload = (preset: AutomationPresetType) => {
+    PresetManager.downloadPreset(preset);
   };
 
   const handleImportClick = () => {
@@ -63,7 +64,7 @@ export const AutomationPresetManagerUI: React.FC<AutomationPresetManagerUIProps>
 
     try {
       setImportError(null);
-      const preset = await AutomationPresetManager.importPreset(file);
+      const preset = await PresetManager.importPreset(file);
       setPresets([...presets, preset]);
       setSelectedPreset(preset);
       onImport?.(preset);
@@ -78,15 +79,15 @@ export const AutomationPresetManagerUI: React.FC<AutomationPresetManagerUIProps>
   };
 
   const handleDeletePreset = (index: number) => {
-    const newPresets = presets.filter((_, i) => i !== index);
+    const newPresets = presets.filter((_: AutomationPresetType, i: number) => i !== index);
     setPresets(newPresets);
     if (selectedPreset === presets[index]) {
       setSelectedPreset(null);
     }
   };
 
-  const handleDuplicatePreset = (preset: AutomationPreset) => {
-    const duplicated: AutomationPreset = {
+  const handleDuplicatePreset = (preset: AutomationPresetType) => {
+    const duplicated: AutomationPresetType = {
       ...preset,
       name: `${preset.name} (Copy)`,
       createdAt: new Date().toISOString(),
@@ -95,11 +96,11 @@ export const AutomationPresetManagerUI: React.FC<AutomationPresetManagerUIProps>
     setSelectedPreset(duplicated);
   };
 
-  const getPresetStats = (preset: AutomationPreset) => {
+  const getPresetStats = (preset: AutomationPresetType) => {
     const stats = {
       totalCurves: preset.curves.length,
-      totalPoints: preset.curves.reduce((sum, c) => sum + c.points.length, 0),
-      parameters: new Set(preset.curves.map(c => c.parameterName)).size,
+      totalPoints: preset.curves.reduce((sum: number, c: AutomationCurveDataType) => sum + c.points.length, 0),
+      parameters: new Set(preset.curves.map((c: AutomationCurveDataType) => c.parameterName)).size,
     };
     return stats;
   };

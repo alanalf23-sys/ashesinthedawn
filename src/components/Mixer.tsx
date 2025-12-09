@@ -1,11 +1,12 @@
 import { useDAW } from '../contexts/DAWContext';
 import { Sliders, ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { useState, useRef, useEffect, memo } from 'react';
+import type { Track, Plugin } from '../types';
 import MixerTile from './MixerTile';
 import DetachablePluginRack from './DetachablePluginRack';
 import MixerOptionsTile from './MixerOptionsTile';
 import { Tooltip, TOOLTIP_LIBRARY } from './TooltipProvider';
-import { KeyboardMusic, Volume2, Music2, Zap } from 'lucide-react';
+import { KeyboardMusic, Volume2, Music, Zap } from 'lucide-react';
 import InputMonitor from './InputMonitor';
 import { RecordingControls } from './RecordingControls';
 import { RecordingStatus } from './RecordingStatus';
@@ -37,18 +38,18 @@ const MixerComponent = () => {
   }
   
   const [detachedTiles, setDetachedTiles] = useState<DetachedTileState[]>([]);
-  const [detachedOptionsTile, setDetachedOptionsTile] = useState(false);
+  const [detachedOptionsTile, setDetachedOptionsTile] = useState<boolean>(false);
   const [detachedPluginRacks, setDetachedPluginRacks] = useState<Record<string, boolean>>({});
   const [levels, setLevels] = useState<Record<string, number>>({}); // live RMS values
-  const [masterFader, setMasterFader] = useState(0.7); // Master fader state (0-1)
-  const [scaledStripWidth, setScaledStripWidth] = useState(DEFAULT_STRIP_WIDTH);
-  const [isHoveringMixer, setIsHoveringMixer] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  const [showPluginRack, setShowPluginRack] = useState(false); // Show/hide plugin rack panel
-  const [showAdvancedMixer, setShowAdvancedMixer] = useState(false); // Show/hide advanced mixer panel
-  const [showPunchPanel, setShowPunchPanel] = useState(false);
-  const [showVUMeter, setShowVUMeter] = useState(false); // Show/hide VU meter panel
+  const [masterFader, setMasterFader] = useState<number>(0.7); // Master fader state (0-1)
+  const [scaledStripWidth, setScaledStripWidth] = useState<number>(DEFAULT_STRIP_WIDTH);
+  const [isHoveringMixer, setIsHoveringMixer] = useState<boolean>(false);
+  const [isMinimized, setIsMinimized] = useState<boolean>(false);
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [showPluginRack, setShowPluginRack] = useState<boolean>(false); // Show/hide plugin rack panel
+  const [showAdvancedMixer, setShowAdvancedMixer] = useState<boolean>(false); // Show/hide advanced mixer panel
+  const [showPunchPanel, setShowPunchPanel] = useState<boolean>(false);
+  const [showVUMeter, setShowVUMeter] = useState<boolean>(false); // Show/hide VU meter panel
 
   // MIDI Quick Actions Handler
   const triggerMIDIAction = (actionId: string) => {
@@ -178,7 +179,7 @@ const MixerComponent = () => {
       const engine = (window as any)?.audioEngineRef?.current;
       if (engine && typeof engine.getTrackLevel === "function") {
         const newLevels: Record<string, number> = {};
-        tracks.forEach((track) => {
+        tracks.forEach((track: Track) => {
           const raw = engine.getTrackLevel(track.id);
           const smoothed = 0.6 * (levels[track.id] || 0) + 0.4 * (raw || 0);
           newLevels[track.id] = smoothed;
@@ -195,9 +196,9 @@ const MixerComponent = () => {
 
   // --- Detach/Dock Handlers ---
   const handleDetachTile = (trackId: string) => {
-    const isAlreadyDetached = detachedTiles.some((t) => t.trackId === trackId);
+    const isAlreadyDetached = detachedTiles.some((t: DetachedTileState) => t.trackId === trackId);
     if (!isAlreadyDetached) {
-      setDetachedTiles((prev) => [
+      setDetachedTiles((prev: DetachedTileState[]) => [
         ...prev,
         {
           trackId,
@@ -212,7 +213,7 @@ const MixerComponent = () => {
   };
 
   const handleDockTile = (trackId: string) => {
-    setDetachedTiles((prev) => prev.filter((t) => t.trackId !== trackId));
+    setDetachedTiles((prev: DetachedTileState[]) => prev.filter((t: DetachedTileState) => t.trackId !== trackId));
   };
 
   // --- Mixer Layout ---
@@ -251,7 +252,7 @@ const MixerComponent = () => {
                   title="Quantize Notes"
                   className="p-0.5 hover:bg-teal-600 rounded transition-colors text-teal-300 hover:text-white"
                 >
-                  <Music2 className="w-3 h-3" />
+                  <Music className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => triggerMIDIAction('transpose-up')}
@@ -485,8 +486,8 @@ const MixerComponent = () => {
                   </div>
                 ) : (
                   tracks
-                    .filter((t) => t.type !== "master")
-                    .map((track) => (
+                    .filter((t: Track) => t.type !== "master")
+                    .map((track: Track) => (
                       <MixerTile
                         key={track.id}
                         track={track}
@@ -496,7 +497,7 @@ const MixerComponent = () => {
                         onUpdate={updateTrack}
                         onAddPlugin={addPluginToTrack}
                         onRemovePlugin={removePluginFromTrack}
-                        // togglePluginEnabled not part of MixerTile props; handled via DetachablePluginRack
+                        togglePluginEnabled={togglePluginEnabled}
                         levels={levels}
                         stripWidth={scaledStripWidth}
                         stripHeight={stripHeight}
@@ -515,13 +516,13 @@ const MixerComponent = () => {
               <div className="h-32 border-t border-gray-700 bg-gray-800 p-4 overflow-y-auto flex-shrink-0">
                 <DetachablePluginRack
                   plugins={selectedTrack.inserts}
-                  onAddPlugin={(plugin) => addPluginToTrack(selectedTrack.id, plugin)}
-                  onRemovePlugin={(pluginId) => removePluginFromTrack(selectedTrack.id, pluginId)}
-                  onTogglePlugin={(pluginId, enabled) => togglePluginEnabled(selectedTrack.id, pluginId, enabled)}
+                  onAddPlugin={(plugin: Plugin) => addPluginToTrack(selectedTrack.id, plugin)}
+                  onRemovePlugin={(pluginId: string) => removePluginFromTrack(selectedTrack.id, pluginId)}
+                  onTogglePlugin={(pluginId: string, enabled: boolean) => togglePluginEnabled(selectedTrack.id, pluginId, enabled)}
                   trackId={selectedTrack.id}
                   trackName={selectedTrack.name}
                   isDetached={false}
-                  onDock={() => setDetachedPluginRacks(prev => ({ ...prev, [selectedTrack.id]: true }))}
+                  onDock={() => setDetachedPluginRacks((prev: Record<string, boolean>) => ({ ...prev, [selectedTrack.id]: true }))}
                 />
               </div>
             )}
@@ -556,11 +557,11 @@ const MixerComponent = () => {
                       isRecording={false}
                       isArmed={selectedTrack.armed || false}
                       recordingTime={0}
-                      onArm={(armed) => updateTrack(selectedTrack.id, { armed })}
+                      onArm={(armed: boolean) => updateTrack(selectedTrack.id, { armed })}
                       onRecord={() => console.log('Record pressed')}
                       onStop={() => console.log('Stop pressed')}
                       recordingMode="audio"
-                      onModeChange={(mode) => console.log('Mode changed:', mode)}
+                      onModeChange={(mode: string) => console.log('Mode changed:', mode)}
                     />
                   </div>
                 </div>

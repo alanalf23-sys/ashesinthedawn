@@ -19,6 +19,7 @@ import {
   File,
   Volume2,
   Wrench,
+  Cpu,
 } from "lucide-react";
 import { useDAW } from '../contexts/DAWContext';
 import { useTransportClock } from "../hooks/useTransportClock";
@@ -29,7 +30,9 @@ import {
   subscribeDirectoryEntries,
 } from "../lib/projectDirectoryStore";
 import type { DirectoryEntry } from "../lib/projectDirectoryStore";
-import CodetteAdvancedTools from "./CodetteAdvancedTools"; // NEW: Import advanced tools modal
+import CodetteAdvancedTools from "./CodetteAdvancedTools";
+import { usePythonDSPConnection } from "../hooks/usePythonDSP";
+import { getAudioEngine } from "../lib/audioEngine";
 
 export default function TopBar() {
   const {
@@ -66,7 +69,7 @@ export default function TopBar() {
   }
 
   const [midiActionLog, setMidiActionLog] = useState<MIDIActionLog[]>([]);
-  const midiLogListenerRef = useRef<() => void>();
+  const midiLogListenerRef = useRef<(() => void) | undefined>();
 
   useEffect(() => {
     // Listen for MIDI action logs from console
@@ -80,11 +83,11 @@ export default function TopBar() {
           action: actionText,
           timestamp: Date.now(),
         };
-        setMidiActionLog(prev => [newLog, ...prev].slice(0, 10)); // Keep last 10
+        setMidiActionLog((prev: MIDIActionLog[]) => [newLog, ...prev].slice(0, 10)); // Keep last 10
         
         // Auto-remove after 4 seconds
         setTimeout(() => {
-          setMidiActionLog(prev => prev.filter(log => log.id !== newLog.id));
+          setMidiActionLog((prev: MIDIActionLog[]) => prev.filter((log: MIDIActionLog) => log.id !== newLog.id));
         }, 4000);
       }
       originalLog(...args);
@@ -98,16 +101,21 @@ export default function TopBar() {
     };
   }, []);
 
-  const [projectDirSearch, setProjectDirSearch] = useState('');
-  const [showProjectDirDropdown, setShowProjectDirDropdown] = useState(false);
-  const [isProjectDirDocked, setIsProjectDirDocked] = useState(true);
-  const [showMIDIDropdown, setShowMIDIDropdown] = useState(false);
+  const [projectDirSearch, setProjectDirSearch] = useState<string>('');
+  const [showProjectDirDropdown, setShowProjectDirDropdown] = useState<boolean>(false);
+  const [isProjectDirDocked, setIsProjectDirDocked] = useState<boolean>(true);
+  const [showMIDIDropdown, setShowMIDIDropdown] = useState<boolean>(false);
   const [directoryEntries, setDirectoryEntries] = useState<DirectoryEntry[]>([]);
-  const [showAdvancedTools, setShowAdvancedTools] = useState(false);
+  const [showAdvancedTools, setShowAdvancedTools] = useState<boolean>(false);
+
+  // Python DSP Integration
+  const { connected: pythonConnected, error: pythonError } = usePythonDSPConnection();
+  const [pythonDSPEnabled, setPythonDSPEnabled] = useState<boolean>(false);
+  const [showPythonStats, setShowPythonStats] = useState<boolean>(false);
 
   useEffect(() => {
     setDirectoryEntries(getDirectoryEntries());
-    const unsubscribe = subscribeDirectoryEntries((entries) => {
+    const unsubscribe = subscribeDirectoryEntries((entries: DirectoryEntry[]) => {
       setDirectoryEntries(entries);
     });
     return unsubscribe;
@@ -118,11 +126,11 @@ export default function TopBar() {
     if (!term) return [];
     return directoryEntries
       .filter(
-        (entry) =>
+        (entry: DirectoryEntry) =>
           entry.name.toLowerCase().includes(term) ||
           entry.path.toLowerCase().includes(term)
       )
-      .sort((a, b) => {
+      .sort((a: DirectoryEntry, b: DirectoryEntry) => {
         if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
         return a.name.localeCompare(b.name);
       })
@@ -147,6 +155,19 @@ export default function TopBar() {
         // Non-critical copy failure
       });
     }
+  };
+
+  // Python DSP toggle handler
+  const togglePythonDSP = () => {
+    const newState = !pythonDSPEnabled;
+    setPythonDSPEnabled(newState);
+    
+    // Update AudioEngine
+    const engine = getAudioEngine();
+    engine.setPythonDSPEnabled(newState);
+    engine.setHybridProcessingEnabled(newState);
+    
+    console.log(`[TopBar] Python DSP ${newState ? 'enabled' : 'disabled'}`);
   };
 
   const formatTime = (seconds: number) => {
@@ -324,7 +345,7 @@ export default function TopBar() {
                 </div>
                 {projectSearchResults.length ? (
                   <div className="divide-y divide-gray-700">
-                    {projectSearchResults.map((entry) => (
+                    {projectSearchResults.map((entry: DirectoryEntry) => (
                       <button
                         key={entry.id}
                         onMouseDown={(e) => {
@@ -390,7 +411,7 @@ export default function TopBar() {
               </div>
               
               <div className="divide-y divide-gray-700">
-                {midiActionLog.map((log) => (
+                {midiActionLog.map((log: MIDIActionLog) => (
                   <div key={log.id} className="px-3 py-2 hover:bg-gray-700/50 transition">
                     <div className="flex items-center gap-2 justify-between">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -477,6 +498,76 @@ export default function TopBar() {
         <span className={`text-xs font-medium ${codetteConnected ? 'text-purple-400' : 'text-gray-500'}`}>
           {codetteConnected ? 'AI Ready' : 'AI Offline'}
         </span>
+      </div>
+
+      {/* Python DSP Status & Toggle */}
+      <div className="relative">
+        <button
+          onClick={togglePythonDSP}
+          onMouseEnter={() => setShowPythonStats(true)}
+          onMouseLeave={() => setShowPythonStats(false)}
+          className={`flex items-center gap-2 px-2 py-1 rounded text-xs border transition-all ${
+            pythonConnected && pythonDSPEnabled
+              ? 'bg-purple-900/40 border-purple-600 text-purple-300'
+              : pythonConnected
+              ? 'bg-gray-900 border-purple-700/50 text-purple-400 hover:bg-purple-900/20'
+              : 'bg-gray-900 border-gray-700 text-gray-500'
+          }`}
+          title={
+            pythonConnected
+              ? pythonDSPEnabled
+                ? 'Python DSP Active - Click to disable'
+                : 'Python DSP Available - Click to enable'
+              : pythonError || 'Python DSP Offline - Check server'
+          }
+        >
+          <Cpu className={`w-3 h-3 ${pythonDSPEnabled ? 'animate-pulse' : ''}`} />
+          <span className="font-medium">
+            {pythonDSPEnabled ? '🐍 Python DSP' : 'DSP'}
+          </span>
+          {pythonConnected ? (
+            <div className={`w-2 h-2 rounded-full ${pythonDSPEnabled ? 'bg-green-500 animate-pulse' : 'bg-purple-500'}`} />
+          ) : (
+            <div className="w-2 h-2 rounded-full bg-red-500" />
+          )}
+        </button>
+
+        {/* Python DSP Stats Tooltip */}
+        {showPythonStats && pythonConnected && (
+          <div className="absolute top-full right-0 mt-1 bg-gray-800 border border-purple-700/50 rounded shadow-lg z-50 p-3 min-w-[250px]">
+            <div className="text-xs space-y-2">
+              <div className="flex items-center justify-between border-b border-gray-700 pb-2">
+                <span className="font-semibold text-purple-300">Python DSP Server</span>
+                <span className="text-green-400">● Online</span>
+              </div>
+              
+              <div className="space-y-1 text-gray-300">
+                <div className="flex justify-between">
+                  <span>Status:</span>
+                  <span className={pythonDSPEnabled ? 'text-green-400' : 'text-gray-400'}>
+                    {pythonDSPEnabled ? 'Active' : 'Standby'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Effects:</span>
+                  <span className="text-purple-400">19 Available</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Quality:</span>
+                  <span className="text-blue-400">Professional</span>
+                </div>
+              </div>
+
+              {pythonDSPEnabled && (
+                <div className="pt-2 border-t border-gray-700 text-gray-400 text-[10px]">
+                  <p>• EQ, Compression, Reverb</p>
+                  <p>• Limiter, Gate, Saturation</p>
+                  <p>• 197 verified tests</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Advanced Tools Modal */}

@@ -1,17 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { AutomationCurve, AutomationPoint } from '../types';
+import type { AutomationCurve as AutomationCurveType, AutomationPoint as AutomationPointType } from '../types';
 import { AutomationEngine } from '../lib/automationEngine';
 import { Trash2, Copy } from 'lucide-react';
 import { normalizeCanvasDimensions } from '../lib/windowScaling';
 import { Tooltip } from './TooltipProvider';
 
 interface AutomationTrackProps {
-  curve: AutomationCurve;
+  curve: AutomationCurveType;
   trackId: string;
   parameter: string;
   minValue: number;
   maxValue: number;
-  onUpdateCurve: (curve: AutomationCurve) => void;
+  onUpdateCurve: (curve: AutomationCurveType) => void;
   onDeleteCurve: () => void;
   onDuplicateCurve: () => void;
   duration: number;
@@ -89,7 +89,7 @@ export const AutomationTrack: React.FC<AutomationTrackProps> = ({
 
       const valueRange = maxValue - minValue;
 
-      curveData.forEach((point, index) => {
+      curveData.forEach((point: { time: number; value: number }, index: number) => {
         const x = point.time * pixelsPerSecond;
         const normalized = (point.value - minValue) / valueRange;
         const y = canvasHeight - padding - normalized * (canvasHeight - 2 * padding);
@@ -104,7 +104,7 @@ export const AutomationTrack: React.FC<AutomationTrackProps> = ({
       ctx.stroke();
 
       // Draw points
-      curve.points.forEach((point, index) => {
+      curve.points.forEach((point: AutomationPointType, index: number) => {
         const x = point.time * pixelsPerSecond;
         const normalized = (point.value - minValue) / valueRange;
         const y = canvasHeight - padding - normalized * (canvasHeight - 2 * padding);
@@ -134,7 +134,7 @@ export const AutomationTrack: React.FC<AutomationTrackProps> = ({
     let clickedPointIndex = -1;
     const valueRange = maxValue - minValue;
 
-    curve.points.forEach((point, index) => {
+    curve.points.forEach((point: AutomationPointType, index: number) => {
       const px = point.time * pixelsPerSecond;
       const normalized = (point.value - minValue) / valueRange;
       const py = canvasHeight - padding - normalized * (canvasHeight - 2 * padding);
@@ -153,7 +153,7 @@ export const AutomationTrack: React.FC<AutomationTrackProps> = ({
       const normalizedY = Math.max(0, Math.min(1, (canvasHeight - padding - y) / (canvasHeight - 2 * padding)));
       const value = minValue + normalizedY * valueRange;
 
-      const newPoint: AutomationPoint = {
+      const newPoint: AutomationPointType = {
         time,
         value,
         curveType: 'linear',
@@ -190,7 +190,7 @@ export const AutomationTrack: React.FC<AutomationTrackProps> = ({
       )
     );
 
-    const updatedPoint: AutomationPoint = {
+    const updatedPoint: AutomationPointType = {
       ...oldPoint,
       time: newTime,
       value: newValue,
@@ -231,7 +231,7 @@ export const AutomationTrack: React.FC<AutomationTrackProps> = ({
   const handleCurveTypeChange = (curveType: 'linear' | 'exponential' | 'logarithmic') => {
     if (selectedPointIndex === null) return;
 
-    const updatedPoint: AutomationPoint = {
+    const updatedPoint: AutomationPointType = {
       ...curve.points[selectedPointIndex],
       curveType,
     };

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Zap, ChevronDown, Loader, Settings } from 'lucide-react';
+import { Plus, X, Zap, ChevronDown, Loader, Settings, Cpu } from 'lucide-react';
 import { Plugin } from '../types';
 import { Tooltip } from './TooltipProvider';
+import { usePythonDSPConnection, usePythonDSPEffects } from '../hooks/usePythonDSP';
 
 interface PluginRackProps {
   plugins: Plugin[];
@@ -13,13 +14,13 @@ interface PluginRackProps {
 }
 
 const AVAILABLE_PLUGINS = [
-  { id: 'eq', name: 'Parametric EQ', type: 'eq' as const, icon: '🎚️' },
-  { id: 'comp', name: 'Compressor', type: 'compressor' as const, icon: '⚙️' },
-  { id: 'gate', name: 'Gate', type: 'gate' as const, icon: '🚪' },
-  { id: 'sat', name: 'Saturation', type: 'saturation' as const, icon: '⚡' },
-  { id: 'delay', name: 'Delay', type: 'delay' as const, icon: '⏱️' },
-  { id: 'reverb', name: 'Reverb', type: 'reverb' as const, icon: '🌊' },
-  { id: 'meter', name: 'Meter', type: 'meter' as const, icon: '📊' },
+  { id: 'eq', name: 'Parametric EQ', type: 'eq' as const, icon: '🎚️', source: 'web' as const },
+  { id: 'comp', name: 'Compressor', type: 'compressor' as const, icon: '⚙️', source: 'web' as const },
+  { id: 'gate', name: 'Gate', type: 'gate' as const, icon: '🚪', source: 'web' as const },
+  { id: 'sat', name: 'Saturation', type: 'saturation' as const, icon: '⚡', source: 'web' as const },
+  { id: 'delay', name: 'Delay', type: 'delay' as const, icon: '⏱️', source: 'web' as const },
+  { id: 'reverb', name: 'Reverb', type: 'reverb' as const, icon: '🌊', source: 'web' as const },
+  { id: 'meter', name: 'Meter', type: 'meter' as const, icon: '📊', source: 'web' as const },
 ];
 
 export default function PluginRack({
@@ -34,6 +35,22 @@ export default function PluginRack({
   const [expandedPluginId, setExpandedPluginId] = useState<string | null>(null);
   const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null);
   const [executingPlugins, setExecutingPlugins] = useState<Set<string>>(new Set());
+
+  // Python DSP Integration
+  const { connected: pythonConnected } = usePythonDSPConnection();
+  const pythonEffects = usePythonDSPEffects();
+
+  // Merge Web Audio and Python DSP effects
+  const allAvailablePlugins = [
+    ...AVAILABLE_PLUGINS,
+    ...(pythonConnected ? pythonEffects.map(fx => ({
+      id: fx.id,
+      name: `${fx.name} (Python)`,
+      type: fx.id as const,
+      icon: '🐍',
+      source: 'python' as const,
+    })) : []),
+  ];
 
   // Simulate real-time plugin execution indicator (increased from 300-500ms to 1-1.5s to reduce CPU load)
   useEffect(() => {
@@ -59,8 +76,8 @@ export default function PluginRack({
     }
   }, [recentlyAdded]);
 
-  const addPlugin = (type: string) => {
-    const pluginDef = AVAILABLE_PLUGINS.find(p => p.id === type);
+  const addPlugin = (type: string, source: 'web' | 'python' = 'web') => {
+    const pluginDef = allAvailablePlugins.find(p => p.id === type);
     if (pluginDef) {
       const newPlugin: Plugin = {
         id: `${type}-${Date.now()}-${trackId}`,
@@ -76,8 +93,13 @@ export default function PluginRack({
   };
 
   const getPluginIcon = (type: string) => {
-    const plugin = AVAILABLE_PLUGINS.find(p => p.type === type);
+    const plugin = allAvailablePlugins.find(p => p.type === type);
     return plugin?.icon || '📦';
+  };
+
+  const getPluginSource = (type: string): 'web' | 'python' | 'unknown' => {
+    const plugin = allAvailablePlugins.find(p => p.type === type);
+    return plugin?.source || 'unknown';
   };
 
   return (
@@ -118,17 +140,60 @@ export default function PluginRack({
           </Tooltip>
 
           {showPluginMenu && (
-            <div className="absolute right-0 bottom-full mb-1 bg-gray-900 border border-gray-600 rounded shadow-lg z-50 min-w-max">
+            <div className="absolute right-0 bottom-full mb-1 bg-gray-900 border border-gray-600 rounded shadow-lg z-50 min-w-max max-h-80 overflow-y-auto">
+              {/* Web Audio Effects Section */}
+              <div className="px-3 py-1.5 bg-gray-800 border-b border-gray-700 sticky top-0">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                  Web Audio Effects
+                </span>
+              </div>
               {AVAILABLE_PLUGINS.map((plugin) => (
                 <button
                   key={plugin.id}
-                  onClick={() => addPlugin(plugin.id)}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition first:rounded-t last:rounded-b whitespace-nowrap flex items-center gap-2"
+                  onClick={() => addPlugin(plugin.id, 'web')}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition whitespace-nowrap flex items-center gap-2"
                 >
                   <span>{plugin.icon}</span>
                   {plugin.name}
                 </button>
               ))}
+
+              {/* Python DSP Effects Section */}
+              {pythonConnected && pythonEffects.length > 0 && (
+                <>
+                  <div className="px-3 py-1.5 bg-purple-900/30 border-b border-purple-700/50 sticky top-0 mt-1">
+                    <div className="flex items-center gap-2">
+                      <Cpu className="w-3 h-3 text-purple-400" />
+                      <span className="text-[10px] font-semibold text-purple-300 uppercase tracking-wide">
+                        Python DSP Effects
+                      </span>
+                      <span className="text-[9px] text-purple-500 bg-purple-900/50 px-1 py-0.5 rounded">
+                        Pro
+                      </span>
+                    </div>
+                  </div>
+                  {pythonEffects.map((fx) => (
+                    <button
+                      key={fx.id}
+                      onClick={() => addPlugin(fx.id, 'python')}
+                      className="w-full text-left px-3 py-2 text-xs text-purple-200 hover:bg-purple-900/30 hover:text-purple-100 transition whitespace-nowrap flex items-center gap-2 group"
+                    >
+                      <span>🐍</span>
+                      <span className="flex-1">{fx.name}</span>
+                      <span className="text-[9px] text-purple-500 opacity-0 group-hover:opacity-100 transition">
+                        {fx.category}
+                      </span>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {/* Python DSP Offline Notice */}
+              {!pythonConnected && (
+                <div className="px-3 py-2 bg-gray-800/50 border-t border-gray-700 text-[10px] text-gray-500 text-center">
+                  Python DSP Server offline
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -176,8 +241,15 @@ export default function PluginRack({
 
               {/* Plugin Name with Type */}
               <div className="flex-1 min-w-0">
-                <div className="text-xs text-gray-200 font-medium truncate">
-                  {plugin.name}
+                <div className="flex items-center gap-1.5">
+                  <div className="text-xs text-gray-200 font-medium truncate">
+                    {plugin.name}
+                  </div>
+                  {getPluginSource(plugin.type) === 'python' && (
+                    <span className="text-[9px] px-1 py-0.5 bg-purple-900/50 text-purple-300 rounded border border-purple-700/50 flex-shrink-0">
+                      🐍 Python
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-gray-500">
                   Slot {index + 1}
