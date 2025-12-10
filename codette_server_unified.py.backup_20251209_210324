@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """
 Codette AI Unified Server - Complete Implementation
 """
@@ -80,26 +80,26 @@ try:
         Reverb, HallReverb, PlateReverb, RoomReverb
     )
     DSP_EFFECTS_AVAILABLE = True
-    logger.info("[OK] DAW Core DSP effects imported successfully")
+    logger.info("✅ DAW Core DSP effects imported successfully")
     
     # Now try importing the FastAPI app
     try:
         from daw_core.api import app as daw_core_app
         DAW_CORE_API_AVAILABLE = True
-        logger.info("[OK] DAW Core API app imported successfully")
-        logger.info(f"   * DAW Core app type: {type(daw_core_app)}")
-        logger.info(f"   * DAW Core app routes: {len(daw_core_app.routes)}")
+        logger.info("✅ DAW Core API app imported successfully")
+        logger.info(f"   • DAW Core app type: {type(daw_core_app)}")
+        logger.info(f"   • DAW Core app routes: {len(daw_core_app.routes)}")
     except ImportError as api_import_error:
-        logger.warning(f"[!] DAW Core API import failed: {api_import_error}")
+        logger.warning(f"⚠️ DAW Core API import failed: {api_import_error}")
         logger.warning("   API app not available, but DSP classes are loaded")
     except Exception as api_error:
-        logger.error(f"[X] Unexpected error importing DAW Core API: {api_error}")
+        logger.error(f"❌ Unexpected error importing DAW Core API: {api_error}")
     
 except ImportError as e:
-    logger.warning(f"[!] DAW Core import failed: {e}")
+    logger.warning(f"⚠️ DAW Core import failed: {e}")
     logger.warning("   DSP effects will not be available via API")
 except Exception as e:
-    logger.error(f"[X] Unexpected error importing DAW Core: {e}")
+    logger.error(f"❌ Unexpected error importing DAW Core: {e}")
 
 # ============================================================================
 # Compatibility helpers (fix NameError for missing helpers at runtime)
@@ -513,11 +513,11 @@ try:
     supabase_key = os.getenv("VITE_SUPABASE_SERVICE_KEY", "")
     if supabase_url and supabase_key:
         SUPABASE_AVAILABLE = True
-        logger.info("[OK] Supabase client initialized")
+        logger.info("✅ Supabase client initialized")
 except ImportError:
-    logger.info("[i]  Supabase library not installed")
+    logger.info("ℹ️  Supabase library not installed")
 except Exception as e:
-    logger.warning(f"[!]  Supabase initialization failed: {e}")
+    logger.warning(f"⚠️  Supabase initialization failed: {e}")
     logger.warning("   CSPROTECT may not work correctly")
 
 # Training data availability
@@ -526,9 +526,9 @@ get_training_context = None
 try:
     from training_data import get_training_context
     TRAINING_AVAILABLE = True
-    logger.info("[OK] Training data module loaded")
+    logger.info("✅ Training data module loaded")
 except ImportError:
-    logger.info("[i]  Training data module not available")
+    logger.info("ℹ️  Training data module not available")
 
 # Try to import OpenAI for fallback model
 OPENAI_AVAILABLE = False
@@ -544,19 +544,19 @@ if OPENAI_FALLBACK_ENABLED and OPENAI_API_KEY:
         from openai import OpenAI
         openai_client = OpenAI(api_key=OPENAI_API_KEY)
         OPENAI_AVAILABLE = True
-        logger.info("[OK] OpenAI client initialized (fallback enabled)")
-        logger.info(f"   * Primary model: {OPENAI_FALLBACK_MODEL_PRIMARY[:60]}...")
-        logger.info(f"   * Secondary model: {OPENAI_FALLBACK_MODEL_SECONDARY[:60]}...")
-        logger.info(f"   * Assistant ID: {OPENAI_ASSISTANT_ID}")
+        logger.info("✅ OpenAI client initialized (fallback enabled)")
+        logger.info(f"   • Primary model: {OPENAI_FALLBACK_MODEL_PRIMARY[:60]}...")
+        logger.info(f"   • Secondary model: {OPENAI_FALLBACK_MODEL_SECONDARY[:60]}...")
+        logger.info(f"   • Assistant ID: {OPENAI_ASSISTANT_ID}")
     except ImportError:
-        logger.warning("[!] OpenAI library not installed. Run: pip install openai")
+        logger.warning("⚠️ OpenAI library not installed. Run: pip install openai")
     except Exception as e:
-        logger.warning(f"[!] OpenAI client initialization failed: {e}")
+        logger.warning(f"⚠️ OpenAI client initialization failed: {e}")
 else:
     if not OPENAI_API_KEY:
-        logger.info("[i]  OpenAI fallback disabled: No API key provided")
+        logger.info("ℹ️  OpenAI fallback disabled: No API key provided")
     else:
-        logger.info("[i]  OpenAI fallback disabled in configuration")
+        logger.info("ℹ️  OpenAI fallback disabled in configuration")
 
 # Try to import DAW Core DSP effects
 DSP_EFFECTS_AVAILABLE = False
@@ -568,18 +568,18 @@ try:
     from daw_core.fx.delays import SimpleDelay
     from daw_core.fx.reverb import Reverb
     DSP_EFFECTS_AVAILABLE = True
-    logger.info("[OK] DSP effects library loaded")
+    logger.info("✅ DSP effects library loaded")
 except ImportError as e:
-    logger.warning(f"[!] DSP effects not available: {e}")
+    logger.warning(f"⚠️ DSP effects not available: {e}")
 
 # Try to import Intelligent Mixing Suggestions
 INTELLIGENT_MIXING_AVAILABLE = False
 try:
     from intelligent_mixing import IntelligentMixingSuggestionGenerator
     INTELLIGENT_MIXING_AVAILABLE = True
-    logger.info("[OK] Intelligent Mixing Suggestions loaded")
+    logger.info("✅ Intelligent Mixing Suggestions loaded")
 except ImportError as e:
-    logger.warning(f"[!] Intelligent Mixing not available: {e}")
+    logger.warning(f"⚠️ Intelligent Mixing not available: {e}")
 
 # ============================================================================
 # CODETTE IMPORT
@@ -589,9 +589,9 @@ except ImportError as e:
 codette_path = Path(__file__).parent / "Codette"
 if codette_path.exists():
     sys.path.insert(0, str(codette_path))
-    logger.info(f"[OK] Added Codette path: {codette_path}")
+    logger.info(f"✅ Added Codette path: {codette_path}")
 else:
-    logger.error("[X] Codette directory not found")
+    logger.error("❌ Codette directory not found")
 
 # Import Codette capabilities (Quantum Consciousness)
 CODETTE_CAPABILITIES_AVAILABLE = False
@@ -599,9 +599,9 @@ quantum_consciousness = None
 try:
     from src.codette_capabilities import QuantumConsciousness
     CODETTE_CAPABILITIES_AVAILABLE = True
-    logger.info("[OK] Codette capabilities module loaded")
+    logger.info("✅ Codette capabilities module loaded")
 except ImportError as e:
-    logger.info(f"[i]  Codette capabilities not available: {e}")
+    logger.info(f"ℹ️  Codette capabilities not available: {e}")
 
 # Import Codette core - try enhanced 9-perspective version first
 CODETTE_CORE_AVAILABLE = False
@@ -614,20 +614,20 @@ if NUMPY_AVAILABLE and hasattr(np, "_core"):
         from codette_enhanced import Codette as CodetteEnhanced
         CODETTE_CORE_AVAILABLE = True
         CODETTE_ENHANCED = True
-        logger.info("[OK] Codette ENHANCED module (codette_enhanced.py) loaded - 9 perspectives")
+        logger.info("✅ Codette ENHANCED module (codette_enhanced.py) loaded - 9 perspectives")
     except Exception as e:
-        logger.info(f"[i]  Enhanced Codette not available: {e}")
+        logger.info(f"ℹ️  Enhanced Codette not available: {e}")
 else:
-    logger.info("[i]  Enhanced Codette not available: NumPy missing _core or not installed")
+    logger.info("ℹ️  Enhanced Codette not available: NumPy missing _core or not installed")
 
 # Fallback to standard codette_new if enhanced engine was not loaded
 if not CODETTE_CORE_AVAILABLE:
     try:
         from codette_new import Codette as CodetteCore
         CODETTE_CORE_AVAILABLE = True
-        logger.info("[OK] Codette core module (codette_new.py) loaded successfully")
+        logger.info("✅ Codette core module (codette_new.py) loaded successfully")
     except ImportError as e2:
-        logger.error(f"[X] Failed to import any Codette: {e2}")
+        logger.error(f"❌ Failed to import any Codette: {e2}")
 
 # Import Codette Hybrid (combines advanced features)
 CODETTE_HYBRID_AVAILABLE = False
@@ -635,29 +635,29 @@ CodetteHybrid = None
 try:
     from codette_hybrid import CodetteHybrid
     CODETTE_HYBRID_AVAILABLE = True
-    logger.info("[OK] Codette Hybrid module loaded")
+    logger.info("✅ Codette Hybrid module loaded")
 except ImportError as e:
-    logger.info(f"[i]  Codette Hybrid not available: {e}")
+    logger.info(f"ℹ️  Codette Hybrid not available: {e}")
 
 # Initialize Quantum Consciousness
 if CODETTE_CAPABILITIES_AVAILABLE:
     try:
         quantum_consciousness = QuantumConsciousness()
-        logger.info("[OK] Quantum Consciousness System initialized")
+        logger.info("✅ Quantum Consciousness System initialized")
     except Exception as e:
-        logger.warning(f"[!] Could not initialize Quantum Consciousness: {e}")
+        logger.warning(f"⚠️ Could not initialize Quantum Consciousness: {e}")
 
 # Initialize Codette instance
 if CODETTE_CORE_AVAILABLE:
     try:
         if CODETTE_ENHANCED:
             codette_core = CodetteEnhanced(user_name="CoreLogicStudio")
-            logger.info("[OK] Codette ENHANCED initialized successfully")
+            logger.info("✅ Codette ENHANCED initialized successfully")
         else:
             codette_core = CodetteCore(user_name="CoreLogicStudio")
-            logger.info("[OK] Codette initialized successfully")
+            logger.info("✅ Codette initialized successfully")
     except Exception as e:
-        logger.error(f"[X] Failed to initialize Codette: {e}")
+        logger.error(f"❌ Failed to initialize Codette: {e}")
         codette_core = None
 
 # Initialize Codette Hybrid (preferred engine if available)
@@ -665,28 +665,28 @@ codette_hybrid = None
 if CODETTE_HYBRID_AVAILABLE and CodetteHybrid:
     try:
         codette_hybrid = CodetteHybrid(user_name="CoreLogicStudio", use_ml_features=True)
-        logger.info("[OK] Codette Hybrid System initialized (ML mode)")
-        logger.info("   * Defense modifiers: Active")
-        logger.info("   * Vector search: Active")
-        logger.info("   * Prompt engineering: Active")
-        logger.info("   * Creative sentence generation: Active")
-        logger.info("   * ML features: Enabled")
+        logger.info("✅ Codette Hybrid System initialized (ML mode)")
+        logger.info("   • Defense modifiers: Active")
+        logger.info("   • Vector search: Active")
+        logger.info("   • Prompt engineering: Active")
+        logger.info("   • Creative sentence generation: Active")
+        logger.info("   • ML features: Enabled")
     except Exception as e:
-        logger.warning(f"[!] Could not initialize Codette Hybrid: {e}")
+        logger.warning(f"⚠️ Could not initialize Codette Hybrid: {e}")
 
 # Set the active engine (prefer hybrid > enhanced > core)
 if codette_hybrid:
     codette_engine = codette_hybrid
     codette_engine_type = "CodetteHybrid"
-    logger.info(f"[OK] Codette engine set from codette_hybrid (type: {codette_engine_type})")
+    logger.info(f"✅ Codette engine set from codette_hybrid (type: {codette_engine_type})")
 elif codette_core:
     codette_engine = codette_core
     codette_engine_type = "CodetteEnhanced" if CODETTE_ENHANCED else "CodetteCore"
-    logger.info(f"[OK] Codette engine set from codette_core (type: {codette_engine_type})")
+    logger.info(f"✅ Codette engine set from codette_core (type: {codette_engine_type})")
 else:
     codette_engine = None
     codette_engine_type = None
-    logger.warning("[!] No Codette engine available - running in fallback mode")
+    logger.warning("⚠️ No Codette engine available - running in fallback mode")
 
 # ============================================================================
 # OPENAI FALLBACK HANDLER
@@ -1024,7 +1024,7 @@ async def query_openai_assistant(message: str, daw_context: Optional[Dict[str, A
                 "error": "Empty response from assistant"
             }
         
-        logger.info(f"[OpenAI Assistant] [OK] Success ({len(response_text)} chars)")
+        logger.info(f"[OpenAI Assistant] ✅ Success ({len(response_text)} chars)")
         
         return {
             "response": response_text,
@@ -1378,7 +1378,7 @@ async def execute_delay_sync(args: Dict[str, Any]) -> Dict[str, Any]:
             "delay_ms": round(delay_ms, 2),
             "delay_seconds": round(delay_seconds, 3),
             "beat_value": beat_value,
-            "formula": f"(60000 / {bpm}) x {beat_value} = {delay_ms:.2f}ms",
+            "formula": f"(60000 / {bpm}) × {beat_value} = {delay_ms:.2f}ms",
             "use_case": f"Set your delay plugin to {delay_ms:.2f}ms for tempo-synced {note_division} note delays"
         }
     except Exception as e:
@@ -1483,153 +1483,153 @@ transport_manager = TransportManager()
 def _log_startup_banner():
     logger.info("")
     logger.info("======================================================================")
-    logger.info(" CODETTE AI UNIFIED SERVER - STARTUP")
+    logger.info("🚀 CODETTE AI UNIFIED SERVER - STARTUP")
     logger.info("======================================================================")
-    logger.info(" Server Configuration:")
-    logger.info("   * Version: 2.0.0")
-    logger.info("   * Host: 0.0.0.0 (all interfaces)")
-    logger.info(f"   * Port: {os.environ.get('PORT', 8000)}")
-    logger.info("   * CORS: Enabled for 4 origins")
+    logger.info("📡 Server Configuration:")
+    logger.info("   • Version: 2.0.0")
+    logger.info("   • Host: 0.0.0.0 (all interfaces)")
+    logger.info(f"   • Port: {os.environ.get('PORT', 8000)}")
+    logger.info("   • CORS: Enabled for 4 origins")
     logger.info("")
     
     # Codette AI Engine status
-    logger.info(" Codette AI Engine:")
+    logger.info("🤖 Codette AI Engine:")
     if codette_engine:
-        logger.info("   [OK] Status: ACTIVE")
-        logger.info(f"   * Engine: {codette_engine_type}")
+        logger.info("   ✅ Status: ACTIVE")
+        logger.info(f"   • Engine: {codette_engine_type}")
         if codette_engine_type == "CodetteHybrid":
-            logger.info("   * Mode: Hybrid (Defense + Vector + Prompt Engineering)")
+            logger.info("   • Mode: Hybrid (Defense + Vector + Prompt Engineering)")
         elif codette_engine_type == "CodetteEnhanced":
-            logger.info("   * Perspectives: Neural, Logical, Creative, Ethical, Quantum, + 4 more")
+            logger.info("   • Perspectives: Neural, Logical, Creative, Ethical, Quantum, + 4 more")
         else:
-            logger.info("   * Perspectives: Neural, Logical, Creative, Ethical, Quantum")
-        logger.info("   * User: CoreLogicStudio")
-        logger.info("   * Mode: Production-ready")
-        logger.info("   * Method: respond() - returns multi-perspective analysis")
+            logger.info("   • Perspectives: Neural, Logical, Creative, Ethical, Quantum")
+        logger.info("   • User: CoreLogicStudio")
+        logger.info("   • Mode: Production-ready")
+        logger.info("   • Method: respond() - returns multi-perspective analysis")
     else:
-        logger.info("   [!]  Status: FALLBACK MODE")
-        logger.info("   * Engine: Keyword-based responder")
-        logger.info("   * Functionality: Limited to basic responses")
-        logger.info("   * Recommendation: Install Codette package")
+        logger.info("   ⚠️  Status: FALLBACK MODE")
+        logger.info("   • Engine: Keyword-based responder")
+        logger.info("   • Functionality: Limited to basic responses")
+        logger.info("   • Recommendation: Install Codette package")
     
     # DAW Core DSP status (NEW SECTION - Priority 1)
     logger.info("")
-    logger.info("  DAW Core DSP Engine:")
+    logger.info("🎚️  DAW Core DSP Engine:")
     if DAW_CORE_API_AVAILABLE and daw_core_app:
-        logger.info("   [OK] Status: INTEGRATED")
-        logger.info("   * API Prefix: /daw")
-        logger.info("   * Total Effects: 19")
-        logger.info("   * Categories:")
+        logger.info("   ✅ Status: INTEGRATED")
+        logger.info("   • API Prefix: /daw")
+        logger.info("   • Total Effects: 19")
+        logger.info("   • Categories:")
         logger.info("     - EQ: 3-band, High/Low pass")
         logger.info("     - Dynamics: Compressor, Limiter, Expander, Gate")
         logger.info("     - Saturation: Saturation, Distortion, WaveShaper")
         logger.info("     - Delays: Simple, PingPong, MultiTap, Stereo")
         logger.info("     - Reverb: Freeverb, Hall, Plate, Room")
-        logger.info("   * Automation: Curve, LFO, Envelope")
-        logger.info("   * Metering: Level, Spectrum, VU, Correlation")
-        logger.info("   * Engine Control: Start, Stop, Config")
+        logger.info("   • Automation: Curve, LFO, Envelope")
+        logger.info("   • Metering: Level, Spectrum, VU, Correlation")
+        logger.info("   • Engine Control: Start, Stop, Config")
     elif DSP_EFFECTS_AVAILABLE:
-        logger.info("   [!]  Status: PARTIAL")
-        logger.info("   * DSP classes loaded but API not mounted")
-        logger.info("   * Recommendation: Check daw_core/api.py import")
+        logger.info("   ⚠️  Status: PARTIAL")
+        logger.info("   • DSP classes loaded but API not mounted")
+        logger.info("   • Recommendation: Check daw_core/api.py import")
     else:
-        logger.info("   [X] Status: NOT AVAILABLE")
-        logger.info("   * DSP effects not loaded")
-        logger.info("   * Recommendation: Install daw_core package")
+        logger.info("   ❌ Status: NOT AVAILABLE")
+        logger.info("   • DSP effects not loaded")
+        logger.info("   • Recommendation: Install daw_core package")
     
     # OpenAI Fallback status
     logger.info("")
-    logger.info(" OpenAI Fallback:")
+    logger.info("🔄 OpenAI Fallback:")
     if OPENAI_AVAILABLE and OPENAI_FALLBACK_ENABLED:
-        logger.info("   [OK] Status: ENABLED")
+        logger.info("   ✅ Status: ENABLED")
         
         # Assistant API status
         if OPENAI_ASSISTANT_ID:
-            logger.info(f"    Assistant API: AVAILABLE")
-            logger.info(f"      * Assistant ID: {OPENAI_ASSISTANT_ID}")
-            logger.info(f"      * Version: {os.getenv('OPENAI_ASSISTANT_VERSION', 'v2')}")
-            logger.info(f"      * Thread Management: Enabled")
-            logger.info(f"      * Priority: Highest (tried first)")
+            logger.info(f"   🤖 Assistant API: AVAILABLE")
+            logger.info(f"      • Assistant ID: {OPENAI_ASSISTANT_ID}")
+            logger.info(f"      • Version: {os.getenv('OPENAI_ASSISTANT_VERSION', 'v2')}")
+            logger.info(f"      • Thread Management: Enabled")
+            logger.info(f"      • Priority: Highest (tried first)")
             logger.info("")
         
         # Chat models status
-        logger.info(f"    Chat Models:")
-        logger.info(f"      * Primary: {OPENAI_FALLBACK_MODEL_PRIMARY[:50]}...")
-        logger.info(f"      * Secondary: {OPENAI_FALLBACK_MODEL_SECONDARY[:50]}...")
-        logger.info(f"      * Base: gpt-4o-mini")
+        logger.info(f"   📋 Chat Models:")
+        logger.info(f"      • Primary: {OPENAI_FALLBACK_MODEL_PRIMARY[:50]}...")
+        logger.info(f"      • Secondary: {OPENAI_FALLBACK_MODEL_SECONDARY[:50]}...")
+        logger.info(f"      • Base: gpt-4o-mini")
         logger.info("")
         
         # Fallback chain
         if OPENAI_ASSISTANT_ID:
-            logger.info("    Response Priority Chain:")
-            logger.info("      1.  OpenAI Assistant API (PRIMARY - Highest quality)")
+            logger.info("   🔄 Response Priority Chain:")
+            logger.info("      1. ⭐ OpenAI Assistant API (PRIMARY - Highest quality)")
             logger.info("      2. Local Codette (Fallback)")
             logger.info("      3. Keyword Fallback (Last resort)")
         else:
-            logger.info("    Response Priority Chain:")
-            logger.info("      1.  Fine-tuned Primary Model (PRIMARY)")
+            logger.info("   🔄 Response Priority Chain:")
+            logger.info("      1. ⭐ Fine-tuned Primary Model (PRIMARY)")
             logger.info("      2. Fine-tuned Secondary Model")
             logger.info("      3. Base Model (gpt-4o-mini)")
             logger.info("      4. Local Codette (Fallback)")
             logger.info("      5. Keyword Fallback (Last resort)")
     elif OPENAI_FALLBACK_ENABLED and not OPENAI_API_KEY:
-        logger.info("   [!]  Status: DISABLED (No API Key)")
-        logger.info("   * Add OPENAI_API_KEY to .env to enable")
+        logger.info("   ⚠️  Status: DISABLED (No API Key)")
+        logger.info("   • Add OPENAI_API_KEY to .env to enable")
     elif not OPENAI_FALLBACK_ENABLED:
-        logger.info("   [i]  Status: DISABLED (Configuration)")
-        logger.info("   * Set OPENAI_FALLBACK_ENABLED=true to enable")
+        logger.info("   ℹ️  Status: DISABLED (Configuration)")
+        logger.info("   • Set OPENAI_FALLBACK_ENABLED=true to enable")
     else:
-        logger.info("   [X] Status: NOT AVAILABLE")
-        logger.info("   * OpenAI library not installed")
-        logger.info("   * Run: pip install openai")
+        logger.info("   ❌ Status: NOT AVAILABLE")
+        logger.info("   • OpenAI library not installed")
+        logger.info("   • Run: pip install openai")
     logger.info("")
     
     # Database status
-    logger.info(" Database:")
+    logger.info("💾 Database:")
     if SUPABASE_AVAILABLE:
-        logger.info("   [OK] Supabase: CONNECTED")
-        logger.info(f"   * URL: {os.getenv('VITE_SUPABASE_URL', 'N/A')[:40]}...")
-        logger.info("   * Key Type: Service Role (full access) ")
+        logger.info("   ✅ Supabase: CONNECTED")
+        logger.info(f"   • URL: {os.getenv('VITE_SUPABASE_URL', 'N/A')[:40]}...")
+        logger.info("   • Key Type: Service Role (full access) 🔐")
     else:
-        logger.info("   [!]  Supabase: NOT CONNECTED")
-        logger.info("   * Running in local mode")
+        logger.info("   ⚠️  Supabase: NOT CONNECTED")
+        logger.info("   • Running in local mode")
     logger.info("")
     
     # Dependencies status
-    logger.info(" Dependencies:")
+    logger.info("📦 Dependencies:")
     deps = []
-    deps.append("NumPy [OK]" if NUMPY_AVAILABLE else "NumPy [X]")
-    deps.append("Supabase [OK]" if SUPABASE_AVAILABLE else "Supabase [X]")
-    deps.append("OpenAI [OK]" if OPENAI_AVAILABLE else "OpenAI [X]")
-    deps.append("Mixing AI [OK]" if INTELLIGENT_MIXING_AVAILABLE else "Mixing AI [X]")
-    logger.info("   * " + " | ".join(deps))
+    deps.append("NumPy ✅" if NUMPY_AVAILABLE else "NumPy ❌")
+    deps.append("Supabase ✅" if SUPABASE_AVAILABLE else "Supabase ❌")
+    deps.append("OpenAI ✅" if OPENAI_AVAILABLE else "OpenAI ❌")
+    deps.append("Mixing AI ✅" if INTELLIGENT_MIXING_AVAILABLE else "Mixing AI ❌")
+    logger.info("   • " + " | ".join(deps))
     
     # Training data availability
-    logger.info(" Training Data:")
+    logger.info("📚 Training Data:")
     if TRAINING_AVAILABLE:
-        logger.info("   [OK] Available")
-        logger.info("   * Method: get_training_context()")
+        logger.info("   ✅ Available")
+        logger.info("   • Method: get_training_context()")
     else:
-        logger.info("   [X] Not available")
+        logger.info("   ❌ Not available")
     
     # Quantum Consciousness status
-    logger.info(" Quantum Consciousness:")
+    logger.info("🌌 Quantum Consciousness:")
     if CODETTE_CAPABILITIES_AVAILABLE and quantum_consciousness:
-        logger.info("   [OK] Initialized")
+        logger.info("   ✅ Initialized")
     else:
-        logger.info("   [X] Not initialized or available")
+        logger.info("   ❌ Not initialized or available")
     
     # Transport manager status
-    logger.info(" Transport Manager:")
-    logger.info(f"   * Playing: {transport_manager.playing}")
-    logger.info(f"   * Time: {transport_manager.time_seconds:.2f}s")
-    logger.info(f"   * BPM: {transport_manager.bpm}")
-    logger.info(f"   * Sample Rate: {transport_manager.sample_rate}")
-    logger.info(f"   * Loop: {transport_manager.loop_enabled} ({transport_manager.loop_start:.2f}s to {transport_manager.loop_end:.2f}s)")
+    logger.info("🚀 Transport Manager:")
+    logger.info(f"   • Playing: {transport_manager.playing}")
+    logger.info(f"   • Time: {transport_manager.time_seconds:.2f}s")
+    logger.info(f"   • BPM: {transport_manager.bpm}")
+    logger.info(f"   • Sample Rate: {transport_manager.sample_rate}")
+    logger.info(f"   • Loop: {transport_manager.loop_enabled} ({transport_manager.loop_start:.2f}s to {transport_manager.loop_end:.2f}s)")
     
     logger.info("")
     logger.info("======================================================================")
-    logger.info("[OK] CODETTE AI UNIFIED SERVER IS READY")
+    logger.info("✅ CODETTE AI UNIFIED SERVER IS READY")
     logger.info("======================================================================")
 
 
@@ -1676,7 +1676,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logger.info("[OK] FastAPI app configured")
+logger.info("✅ FastAPI app configured")
 
 # ============================================================================
 # UNIFIED EFFECT PROCESSOR (Priority 2: Critical Integration)
@@ -1690,7 +1690,7 @@ class EffectProcessRequest(BaseModel):
     audio_data: List[float]
     sample_rate: Optional[int] = 44100
 
-# Effect type mapping: frontend effect names -> DAW Core endpoint paths
+# Effect type mapping: frontend effect names → DAW Core endpoint paths
 EFFECT_TYPE_MAP = {
     # EQ Effects
     "highpass": "/daw/process/eq/highpass",
@@ -1782,7 +1782,7 @@ async def route_effect_to_daw_core(
         )
     
     try:
-        logger.info(f"[Unified Processor] Processing {effect_type} -> {daw_endpoint}")
+        logger.info(f"[Unified Processor] Processing {effect_type} → {daw_endpoint}")
         
         # Build request for DAW Core
         daw_request = ProcessAudioRequest(
@@ -1832,8 +1832,8 @@ async def route_effect_to_daw_core(
         }
         
         logger.info(
-            f"[Unified Processor] [OK] {effect_type} processed "
-            f"({len(audio_data)} -> {normalized_response['length']} samples)"
+            f"[Unified Processor] ✅ {effect_type} processed "
+            f"({len(audio_data)} → {normalized_response['length']} samples)"
         )
         
         return normalized_response
@@ -1963,7 +1963,7 @@ async def process_effect_chain(
     
     Applies effects sequentially (output of effect N becomes input of effect N+1).
     This enables complex processing chains like:
-    1. Highpass -> 2. Compressor -> 3. Saturation -> 4. Reverb
+    1. Highpass → 2. Compressor → 3. Saturation → 4. Reverb
     
     Example request:
     ```json
@@ -2057,7 +2057,7 @@ async def process_effect_chain(
 try:
     import httpx
 except ImportError:
-    logger.warning("[!] httpx not installed - effect routing may not work")
+    logger.warning("⚠️ httpx not installed - effect routing may not work")
     logger.warning("   Run: pip install httpx")
 
 # ============================================================================
@@ -2089,23 +2089,23 @@ if DAW_CORE_API_AVAILABLE and daw_core_app:
                                 name=f"daw_{route.name}" if hasattr(route, 'name') else None
                             )
         
-        logger.info("[OK] DAW Core API routes copied successfully")
-        logger.info("   * 19 DSP effects now accessible")
-        logger.info("   * EQ: /daw/process/eq/*")
-        logger.info("   * Dynamics: /daw/process/dynamics/*")
-        logger.info("   * Saturation: /daw/process/saturation/*")
-        logger.info("   * Delays: /daw/process/delay/*")
-        logger.info("   * Reverb: /daw/process/reverb/*")
-        logger.info("   * Automation: /daw/automation/*")
-        logger.info("   * Metering: /daw/metering/*")
-        logger.info("   * Engine: /daw/engine/*")
+        logger.info("✅ DAW Core API routes copied successfully")
+        logger.info("   • 19 DSP effects now accessible")
+        logger.info("   • EQ: /daw/process/eq/*")
+        logger.info("   • Dynamics: /daw/process/dynamics/*")
+        logger.info("   • Saturation: /daw/process/saturation/*")
+        logger.info("   • Delays: /daw/process/delay/*")
+        logger.info("   • Reverb: /daw/process/reverb/*")
+        logger.info("   • Automation: /daw/automation/*")
+        logger.info("   • Metering: /daw/metering/*")
+        logger.info("   • Engine: /daw/engine/*")
         
     except Exception as e:
-        logger.error(f"[X] Failed to copy DAW Core routes: {e}")
+        logger.error(f"❌ Failed to copy DAW Core routes: {e}")
         logger.error(traceback.format_exc())
         
         # Fallback: Create proxy endpoints manually
-        logger.info("[!] Attempting manual proxy endpoint creation...")
+        logger.info("⚠️ Attempting manual proxy endpoint creation...")
         
         # Import individual effect processing functions directly
         try:
@@ -2183,15 +2183,15 @@ if DAW_CORE_API_AVAILABLE and daw_core_app:
                 except Exception as e:
                     raise HTTPException(status_code=400, detail=str(e))
             
-            logger.info("[OK] Created direct proxy endpoints for core effects")
-            logger.info("   * Highpass, Lowpass, Compressor available")
-            logger.info("   * Other effects will use unified processor")
+            logger.info("✅ Created direct proxy endpoints for core effects")
+            logger.info("   • Highpass, Lowpass, Compressor available")
+            logger.info("   • Other effects will use unified processor")
             
         except Exception as proxy_error:
-            logger.error(f"[X] Failed to create proxy endpoints: {proxy_error}")
+            logger.error(f"❌ Failed to create proxy endpoints: {proxy_error}")
             logger.error(traceback.format_exc())
 else:
-    logger.warning("[!] DAW Core API not available - DSP effects endpoints disabled")
+    logger.warning("⚠️ DAW Core API not available - DSP effects endpoints disabled")
 
 # ============================================================================
 # PYDANTIC MODELS
@@ -2394,14 +2394,14 @@ async def codette_chat(request: ChatRequest):
     
     # TRY OPENAI ASSISTANT FIRST (PRIMARY)
     if OPENAI_AVAILABLE and OPENAI_FALLBACK_ENABLED:
-        logger.info("[Chat]  Trying OpenAI Assistant (primary)...")
+        logger.info("[Chat] 🎯 Trying OpenAI Assistant (primary)...")
         openai_result = await query_openai_assistant(request.message, request.daw_context)
         
         if openai_result["response"]:
             response = openai_result["response"]
             source = openai_result["source"]
             confidence = openai_result["confidence"]
-            logger.info(f"[Chat] [OK] OpenAI Assistant successful ({source}, {len(response)} chars)")
+            logger.info(f"[Chat] ✅ OpenAI Assistant successful ({source}, {len(response)} chars)")
 
             # Ingest exchange into Codette memory asynchronously (best-effort)
             try:
@@ -2417,11 +2417,11 @@ async def codette_chat(request: ChatRequest):
                 "source": source
             }
         else:
-            logger.warning(f"[Chat] [!] OpenAI Assistant failed: {openai_result.get('error', 'Unknown error')}")
+            logger.warning(f"[Chat] ⚠️ OpenAI Assistant failed: {openai_result.get('error', 'Unknown error')}")
     
     # FALLBACK TO LOCAL CODETTE ENGINE
     if codette_engine and hasattr(codette_engine, 'respond'):
-        logger.info("[Chat]  Falling back to local Codette engine...")
+        logger.info("[Chat] 🔄 Falling back to local Codette engine...")
         try:
             if request.daw_context:
                 response = codette_engine.respond(request.message, request.daw_context)
@@ -2429,7 +2429,7 @@ async def codette_chat(request: ChatRequest):
                 response = codette_engine.respond(request.message)
             source = codette_engine_type or "codette"
             confidence = 0.85  # Slightly lower than OpenAI
-            logger.info(f"[Chat] [OK] Local Codette response ({source}, {len(response)} chars)")
+            logger.info(f"[Chat] ✅ Local Codette response ({source}, {len(response)} chars)")
 
             # Ingest local Codette exchange into Codette memory (if engine supports it)
             try:
@@ -2445,12 +2445,12 @@ async def codette_chat(request: ChatRequest):
                 "source": source
             }
         except Exception as e:
-            logger.error(f"[Chat] [X] Local Codette engine error: {e}")
+            logger.error(f"[Chat] ❌ Local Codette engine error: {e}")
     else:
-        logger.warning("[Chat] [!] No local Codette engine available")
+        logger.warning("[Chat] ⚠️ No local Codette engine available")
     
     # LAST RESORT: BASIC KEYWORD FALLBACK
-    logger.warning("[Chat] [!] Using basic keyword fallback (all engines failed)")
+    logger.warning("[Chat] ⚠️ Using basic keyword fallback (all engines failed)")
     response = generate_basic_fallback_response(request.message)
     source = "fallback_basic"
     confidence = 0.5
@@ -2656,167 +2656,12 @@ def get_timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-
-# ============================================================================
-# ADVANCED ANALYSIS ENDPOINTS (Required by CodetteAdvancedTools frontend)
-# ============================================================================
-@app.get("/api/analysis/delay-sync")
-async def api_delay_sync(bpm: float = 120.0):
-    """Calculate tempo-synced delay times for all note divisions"""
-    try:
-        # Calculate delay times for common note divisions
-        divisions = {
-            "Whole Note": round((60000 / bpm) * 4, 2),
-            "Half Note": round((60000 / bpm) * 2, 2),
-            "Quarter Note": round((60000 / bpm) * 1, 2),
-            "Eighth Note": round((60000 / bpm) * 0.5, 2),
-            "16th Note": round((60000 / bpm) * 0.25, 2),
-            "Dotted Quarter": round((60000 / bpm) * 1.5, 2),
-            "Dotted Eighth": round((60000 / bpm) * 0.75, 2),
-            "Triplet Quarter": round((60000 / bpm) * (2/3), 2),
-            "Triplet Eighth": round((60000 / bpm) * (1/3), 2),
-        }
-        
-        logger.info(f"[API] Delay sync calculated for BPM {bpm}")
-        return {
-            "success": True,
-            "bpm": bpm,
-            "divisions": divisions,
-            "timestamp": get_timestamp()
-        }
-    except Exception as e:
-        logger.error(f"[API] Delay sync error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/analysis/ear-training")
-async def api_ear_training(exercise_type: str = "interval", difficulty: str = "beginner"):
-    """Get ear training exercises and data"""
-    try:
-        result = await ear_training(exercise_type, difficulty)
-        logger.info(f"[API] Ear training: {exercise_type}/{difficulty}")
-        return result
-    except Exception as e:
-        logger.error(f"[API] Ear training error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/analysis/production-checklist")
-async def api_production_checklist(stage: str = "mixing"):
-    """Get production workflow checklist for stage"""
-    try:
-        result = await production_checklist(stage)
-        logger.info(f"[API] Production checklist: {stage}")
-        return result
-    except Exception as e:
-        logger.error(f"[API] Production checklist error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/analysis/instrument-info")
-async def api_instrument_info(category: str = "vocals", instrument: str = "lead"):
-    """Get instrument processing information"""
-    try:
-        result = await instrument_info(category, instrument)
-        logger.info(f"[API] Instrument info: {category}/{instrument}")
-        return result
-    except Exception as e:
-        logger.error(f"[API] Instrument info error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/analysis/instruments-list")
-async def api_instruments_list():
-    """Get list of all available instruments by category"""
-    try:
-        instruments_list = {
-            "vocals": ["lead", "harmony", "backing", "rap"],
-            "drums": ["kick", "snare", "hi-hat", "tom", "crash", "ride"],
-            "guitars": ["acoustic", "electric", "bass"],
-            "keys": ["piano", "synth", "organ", "rhodes"],
-            "strings": ["violin", "viola", "cello", "double-bass"],
-            "brass": ["trumpet", "trombone", "saxophone", "french-horn"],
-            "woodwinds": ["flute", "clarinet", "oboe", "bassoon"],
-            "percussion": ["conga", "bongo", "shaker", "tambourine"]
-        }
-        
-        logger.info("[API] Instruments list requested")
-        return {
-            "success": True,
-            "categories": instruments_list,
-            "total_instruments": sum(len(v) for v in instruments_list.values()),
-            "timestamp": get_timestamp()
-        }
-    except Exception as e:
-        logger.error(f"[API] Instruments list error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/analysis/detect-genre")
-async def api_detect_genre(request: Dict[str, Any]):
-    """Detect genre from project metadata"""
-    try:
-        bpm = request.get("bpm", 120)
-        tracks = request.get("tracks", [])
-        
-        # Simple genre detection based on BPM and track count
-        genre = "Electronic"
-        confidence = 0.5
-        
-        if bpm < 80:
-            genre = "Ambient"
-            confidence = 0.7
-        elif bpm < 100:
-            genre = "Hip-Hop"
-            confidence = 0.75
-        elif bpm < 120:
-            genre = "Pop"
-            confidence = 0.8
-        elif bpm < 140:
-            genre = "House"
-            confidence = 0.75
-        else:
-            genre = "Drum & Bass"
-            confidence = 0.7
-        
-        logger.info(f"[API] Genre detected: {genre} ({confidence * 100}%)")
-        return {
-            "success": True,
-            "detected_genre": genre,
-            "confidence": confidence,
-            "bpm_range": [max(1, bpm - 10), bpm + 10],
-            "candidates": [genre],
-            "timestamp": get_timestamp()
-        }
-    except Exception as e:
-        logger.error(f"[API] Genre detection error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ============================================================================
-# INSTRUCTIONS FOR MANUAL INTEGRATION
-# ============================================================================
-"""
-TO FIX THE 404 ERRORS:
-
-1. Open codette_server_unified.py in your favorite text editor
-2. Scroll to near the bottom (around line 2500-2600)
-3. Find the WebSocket route (@app.websocket("/ws"))
-4. **ABOVE** that WebSocket route, paste all the @app.get and @app.post endpoints from this file
-5. Save the file
-6. Restart the server: python codette_server_unified.py
-7. Test: curl http://localhost:8000/api/analysis/delay-sync?bpm=120
-
-The endpoints should then be available and the 404 errors will be resolved.
-"""
-
-
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time communication with graceful disconnect handling"""
     await websocket.accept()
     active_websockets.append(websocket)
-    logger.info(f"[OK] WebSocket connected. Total: {len(active_websockets)}")
+    logger.info(f"✅ WebSocket connected. Total: {len(active_websockets)}")
 
     try:
         # Send initial handshake & immediate status
@@ -2908,249 +2753,3 @@ async def websocket_endpoint(websocket: WebSocket):
         if websocket in active_websockets:
             active_websockets.remove(websocket)
         logger.info(f"WebSocket disconnected. Total: {len(active_websockets)}")
-# ============================================================================
-# METERING PROXY ENDPOINTS (Priority 4: Critical Integration)
-# ============================================================================
-
-# Import metering classes from DAW Core
-try:
-    from daw_core.metering import LevelMeter, SpectrumAnalyzer, VUMeter, Correlometer
-    METERING_AVAILABLE = True
-    logger.info("[OK] DAW Core metering classes imported successfully")
-except ImportError as e:
-    METERING_AVAILABLE = False
-    logger.warning(f"[!] DAW Core metering import failed: {e}")
-    logger.warning("   Metering endpoints will not be available")
-
-
-@app.post("/daw/metering/level")
-async def daw_metering_level(
-    audio_data: List[float],
-    sample_rate: int = 44100
-):
-    """
-    Level metering endpoint - Peak, RMS, LUFS, headroom
-    
-    Args:
-        audio_data: Audio samples (mono or stereo)
-        sample_rate: Sample rate in Hz (default 44100)
-        
-    Returns:
-        Peak, RMS, LUFS, and headroom measurements
-    """
-    if not NUMPY_AVAILABLE:
-        raise HTTPException(status_code=503, detail="NumPy not available")
-    
-    if not METERING_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Metering module not available")
-    
-    try:
-        import numpy as np
-        
-        # Convert to numpy array
-        audio = np.array(audio_data, dtype=np.float32)
-        
-        # Create level meter
-        meter = LevelMeter(sample_rate=sample_rate)
-        
-        # Process audio
-        meter.process(audio)
-        
-        # Get measurements
-        peak = meter.get_peak_db()
-        rms = meter.get_rms_db()
-        held_peak = meter.get_held_peak_db()
-        
-        # Calculate headroom
-        headroom = 0.0 - peak  # dB to 0dBFS
-        
-        # Approximate LUFS (simplified calculation)
-        loudness_lufs = rms  # Approximation
-        
-        logger.info(f"[Metering] Level: Peak={peak:.1f}dB, RMS={rms:.1f}dB")
-        
-        return {
-            "status": "success",
-            "meter_type": "level",
-            "peak": float(peak),
-            "rms": float(rms),
-            "peak_db": float(peak),
-            "rms_db": float(rms),
-            "held_peak_db": float(held_peak),
-            "loudness_lufs": float(loudness_lufs),
-            "headroom": float(headroom),
-            "timestamp": get_timestamp()
-        }
-        
-    except Exception as e:
-        logger.error(f"[Metering] Level meter error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/daw/metering/spectrum")
-async def daw_metering_spectrum(
-    audio_data: List[float],
-    sample_rate: int = 44100,
-    fft_size: int = 2048
-):
-    """
-    Spectrum analysis endpoint - FFT-based frequency analysis
-    
-    Args:
-        audio_data: Audio samples (mono)
-        sample_rate: Sample rate in Hz (default 44100)
-        fft_size: FFT size in samples (default 2048)
-        
-    Returns:
-        Frequency bins and magnitude spectrum in dB
-    """
-    if not NUMPY_AVAILABLE:
-        raise HTTPException(status_code=503, detail="NumPy not available")
-    
-    if not METERING_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Metering module not available")
-    
-    try:
-        import numpy as np
-        
-        # Convert to numpy array
-        audio = np.array(audio_data, dtype=np.float32)
-        
-        # Create spectrum analyzer
-        analyzer = SpectrumAnalyzer(fft_size=fft_size, sample_rate=sample_rate)
-        
-        # Process audio
-        analyzer.process(audio)
-        
-        # Get frequency bands for visualization (32 bands)
-        band_freqs, band_mags = analyzer.get_frequency_bands(num_bands=32)
-        
-        logger.info(f"[Metering] Spectrum: {len(band_freqs)} frequency bands")
-        
-        return {
-            "status": "success",
-            "meter_type": "spectrum",
-            "frequencies": band_freqs.tolist(),
-            "magnitudes": band_mags.tolist(),
-            "num_bins": len(band_freqs),
-            "fft_size": fft_size,
-            "sample_rate": sample_rate,
-            "timestamp": get_timestamp()
-        }
-        
-    except Exception as e:
-        logger.error(f"[Metering] Spectrum analyzer error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/daw/metering/vu")
-async def daw_metering_vu(
-    audio_data: List[float],
-    sample_rate: int = 44100
-):
-    """
-    VU metering endpoint - Classic VU meter simulation
-    
-    Args:
-        audio_data: Audio samples (mono or stereo)
-        sample_rate: Sample rate in Hz (default 44100)
-        
-    Returns:
-        VU reading in dB and normalized 0-1 scale
-    """
-    if not NUMPY_AVAILABLE:
-        raise HTTPException(status_code=503, detail="NumPy not available")
-    
-    if not METERING_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Metering module not available")
-    
-    try:
-        import numpy as np
-        
-        # Convert to numpy array
-        audio = np.array(audio_data, dtype=np.float32)
-        
-        # Create VU meter
-        vu_meter = VUMeter(sample_rate=sample_rate)
-        
-        # Process audio
-        vu_meter.process(audio)
-        
-        # Get VU reading
-        vu_normalized = vu_meter.get_vu()  # 0-1 scale
-        vu_db = vu_meter.get_vu_db()       # dB scale (-40 to +6)
-        
-        logger.info(f"[Metering] VU: {vu_db:.1f}dB ({vu_normalized:.2f})")
-        
-        return {
-            "status": "success",
-            "meter_type": "vu",
-            "vu": float(vu_normalized),
-            "vu_db": float(vu_db),
-            "scaled": float(vu_normalized),
-            "timestamp": get_timestamp()
-        }
-        
-    except Exception as e:
-        logger.error(f"[Metering] VU meter error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/daw/metering/correlation")
-async def daw_metering_correlation(
-    audio_data: List[float],
-    sample_rate: int = 44100
-):
-    """
-    Stereo correlation endpoint - Phase correlation analysis
-    
-    Args:
-        audio_data: Stereo audio samples [[L,R], [L,R], ...]
-        sample_rate: Sample rate in Hz (default 44100)
-        
-    Returns:
-        Correlation coefficient (-1 to +1), mono/stereo indicators
-    """
-    if not NUMPY_AVAILABLE:
-        raise HTTPException(status_code=503, detail="NumPy not available")
-    
-    if not METERING_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Metering module not available")
-    
-    try:
-        import numpy as np
-        
-        # Convert to numpy array
-        audio = np.array(audio_data, dtype=np.float32)
-        
-        # Ensure stereo format (N, 2)
-        if audio.ndim == 1:
-            # Mono signal - duplicate to stereo
-            audio = np.stack([audio, audio], axis=1)
-        
-        # Create correlometer
-        correlometer = Correlometer(sample_rate=sample_rate)
-        
-        # Process audio
-        correlometer.process(audio)
-        
-        # Get correlation
-        correlation = correlometer.get_correlation()
-        is_mono = correlometer.is_mono()
-        is_stereo = correlometer.is_stereo()
-        
-        logger.info(f"[Metering] Correlation: {correlation:.2f} (mono={is_mono}, stereo={is_stereo})")
-        
-        return {
-            "status": "success",
-            "meter_type": "correlation",
-            "correlation": float(correlation),
-            "mono": bool(is_mono),
-            "stereo": bool(is_stereo),
-            "timestamp": get_timestamp()
-        }
-        
-    except Exception as e:
-        logger.error(f"[Metering] Correlometer error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-

@@ -118,6 +118,131 @@ async function safeFetch<T>(
 }
 
 // ============================================================================
+// EFFECT TYPE NORMALIZATION (Priority 3)
+// ============================================================================
+
+/**
+ * Frontend effect name to backend effect type mapping
+ * Ensures compatibility between UI names and backend EFFECT_TYPE_MAP
+ */
+export const FRONTEND_TO_BACKEND_EFFECT_MAP: Record<string, string> = {
+  // EQ Effects
+  'high-pass': 'highpass',
+  'highpass': 'highpass',
+  'high_pass': 'highpass',
+  'low-pass': 'lowpass',
+  'lowpass': 'lowpass',
+  'low_pass': 'lowpass',
+  'eq-3-band': '3band',
+  '3band': '3band',
+  'eq3band': '3band',
+  'parametric': '3band',
+  
+  // Dynamics
+  'compressor': 'compressor',
+  'limiter': 'limiter',
+  'expander': 'expander',
+  'gate': 'gate',
+  'noisegate': 'gate',
+  'noise-gate': 'gate',
+  'noise_gate': 'gate',
+  
+  // Saturation
+  'saturation': 'saturation',
+  'distortion': 'distortion',
+  'waveshaper': 'waveshaper',
+  'wave-shaper': 'waveshaper',
+  'wave_shaper': 'waveshaper',
+  'hardclip': 'hardclip',
+  'hard-clip': 'hardclip',
+  'hard_clip': 'hardclip',
+  
+  // Delays
+  'delay': 'delay',
+  'simple-delay': 'delay',
+  'simple_delay': 'delay',
+  'pingpong': 'pingpong',
+  'ping-pong': 'pingpong',
+  'ping_pong': 'pingpong',
+  'pingpong-delay': 'pingpong',
+  'pingpong_delay': 'pingpong',
+  'multitap': 'multitap',
+  'multi-tap': 'multitap',
+  'multi_tap': 'multitap',
+  'multitap-delay': 'multitap',
+  'multitap_delay': 'multitap',
+  'stereo-delay': 'stereo_delay',
+  'stereo_delay': 'stereo_delay',
+  
+  // Reverb
+  'reverb': 'reverb',
+  'freeverb': 'reverb',
+  'hall': 'hall',
+  'hall-reverb': 'hall',
+  'hall_reverb': 'hall',
+  'plate': 'plate',
+  'plate-reverb': 'plate',
+  'plate_reverb': 'plate',
+  'room': 'room',
+  'room-reverb': 'room',
+  'room_reverb': 'room',
+};
+
+/**
+ * Normalize effect type name for backend compatibility
+ * Handles case variations, separators, and aliases
+ * 
+ * @param effectType - Frontend effect type name
+ * @returns Backend-compatible effect type
+ * @throws Error if effect type is unknown
+ */
+export function normalizeEffectType(effectType: string): string {
+  // Normalize to lowercase and replace separators
+  const normalized = effectType.toLowerCase().trim().replace(/\s+/g, '-');
+  
+  // Look up in mapping
+  const backendType = FRONTEND_TO_BACKEND_EFFECT_MAP[normalized];
+  
+  if (!backendType) {
+    const availableTypes = Object.keys(FRONTEND_TO_BACKEND_EFFECT_MAP)
+      .filter((key, index, self) => self.indexOf(key) === index)
+      .join(', ');
+    
+    throw new Error(
+      `Unknown effect type: "${effectType}". ` +
+      `Available types: ${availableTypes}`
+    );
+  }
+  
+  return backendType;
+}
+
+/**
+ * Validate effect type exists
+ * 
+ * @param effectType - Effect type to validate
+ * @returns True if valid, false otherwise
+ */
+export function isValidEffectType(effectType: string): boolean {
+  try {
+    normalizeEffectType(effectType);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get all supported effect types (frontend names)
+ * 
+ * @returns Array of supported effect type names
+ */
+export function getSupportedEffectTypes(): string[] {
+  const unique = new Set(Object.values(FRONTEND_TO_BACKEND_EFFECT_MAP));
+  return Array.from(unique).sort();
+}
+
+// ============================================================================
 // EFFECT PROCESSING (UPDATED TO USE UNIFIED ENDPOINT)
 // ============================================================================
 
@@ -152,8 +277,11 @@ export async function processEffect(
   parameters: Record<string, number>,
   sampleRate: number = 44100
 ): Promise<Float32Array> {
+  // Normalize effect type to backend-compatible name
+  const normalizedType = normalizeEffectType(effectType);
+  
   const request: EffectProcessRequest = {
-    effect_type: effectType,
+    effect_type: normalizedType,
     parameters,
     audio_data: Array.from(audioData),
     sample_rate: sampleRate,
@@ -184,6 +312,7 @@ export async function processEffectChain(
 
   for (const effect of effectChain) {
     try {
+      // Normalize effect type before processing
       output = await processEffect(effect.type, output, effect.parameters, sampleRate);
     } catch (error) {
       console.error(`Failed to process ${effect.type}:`, error);

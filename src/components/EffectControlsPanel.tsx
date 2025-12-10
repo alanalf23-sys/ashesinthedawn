@@ -11,7 +11,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { initializeDSPBridge } from '../lib/dspBridge';
+import { initializeDSPBridge, normalizeEffectType } from '../lib/dspBridge';
 
 interface EffectParameter {
   name: string;
@@ -52,9 +52,11 @@ interface EffectControlsPanelProps {
 
 /**
  * Effect parameter definitions for each effect type
+ * NOTE: Keys updated to match backend effect names (Priority 3)
  */
 const EFFECT_PARAMETERS: Record<string, Record<string, EffectParameter>> = {
-  'high-pass': {
+  // Backend: "highpass"
+  'highpass': {
     frequency: {
       name: 'frequency',
       label: 'Frequency',
@@ -78,7 +80,8 @@ const EFFECT_PARAMETERS: Record<string, Record<string, EffectParameter>> = {
       description: 'Peak at cutoff frequency',
     },
   },
-  'low-pass': {
+  // Backend: "lowpass"
+  'lowpass': {
     frequency: {
       name: 'frequency',
       label: 'Frequency',
@@ -102,7 +105,8 @@ const EFFECT_PARAMETERS: Record<string, Record<string, EffectParameter>> = {
       description: 'Peak at cutoff frequency',
     },
   },
-  'eq-3-band': {
+  // Backend: "3band"
+  '3band': {
     low: {
       name: 'low',
       label: 'Low',
@@ -137,6 +141,7 @@ const EFFECT_PARAMETERS: Record<string, Record<string, EffectParameter>> = {
       description: 'High frequency adjustment',
     },
   },
+  // Backend: "compressor"
   'compressor': {
     threshold: {
       name: 'threshold',
@@ -194,6 +199,7 @@ const EFFECT_PARAMETERS: Record<string, Record<string, EffectParameter>> = {
       description: 'Output level compensation',
     },
   },
+  // Backend: "limiter"
   'limiter': {
     threshold: {
       name: 'threshold',
@@ -218,6 +224,7 @@ const EFFECT_PARAMETERS: Record<string, Record<string, EffectParameter>> = {
       description: 'Time to release limiting',
     },
   },
+  // Backend: "distortion"
   'distortion': {
     drive: {
       name: 'drive',
@@ -241,6 +248,7 @@ const EFFECT_PARAMETERS: Record<string, Record<string, EffectParameter>> = {
       description: 'Tone color (0 = dark, 1 = bright)',
     },
   },
+  // Backend: "delay"
   'delay': {
     time: {
       name: 'time',
@@ -264,6 +272,7 @@ const EFFECT_PARAMETERS: Record<string, Record<string, EffectParameter>> = {
       description: 'Amount of signal fed back to input',
     },
   },
+  // Backend: "reverb"
   'reverb': {
     roomSize: {
       name: 'roomSize',
@@ -322,13 +331,16 @@ export default function EffectControlsPanel({
   onWetDryChange,
   className = '',
 }: EffectControlsPanelProps): JSX.Element {
+  // Normalize effect type to backend-compatible name
+  const normalizedEffectType = normalizeEffectType(effectType);
+  
   const [effect, setEffect] = useState<EffectConfig>({
     id: effectId,
-    type: effectType,
+    type: normalizedEffectType,
     enabled: true,
     wetDry: 100,
     bypass: false,
-    parameters: EFFECT_PARAMETERS[effectType] || {},
+    parameters: EFFECT_PARAMETERS[normalizedEffectType] || {},
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -354,10 +366,10 @@ export default function EffectControlsPanel({
           return { ...prev, parameters: updatedParams };
         });
 
-        // Update via DSP bridge
+        // Update via DSP bridge (normalizedEffectType is already backend-compatible)
         const bridge = await initializeDSPBridge();
         if (bridge && typeof bridge === 'object' && typeof (bridge as any).processEffect === 'function') {
-          await (bridge as any).processEffect(effectType, new Float32Array([]), {
+          await (bridge as any).processEffect(normalizedEffectType, new Float32Array([]), {
             [paramName]: newValue,
           });
         }
@@ -373,7 +385,7 @@ export default function EffectControlsPanel({
         setIsLoading(false);
       }
     },
-    [effectId, effectType, onParameterChange]
+    [effectId, normalizedEffectType, onParameterChange]
   );
 
   /**
@@ -401,7 +413,7 @@ export default function EffectControlsPanel({
         setIsLoading(false);
       }
     },
-    [effectId, effectType, onEffectToggle]
+    [effectId, onEffectToggle]
   );
 
   /**
@@ -428,7 +440,7 @@ export default function EffectControlsPanel({
         setIsLoading(false);
       }
     },
-    [effectId, effectType, onWetDryChange]
+    [effectId, onWetDryChange]
   );
 
   /**
