@@ -63,6 +63,37 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ============================================================================
+# DAW CORE API IMPORT (Priority 1: Critical Integration)
+# ============================================================================
+
+# Import DAW Core effects and API
+DSP_EFFECTS_AVAILABLE = False
+DAW_CORE_API_AVAILABLE = False
+daw_core_app = None
+
+try:
+    # Try importing DSP effects classes first
+    from daw_core.fx import (
+        EQ3Band, HighLowPass, Compressor, Limiter, Expander, Gate, NoiseGate,
+        Saturation, HardClip, Distortion, WaveShaper,
+        SimpleDelay, PingPongDelay, MultiTapDelay, StereoDelay,
+        Reverb, HallReverb, PlateReverb, RoomReverb
+    )
+    DSP_EFFECTS_AVAILABLE = True
+    logger.info("✅ DAW Core DSP effects imported successfully")
+    
+    # Now try importing the FastAPI app
+    from daw_core.api import app as daw_core_app
+    DAW_CORE_API_AVAILABLE = True
+    logger.info("✅ DAW Core API app imported successfully")
+    
+except ImportError as e:
+    logger.warning(f"⚠️ DAW Core import failed: {e}")
+    logger.warning("   DSP effects will not be available via API")
+except Exception as e:
+    logger.error(f"❌ Unexpected error importing DAW Core: {e}")
+
+# ============================================================================
 # Compatibility helpers (fix NameError for missing helpers at runtime)
 # ============================================================================
 
@@ -479,6 +510,7 @@ except ImportError:
     logger.info("ℹ️  Supabase library not installed")
 except Exception as e:
     logger.warning(f"⚠️  Supabase initialization failed: {e}")
+    logger.warning("   CSPROTECT may not work correctly")
 
 # Training data availability
 TRAINING_AVAILABLE = False
@@ -1472,6 +1504,31 @@ def _log_startup_banner():
         logger.info("   • Functionality: Limited to basic responses")
         logger.info("   • Recommendation: Install Codette package")
     
+    # DAW Core DSP status (NEW SECTION - Priority 1)
+    logger.info("")
+    logger.info("🎚️  DAW Core DSP Engine:")
+    if DAW_CORE_API_AVAILABLE and daw_core_app:
+        logger.info("   ✅ Status: INTEGRATED")
+        logger.info("   • API Prefix: /daw")
+        logger.info("   • Total Effects: 19")
+        logger.info("   • Categories:")
+        logger.info("     - EQ: 3-band, High/Low pass")
+        logger.info("     - Dynamics: Compressor, Limiter, Expander, Gate")
+        logger.info("     - Saturation: Saturation, Distortion, WaveShaper")
+        logger.info("     - Delays: Simple, PingPong, MultiTap, Stereo")
+        logger.info("     - Reverb: Freeverb, Hall, Plate, Room")
+        logger.info("   • Automation: Curve, LFO, Envelope")
+        logger.info("   • Metering: Level, Spectrum, VU, Correlation")
+        logger.info("   • Engine Control: Start, Stop, Config")
+    elif DSP_EFFECTS_AVAILABLE:
+        logger.info("   ⚠️  Status: PARTIAL")
+        logger.info("   • DSP classes loaded but API not mounted")
+        logger.info("   • Recommendation: Check daw_core/api.py import")
+    else:
+        logger.info("   ❌ Status: NOT AVAILABLE")
+        logger.info("   • DSP effects not loaded")
+        logger.info("   • Recommendation: Install daw_core package")
+    
     # OpenAI Fallback status
     logger.info("")
     logger.info("🔄 OpenAI Fallback:")
@@ -1612,6 +1669,417 @@ app.add_middleware(
 )
 
 logger.info("✅ FastAPI app configured")
+
+# ============================================================================
+# UNIFIED EFFECT PROCESSOR (Priority 2: Critical Integration)
+# ============================================================================
+
+# Effect type mapping: frontend effect names → DAW Core endpoint paths
+EFFECT_TYPE_MAP = {
+    # EQ Effects
+    "highpass": "/daw/process/eq/highpass",
+    "lowpass": "/daw/process/eq/lowpass",
+    "3band": "/daw/process/eq/3band",
+    "eq3band": "/daw/process/eq/3band",
+    "parametric": "/daw/process/eq/3band",
+    
+    # Dynamics
+    "compressor": "/daw/process/dynamics/compressor",
+    "limiter": "/daw/process/dynamics/limiter",
+    "expander": "/daw/process/dynamics/expander",
+    "gate": "/daw/process/dynamics/gate",
+    "noisegate": "/daw/process/dynamics/gate",
+    
+    # Saturation
+    "saturation": "/daw/process/saturation/saturation",
+    "distortion": "/daw/process/saturation/distortion",
+    "waveshaper": "/daw/process/saturation/waveshaper",
+    "hardclip": "/daw/process/saturation/hardclip",
+    
+    # Delays
+    "delay": "/daw/process/delay/simple",
+    "simple_delay": "/daw/process/delay/simple",
+    "pingpong": "/daw/process/delay/pingpong",
+    "pingpong_delay": "/daw/process/delay/pingpong",
+    "multitap": "/daw/process/delay/multitap",
+    "multitap_delay": "/daw/process/delay/multitap",
+    "stereo_delay": "/daw/process/delay/stereo",
+    
+    # Reverb
+    "reverb": "/daw/process/reverb/freeverb",
+    "freeverb": "/daw/process/reverb/freeverb",
+    "hall": "/daw/process/reverb/hall",
+    "hall_reverb": "/daw/process/reverb/hall",
+    "plate": "/daw/process/reverb/plate",
+    "plate_reverb": "/daw/process/reverb/plate",
+    "room": "/daw/process/reverb/room",
+    "room_reverb": "/daw/process/reverb/room",
+}
+
+
+async def route_effect_to_daw_core(
+    effect_type: str,
+    parameters: Dict[str, float],
+    audio_data: List[float],
+    sample_rate: int = 44100
+) -> Dict[str, Any]:
+    """
+    Route effect processing request to appropriate DAW Core endpoint
+    
+    This function implements the unified effect processor pattern:
+    - Frontend calls /api/effects/process with effect_type
+    - This function maps effect_type to specific DAW Core endpoint
+    - Request is forwarded to mounted DAW Core API
+    - Response is normalized and returned
+    
+    Args:
+        effect_type: Effect name (e.g., 'compressor', 'highpass', 'reverb')
+        parameters: Effect-specific parameters
+        audio_data: Input audio samples
+        sample_rate: Sample rate in Hz
+        
+    Returns:
+        Normalized effect processing response
+        
+    Raises:
+        HTTPException: If effect type unknown or processing fails
+    """
+    # Normalize effect type (lowercase, strip whitespace)
+    effect_type_normalized = effect_type.lower().strip().replace(" ", "_")
+    
+    # Look up DAW Core endpoint
+    daw_endpoint = EFFECT_TYPE_MAP.get(effect_type_normalized)
+    
+    if not daw_endpoint:
+        logger.error(f"[Unified Processor] Unknown effect type: {effect_type}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown effect type: {effect_type}. Available: {', '.join(EFFECT_TYPE_MAP.keys())}"
+        )
+    
+    # Check if DAW Core is available
+    if not DAW_CORE_API_AVAILABLE:
+        logger.error("[Unified Processor] DAW Core not available")
+        raise HTTPException(
+            status_code=503,
+            detail="DSP engine not available. DAW Core API not loaded."
+        )
+    
+    try:
+        logger.info(f"[Unified Processor] Processing {effect_type} → {daw_endpoint}")
+        
+        # Build request for DAW Core
+        daw_request = ProcessAudioRequest(
+            effect_type=effect_type,
+            parameters=parameters,
+            audio_data=audio_data
+        )
+        
+        # Forward to DAW Core endpoint using internal routing
+        # Note: We simulate an internal request since DAW Core is mounted
+        import httpx
+        async with httpx.AsyncClient() as client:
+            # Use localhost to call our own mounted DAW Core API
+            internal_url = f"http://localhost:{os.environ.get('PORT', 8000)}{daw_endpoint}"
+            
+            response = await client.post(
+                internal_url,
+                json={
+                    "effect_type": effect_type,
+                    "parameters": parameters,
+                    "audio_data": audio_data
+                },
+                timeout=30.0
+            )
+            
+            if response.status_code != 200:
+                error_detail = response.json().get("detail", "Unknown error")
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"DSP processing failed: {error_detail}"
+                )
+            
+            result = response.json()
+        
+        # Normalize response format
+        normalized_response = {
+            "status": "success",
+            "effect": effect_type,
+            "effect_type": effect_type,
+            "parameters": parameters,
+            "output": result.get("output", []),
+            "length": result.get("length", len(result.get("output", []))),
+            "sample_rate": sample_rate,
+            "timestamp": get_timestamp(),
+            "daw_endpoint": daw_endpoint,
+            "processing_time_ms": result.get("processing_time_ms", 0)
+        }
+        
+        logger.info(
+            f"[Unified Processor] ✅ {effect_type} processed "
+            f"({len(audio_data)} → {normalized_response['length']} samples)"
+        )
+        
+        return normalized_response
+        
+    except httpx.RequestError as e:
+        logger.error(f"[Unified Processor] Request failed: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Failed to connect to DSP engine: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"[Unified Processor] Error processing {effect_type}: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail=f"Effect processing error: {str(e)}"
+        )
+
+
+class ProcessAudioRequest(BaseModel):
+    """Request model for audio processing"""
+    effect_type: str
+    parameters: Dict[str, float]
+    audio_data: List[float]
+
+
+@app.post("/api/effects/process")
+async def process_effect_unified(request: EffectProcessRequest):
+    """
+    Unified effect processing endpoint
+    
+    This is the PRIMARY endpoint that frontend uses for ALL effect processing.
+    It routes requests to appropriate DAW Core endpoints based on effect_type.
+    
+    Supports all 19 DSP effects:
+    - EQ: highpass, lowpass, 3band
+    - Dynamics: compressor, limiter, expander, gate
+    - Saturation: saturation, distortion, waveshaper, hardclip
+    - Delays: simple, pingpong, multitap, stereo
+    - Reverb: freeverb, hall, plate, room
+    
+    Example request:
+    ```json
+    {
+      "effect_type": "compressor",
+      "parameters": {
+        "threshold": -20,
+        "ratio": 4,
+        "attack": 0.005,
+        "release": 0.1
+      },
+      "audio_data": [0.1, 0.2, -0.1, ...],
+      "sample_rate": 44100
+    }
+    ```
+    
+    Returns:
+        Processed audio with metadata
+    """
+    try:
+        logger.info(
+            f"[API] /api/effects/process called: {request.effect_type} "
+            f"({len(request.audio_data)} samples)"
+        )
+        
+        result = await route_effect_to_daw_core(
+            effect_type=request.effect_type,
+            parameters=request.parameters,
+            audio_data=request.audio_data,
+            sample_rate=request.sample_rate
+        )
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[API] Unified processor error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unified effect processor failed: {str(e)}"
+        )
+
+
+@app.get("/api/effects/list")
+async def list_effects():
+    """
+    List all available effects with categories
+    
+    Returns complete effect catalog organized by category.
+    Frontend can use this to populate effect menus and validate effect types.
+    
+    Returns:
+        Effect catalog with categories and total count
+    """
+    return {
+        "categories": {
+            "eq": {
+                "effects": ["highpass", "lowpass", "3band", "parametric"],
+                "description": "Frequency shaping and filtering"
+            },
+            "dynamics": {
+                "effects": ["compressor", "limiter", "expander", "gate"],
+                "description": "Dynamic range processing"
+            },
+            "saturation": {
+                "effects": ["saturation", "distortion", "waveshaper", "hardclip"],
+                "description": "Harmonic enhancement and drive"
+            },
+            "delays": {
+                "effects": ["delay", "pingpong", "multitap", "stereo_delay"],
+                "description": "Time-based effects"
+            },
+            "reverb": {
+                "effects": ["reverb", "hall", "plate", "room"],
+                "description": "Spatial and ambience effects"
+            }
+        },
+        "total_effects": 19,
+        "all_effects": sorted(EFFECT_TYPE_MAP.keys()),
+        "daw_core_available": DAW_CORE_API_AVAILABLE,
+        "timestamp": get_timestamp()
+    }
+
+
+@app.post("/api/effects/chain")
+async def process_effect_chain(
+    audio_data: List[float],
+    effect_chain: List[Dict[str, Any]],
+    sample_rate: int = 44100
+):
+    """
+    Process audio through multiple effects in series
+    
+    Applies effects sequentially (output of effect N becomes input of effect N+1).
+    This enables complex processing chains like:
+    1. Highpass → 2. Compressor → 3. Saturation → 4. Reverb
+    
+    Example request:
+    ```json
+    {
+      "audio_data": [0.1, 0.2, ...],
+      "effect_chain": [
+        {
+          "type": "highpass",
+          "parameters": {"cutoff": 80}
+        },
+        {
+          "type": "compressor",
+          "parameters": {"threshold": -20, "ratio": 4}
+        },
+        {
+          "type": "reverb",
+          "parameters": {"room": 0.7, "wet": 0.3}
+        }
+      ],
+      "sample_rate": 44100
+    }
+    ```
+    
+    Args:
+        audio_data: Input audio samples
+        effect_chain: Array of effects to apply sequentially
+        sample_rate: Sample rate in Hz
+        
+    Returns:
+        Final processed audio with chain metadata
+    """
+    try:
+        logger.info(f"[API] Processing effect chain: {len(effect_chain)} effects")
+        
+        current_audio = audio_data
+        chain_results = []
+        
+        for idx, effect_config in enumerate(effect_chain):
+            effect_type = effect_config.get("type")
+            parameters = effect_config.get("parameters", {})
+            
+            logger.info(f"[API] Chain step {idx+1}/{len(effect_chain)}: {effect_type}")
+            
+            try:
+                result = await route_effect_to_daw_core(
+                    effect_type=effect_type,
+                    parameters=parameters,
+                    audio_data=current_audio,
+                    sample_rate=sample_rate
+                )
+                
+                # Output becomes input for next effect
+                current_audio = result["output"]
+                
+                chain_results.append({
+                    "step": idx + 1,
+                    "effect": effect_type,
+                    "status": "success",
+                    "parameters": parameters
+                })
+                
+            except Exception as e:
+                logger.error(f"[API] Chain step {idx+1} failed: {e}")
+                chain_results.append({
+                    "step": idx + 1,
+                    "effect": effect_type,
+                    "status": "failed",
+                    "error": str(e)
+                })
+                # Continue with previous audio on error
+        
+        return {
+            "status": "success",
+            "output": current_audio,
+            "length": len(current_audio),
+            "sample_rate": sample_rate,
+            "chain_length": len(effect_chain),
+            "chain_results": chain_results,
+            "timestamp": get_timestamp()
+        }
+        
+    except Exception as e:
+        logger.error(f"[API] Effect chain error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Effect chain processing failed: {str(e)}"
+        )
+
+
+# Install httpx if not already present (needed for internal routing)
+try:
+    import httpx
+except ImportError:
+    logger.warning("⚠️ httpx not installed - effect routing may not work")
+    logger.warning("   Run: pip install httpx")
+
+# ============================================================================
+# MOUNT DAW CORE API (Priority 1: Critical Integration)
+# ============================================================================
+
+if DAW_CORE_API_AVAILABLE and daw_core_app:
+    try:
+        # Mount DAW Core API as sub-application under /daw prefix
+        # This makes all 19 DSP effects available at:
+        # - /daw/process/eq/highpass
+        # - /daw/process/eq/lowpass
+        # - /daw/process/dynamics/compressor
+        # - /daw/automation/curve
+        # - /daw/metering/level
+        # etc.
+        app.mount("/daw", daw_core_app)
+        logger.info("✅ DAW Core API mounted at /daw")
+        logger.info("   • 19 DSP effects now accessible")
+        logger.info("   • EQ: /daw/process/eq/*")
+        logger.info("   • Dynamics: /daw/process/dynamics/*")
+        logger.info("   • Saturation: /daw/process/saturation/*")
+        logger.info("   • Delays: /daw/process/delay/*")
+        logger.info("   • Reverb: /daw/process/reverb/*")
+        logger.info("   • Automation: /daw/automation/*")
+        logger.info("   • Metering: /daw/metering/*")
+        logger.info("   • Engine: /daw/engine/*")
+    except Exception as e:
+        logger.error(f"❌ Failed to mount DAW Core API: {e}")
+else:
+    logger.warning("⚠️ DAW Core API not available - DSP effects endpoints disabled")
 
 # ============================================================================
 # PYDANTIC MODELS
@@ -2183,24 +2651,3 @@ async def websocket_endpoint(websocket: WebSocket):
         if websocket in active_websockets:
             active_websockets.remove(websocket)
         logger.info(f"WebSocket disconnected. Total: {len(active_websockets)}")
-
-
-# ============================================================================
-# SERVER STARTUP
-# ============================================================================
-
-if __name__ == "__main__":
-    import uvicorn
-    
-    # Get port from environment or use default
-    port = int(os.environ.get("PORT", 8000))
-    host = os.environ.get("HOST", "0.0.0.0")
-    
-    # Start the server
-    uvicorn.run(
-        app,
-        host=host,
-        port=port,
-        log_level="info",
-        access_log=True
-    )

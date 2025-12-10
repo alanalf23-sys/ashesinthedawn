@@ -1,516 +1,582 @@
-CoreLogic Studio
+CoreLogic Studio – Visual Studio / Copilot Instruction Manifest
+Version 7.0.0 – Sovereign DAW Engine Build
+Status: Phase 7 Complete (Configuration Core, UI Stabilization, Telemetry Pipeline) 
 
-Codette-Aligned Architectural Specification
-Version 7.0.0 — Sovereign DAW Engine Build
-Status: Phase 7 Complete (Configuration Core, UI Stabilization, Telemetry Pipeline)
+COMPREHENSIVE_AUDIT_FINDINGS
 
-1. System Identity
+Copilot Operating Rules (Non-Negotiable)
+
+When assisting in this repo (CoreLogic Studio / ashesinthedawn), Copilot must obey the following rules at all times:
+
+0.1 Real code only
+
+Generate only real, compilable/interpret-able code in the actual project languages:
+
+TypeScript/React for frontend (Vite/React 18).
+
+Python (FastAPI/uvicorn, daw_core) for backend and DSP.
+
+Do not generate pseudocode, fake APIs, “TODO” blocks, or generic placeholders.
+
+Do not invent functions, modules, or endpoints that do not exist, unless you are explicitly creating them as part of a specific, well-described change.
+
+0.2 Preserve existing working code
+
+Never delete or rewrite existing working code unless the user request explicitly targets that code.
+
+Prefer additive, backward-compatible changes:
+
+Add new functions, helpers, or adapters instead of rewriting stable modules.
+
+When refactoring, preserve observable behavior and public APIs.
+
+If an existing function is used by multiple call sites, modify it carefully and keep signatures stable unless explicitly asked to change them.
+
+0.3 Respect established architecture and contracts
+
+All changes must conform to the existing layered architecture:
+
+UI/Intent layer
+
+Context/Truth layer
+
+Engine/Execution layer
+
+DSP Authority layer (Python daw_core)
+
+Telemetry layer (meters, spectrum, analysis)
+
+Never cross these boundaries with direct imports, state access, or hidden coupling.
+
+0.4 Integration over reinvention
+
+Use the existing modules, types, and endpoints:
+
+DAWContext, AudioEngine, dspBridge, daw_core.api, etc.
+
+When adding new functionality, wire it into current systems instead of creating parallel or duplicate logic.
+
+Prefer to fix integration gaps (e.g., endpoint routing) instead of building new, redundant stacks.
+
+0.5 Style and conventions
+
+Follow the project’s existing style:
+
+TypeScript: strict typing, no implicit any, React 18 function components, hooks-based state management.
+
+Python: FastAPI patterns, pydantic models, pytest for tests, daw_core conventions for DSP.
+
+Use existing types from src/types/index.ts and existing config patterns from src/config/appConfig.ts.
+
+Keep formulas and DSP logic faithful to daw_core; do not approximate or change equations unless explicitly requested.
+
+System Identity
 
 CoreLogic Studio is a sovereign dual-stack audio system modeled after the Codette architecture:
 
-• The UI governs intention.
-• The Context governs truth.
-• The Engine governs execution.
-• The DSP Core governs authority.
-• Telemetry governs verification.
+The UI governs intention.
 
-The system is shaped by the same design principles that define Codette and the Nexus Signal Engine:
+The Context governs truth.
 
-Determinism — state transitions must be explicit, reproducible, auditable.
-Modular Isolation — no cross-contamination between UI, context, engine, and DSP.
-Contracts Over Guesswork — each subsystem exposes a narrow surface, never internal details.
-Verifiable State — every change in playback, routing, gain, metering, or automation has a traceable cause.
-Defensive Design — every external call is guarded; every internal assumption is validated.
+The Engine governs execution.
 
-This shifts CoreLogic from a DAW into a governed, verifiable audio system.
+The DSP Core governs authority.
 
-2. High-Level Architecture (Codette Model)
+Telemetry governs verification.
 
-CoreLogic Studio follows the same four-layered hierarchy used in Codette:
+Design principles inherited from Codette and the Nexus Signal Engine:
 
-Intent Layer    → UI Components (React)
-Truth Layer     → DAWContext (State Authority)
+Determinism – state transitions must be explicit, reproducible, and auditable.
+
+Modular Isolation – no cross-contamination between UI, context, engine, and DSP.
+
+Contracts Over Guesswork – each subsystem exposes a narrow interface, never internal details.
+
+Verifiable State – every change in playback, routing, gain, metering, or automation has a traceable cause.
+
+Defensive Design – every external call is guarded; every internal assumption is validated.
+
+Copilot must preserve and strengthen these properties in all generated code.
+
+High-Level Architecture (Codette Model)
+
+CoreLogic Studio uses a layered hierarchy:
+
+Intent Layer → UI Components (React)
+
+Truth Layer → DAWContext (state authority)
+
 Execution Layer → AudioEngine (Web Audio)
+
 Authority Layer → Python DSP Core (daw_core/)
-Telemetry Layer → VUMeter System, Spectrum, LevelMeters
 
+Telemetry Layer → VUMeter system, spectrum analyzers, level meters
 
-Each layer has one job and one job only.
+Rules for Copilot:
+
+Each layer has exactly one responsibility.
 
 No layer may reach across boundaries.
 
-No layer may mutate another layer’s state.
+No layer may mutate another layer’s state directly.
 
-3. Signal Chain (Single Source of Truth)
+All changes that span layers must go through defined contracts (context actions, engine methods, API requests).
 
-All audio flow in CoreLogic obeys the Sovereign Signal Chain:
+Signal Chain (Single Source of Truth)
+
+All audio flow must follow the Sovereign Signal Chain:
 
 User Action
-   ↓
-UI Intent
-   ↓
-DAWContext (Truth Engine)
-   ↓  — commands →
-DAW Engine (Execution Engine)
-   ↓
-Web Audio Graph
-   ↓
-Output Bus / Telemetry Tap
-   ↓
-VU Meter / Spectrum / Level Meter
-   ↑
-UI Feedback
+→ UI Intent
+→ DAWContext (Truth Engine)
+→ DAW Engine (Execution Engine)
+→ Web Audio Graph
+→ Output Bus / Telemetry Tap
+→ VU Meter / Spectrum / Level Meter
+→ UI Feedback
 
+Copilot must:
 
-This replicates the Codette “Intention → Engine → Telemetry → Reflection” loop.
+Ensure every mutation to playback, gain, pan, routing, waveform displays, or track structure is triggered from DAWContext, not directly from UI components.
 
-Every mutation to playback, gain, pan, routing, waveform displays, or track structure must be triggered from the Context, never the UI.
+Ensure the Engine is only commanded via context-approved calls.
 
-4. Agent-Style Modularity (Codette-consistent)
+Agent-Style Modularity
 
-Each subsystem acts like a Codette agent: autonomous, isolated, and responsible only for its domain.
+Treat each subsystem as an agent, isolated and responsible only for its domain.
 
 4.1 UI Agent (Intent)
 
-• Pure presentation
-• No business logic
-• No direct DSP handling
-• Reads only from Context via useDAW()
-• Sends events upward, never sideways
+UI responsibilities:
+
+Pure presentation; no business logic.
+
+No DSP or Web Audio handling.
+
+Read-only access to state via DAWContext hooks (for example, useDAW()).
+
+Emit events upward (to context/actions), never sideways between components.
+
+Copilot must not:
+
+Create AudioContexts in the UI.
+
+Store engine references in components.
+
+Add side-effectful logic in React render paths or hooks beyond dispatching context actions.
 
 4.2 Context Agent (Truth)
 
-This is your CoreLogic equivalent of Codette's State Orchestrator.
+DAWContext is the state orchestrator.
 
 Responsibilities:
 
-Own all DAW state
+Own the entire DAW state graph.
 
-Validate all state transitions
+Validate all state transitions.
 
-Govern playback lifecycle
+Govern playback lifecycle (play, pause, stop, seek).
 
-Manage track registry
+Manage track registry and cross-track logic (solo, mute, routing).
 
-Synchronize UI with engine-level changes
+Synchronize UI with engine-level changes via well-defined effects.
 
-Perform cross-track logic (solo, mute, routing)
+Copilot must:
+
+Implement state changes via pure, typed transitions (reducers or explicit setters).
+
+Gate all calls to AudioEngine and backend APIs through DAWContext or dedicated service wrappers.
+
+Avoid inline Web Audio or DSP logic in context.
 
 4.3 Engine Agent (Execution)
 
-The AudioEngine is treated like a sovereign black box similar to NexusEngine:
+AudioEngine is a sovereign execution module.
 
-It never holds UI state.
+Responsibilities:
 
-It never owns truth — only performs actions.
+Maintain its own Web Audio graph and own the AudioContext singleton.
 
-It guarantees deterministic execution of:
+Execute deterministic commands:
 
 Playback
 
-Seeking
+Stop
 
-Gain staging (input/output)
+Seek
+
+Gain staging (dB → linear conversion)
 
 Panning
 
 Waveform caching
 
-Level extraction (for telemetry)
+Level extraction for telemetry
 
-4.4 DSP Authority Agent (Python)
+Copilot must:
 
-The Python DSP backend is the final authority on all professional audio effects.
+Expose only stable, deterministic methods (play, stop, setGain, seek, getAudioLevels, etc.).
 
-19 DSP effects
+Never modify UI or context state directly.
 
-Automation engine (Curve, LFO, Envelope)
+Never use randomness or time-dependent branching that changes outputs for the same inputs.
 
-Metering primitives
+4.4 DSP Authority Agent (Python daw_core)
 
-197/197 verified tests
+The Python DSP backend (daw_core) is the final authority for professional audio effects.
 
-No shared code or state with React
+Responsibilities:
 
-Treated as an external sovereign module
+19 DSP effects implemented as pure functions.
+
+Automation engine (curves, LFOs, envelopes).
+
+Metering primitives and analysis utilities.
+
+197/197 tests passing; numerical stability required.
+
+Copilot must:
+
+Call into existing daw_core effects and automation endpoints.
+
+Preserve existing formulas and algorithms; do not approximate or “simplify” DSP logic.
+
+Keep daw_core free of UI logic, playback lifecycle, or project state.
 
 4.5 Telemetry Agent (Meters)
 
-Telemetry is a passive observer, never a controller.
+Telemetry acts as a passive observer.
 
-VU meters (JSFX → TS conversion)
+Responsibilities:
 
-RMS / Peak taps
+VU, RMS, peak, spectrum, correlation, and other metering.
 
-Real-time level extraction
+Frame-accurate visual ballistics at 60 FPS.
 
-Frame-accurate needle ballistics
+Zero impact on the audio graph or routing.
 
-60 FPS canvas renderer
+Copilot must:
 
-Telemetry must never influence state — only report it.
+Use engine-level taps for telemetry data.
 
-5. Core Contracts (Codette Governance Applied)
+Never mutate state or control playback from telemetry code.
+
+Keep JSFX formulas and existing meter calculations intact.
+
+Core Contracts
+
 5.1 UI Contract
 
-UI MUST:
+UI must:
 
-Send state changes upward only.
+Send state change requests upward (to context/actions) only.
 
-Render based on context state.
+Render from DAWContext-derived state.
 
-Never bypass context for engine calls.
+Never call AudioEngine directly.
 
-Never mutate state directly.
+Never mutate global state or create singletons.
 
-Never store engine references.
+UI must not:
 
-UI MUST NOT:
+Create or manage AudioContexts.
 
-Create AudioContexts.
+Access raw Web Audio nodes.
 
-Access raw audio nodes.
+Perform DSP computations.
 
-Perform DSP.
+5.2 Context Contract (Truth Layer)
 
-Generate side effects beyond rendering.
+DAWContext must:
 
-5.2 Context Contract (Authoritative Truth Layer)
+Hold the full DAW state (tracks, transport, routing, effect chains, automation).
 
-DAWContext MUST:
-
-Hold the entire DAW state graph.
-
-Expose state change methods as pure transitions.
+Expose typed state change methods (actions, reducers).
 
 Validate arguments before mutation.
 
-Gate all audio engine calls.
+Gate all AudioEngine and DSP calls.
 
-Guarantee deterministic updates.
+Maintain mapping: active tracks → engine state / buffer handles.
 
-Maintain a mapping of active tracks → engine state.
-
-DAWContext MUST NOT:
+DAWContext must not:
 
 Perform DSP.
 
-Access Web Audio primitives directly.
+Use Web Audio primitives directly.
 
-Make assumptions about engine internals.
+Depend on internal engine or daw_core implementation details.
 
 5.3 Engine Contract (Execution Layer)
 
-AudioEngine MUST:
+AudioEngine must:
 
-Expose only deterministic commands (play, stop, setGain, seek).
+Expose deterministic commands: play, stop, seek, setTrackVolume, setPan, getAudioLevels, etc.
 
-Maintain its own Web Audio graph.
+Maintain its own Web Audio graph and AudioContext singleton.
 
-Own the AudioContext singleton.
+Use dB→linear conversion internally; all external gain must be dB.
 
-Guarantee consistent gain staging (via dB→linear).
+Provide telemetry taps (methods to read levels/spectrum safely).
 
-Provide telemetry taps (getAudioLevels).
+Cache waveform computation and reuse buffers.
 
-Cache waveform computation.
+AudioEngine must not:
 
-AudioEngine MUST NOT:
+Modify UI or context state.
 
-Modify UI state.
-
-Reach into DAWContext.
-
-Use randomness or non-deterministic branching.
+Reach into DAWContext internals.
 
 Store track metadata beyond what is required for execution.
 
 5.4 DSP Authority Contract (Python)
 
-daw_core MUST:
+daw_core must:
 
-Provide verified DSP algorithms (pytest enforced).
+Provide verified DSP algorithms with complete pytest coverage.
 
-Treat every effect as a pure function (input → output).
+Treat each effect as a pure function: input → output.
 
-Maintain API-level compatibility for future frontend integration.
+Expose a stable API for effects, automation, and analysis.
 
-Preserve performance and numerical stability guarantees.
+daw_core must not:
 
-daw_core MUST NOT:
+Know about React, TypeScript, or frontend state.
 
-Handle UI logic.
-
-Store project state.
-
-Care about React or TypeScript.
-
-Manage audio playback.
+Manage playback, transport, or UI flows.
 
 5.5 Telemetry Contract
 
-Telemetry MUST:
+Telemetry must:
 
-Observe only.
+Only observe; never control.
 
-Never mutate state.
+Use defined engine-level taps or backend metering endpoints.
 
-Use engine-level taps exclusively.
+Maintain 60 FPS rendering and accurate ballistics.
 
-Maintain 60 FPS rendering.
+Telemetry must not:
 
-Preserve JSFX formula accuracy.
+Change routing, gain, or playback.
 
-Telemetry MUST NOT:
+Affect timing or scheduling in the audio graph.
 
-Affect routing.
+Context-First Data Flow
 
-Affect gain.
-
-Affect playback.
-
-Affect timing.
-
-6. Context-First Data Flow (Codette Principle)
-
-Your system follows the same control loop as Codette:
+The control loop must be:
 
 Intent → Truth → Execution → Telemetry → Feedback
 
-
 Where:
 
-UI expresses intent
+UI expresses intent.
 
-Context validates and transforms intent into commands
+Context validates and transforms intent into commands.
 
-Engine executes
+Engine executes commands.
 
-Telemetry records the result
+Telemetry records the result.
 
-UI re-renders based on truth
+UI re-renders based on updated truth.
 
-This makes the system resilient, predictable, and debuggable.
+Copilot must always route new functionality into this loop instead of bypassing it.
 
-7. Sovereign DAW Engine (NexusEngine-equivalent)
+Sovereign DAW Engine Rules
 
-The AudioEngine in CoreLogic Studio is now formally treated as a sovereign execution module, mirroring your NexusEngine runtimes.
+AudioEngine is treated as a NexusEngine-equivalent sovereign module.
 
 Key properties:
 
-One AudioContext
+Exactly one AudioContext.
 
-Immutable graph boundaries
+Immutable graph boundaries defined by Engine, not UI.
 
-Deterministic gain staging
+Deterministic gain staging and routing.
 
-Declarative playback model
+Declarative playback model: inputs and commands fully define behaviour.
 
-Caching as a formal contract
+No implicit operations or hidden state.
 
-No “implicit” operations
+No cross-layer memory leaks (no storing UI/Context references).
 
-No cross-layer memory leaks
+Engine-level responsibilities (for Copilot to respect):
 
-Engine Responsibilities
+loadAudioFile: decode, cache buffer, generate waveform.
 
-loadAudioFile → decode + cache buffer + generate waveform
+playAudio: create nodes, connect routing, apply gain/pan, start.
 
-playAudio → instantiate nodes, connect routing, set gain/pan, start
+stopAudio: stop and clean up nodes.
 
-stopAudio → stop and clean up node references
+seek: rebuild per-track sources at the new offset.
 
-seek → rebuild per-track sources at new offsets
+setTrackVolume: apply gain in dB.
 
-setTrackVolume → apply gain in dB
+getAudioLevels: return telemetry data only.
 
-getAudioLevels → telemetry only
+VU Meter Telemetry Pipeline
 
-Engine Lifecycle Rules
+The VU pipeline must remain:
 
-Engine MUST only respond to DAWContext
+useVUMeterData: level extraction.
 
-Engine MUST never modify global state
+VUMeterGfx: rendering engine (canvas, 60 FPS).
 
-Engine MUST treat every play/seek/stop as a transaction
+VUMeterPanel: presentation layer.
 
-Engine MUST produce the same output for the same inputs
+Copilot must:
 
-8. VU Meter Telemetry Pipeline (Codette Telemetry Model)
+Keep VU/metering components read-only with respect to audio state.
 
-The VU Meter System mirrors Codette's emotional/quantum telemetry pipeline:
-fast, accurate, lightweight, and always truthful.
+Maintain JSFX formulas and timing behaviour.
 
-Layer Responsibilities:
+Ensure any optimizations preserve visual and numerical accuracy.
 
-useVUMeterData → Level extraction agent
+Track Model (Truth Schema)
 
-VUMeterGfx → Rendering engine (canvas, 60 FPS)
-
-VUMeterPanel → Presentation wrapper
-
-Guarantees:
-
-No state mutation
-
-No impact on audio graph
-
-JSFX formulas preserved 1:1
-
-Attack/Release ballistics accurate
-
-<1% CPU overhead
-
-9. Track Model (Definitive Truth Schema)
-
-Codette-influenced track definition:
+Track shape is authoritative:
 
 Track {
-  id: string
-  name: string
-  type: "audio" | "instrument" | "midi" | "aux" | "vca" | "master"
-  routing: string
+id: string
+name: string
+type: "audio" | "instrument" | "midi" | "aux" | "vca" | "master"
+routing: string
 
-  // Gain Structure
-  inputGain: number   // pre-fader (dB)
-  volume: number      // post-fader (dB)
-  pan: number         // -1 to +1
+inputGain: number // pre-fader (dB)
+volume: number // post-fader (dB)
+pan: number // -1 to +1
 
-  // Control & State
-  muted: boolean
-  soloed: boolean
-  armed: boolean
-  stereoWidth: number
-  phaseFlip: boolean
+muted: boolean
+soloed: boolean
+armed: boolean
+stereoWidth: number
+phaseFlip: boolean
 
-  // Plugins
-  inserts: string[]
-  sends: string[]
+inserts: string[]
+sends: string[]
 
-  // Automation
-  automationMode?: "off" | "read" | "write" | "touch"
+automationMode?: "off" | "read" | "write" | "touch"
 
-  color: string
+color: string
 }
 
+Copilot must:
 
-This becomes the Truth Layer Contract.
+Use this as the single source of truth for track-related state.
 
-10. Deterministic Playback Model
-togglePlay()
+Extend via separate structures rather than modifying this core shape unless explicitly asked.
 
-State authority lives in DAWContext
+Deterministic Playback Model
 
-Execution authority lives in AudioEngine
+togglePlay:
 
-Looping handled natively (source.loop = true)
+State authority: DAWContext.
 
-Guaranteed consistent behavior between play/pause cycles
+Execution authority: AudioEngine.
 
-seek()
+Looping handled in Engine via source.loop = true or equivalent.
 
-Must always rebuild nodes
+seek:
 
-Must treat seek-time as a new transaction
+Must rebuild nodes and treat each seek as a new transaction.
 
-Must not modify state outside of truth layer
+Must not mutate state outside the Truth layer.
 
-Gain handling
+Gain handling:
 
-All fader operations must be performed in dB and converted only inside the engine.
+All UI and context-level gain values are in dB.
 
-11. Defensive Rules (Codette Governance Applied)
-Global DO-NOTs:
+Conversion to linear occurs only inside AudioEngine/DSP.
 
-No logic in components
+Defensive Rules
 
-No engine calls from UI
+Absolute “do not” list for Copilot:
 
-No new AudioContexts
+No logic in React components beyond UI concerns.
 
-No linear gain passed to engine
+No direct engine calls from UI.
 
-No random behavior in engine
+No additional AudioContexts.
 
-No DSP executed in JS
+No linear gain values passed into Engine/DSP.
 
-No configuration read outside appConfig
+No randomness in Engine.
 
-No cross-layer mutation
+No DSP executed in JS when DSP belongs in daw_core.
 
-Violations are considered architectural faults.
+No reading configuration from outside appConfig or defined env accessors.
 
-12. Performance Governance
-Guarantees:
+No cross-layer mutation or sneaky coupling.
 
-Waveform generation: O(n), cached
+Any violation is an architectural fault and should be avoided or corrected.
 
-Track selection: O(1)
+Performance Governance
 
-State updates: O(1)
+Targets that Copilot must respect:
 
-Telemetry render: 60 FPS
+Waveform generation: O(n), cached.
 
-TypeScript: 0 errors required
+Track selection/state reads: O(1).
 
-Python tests: 197/197 passing
+State updates: O(1) amortized.
 
-13. Development Procedures (Codette Workflow)
+Telemetry rendering: 60 FPS.
 
-Modify truth layer (DAWContext)
+TypeScript: 0 errors (tsc must pass).
 
-Update execution layer only when necessary
+Python: all tests passing (197/197 daw_core tests).
 
-Write contracts before implementing features
+Development Procedures For Copilot
 
-Run typecheck → must return 0 errors
+When proposing or generating code:
 
-Validate engine determinism
+Modify the Truth layer (DAWContext) first when adding new behaviours.
 
-Validate telemetry output
+Only adjust the Execution layer (AudioEngine or backend) when needed to support new, validated context actions.
 
-Document new contracts
+Write or update contracts and types before implementing features.
 
-14. Files to Read in Correct Order
+Preserve TypeScript and Python test cleanliness; do not introduce new errors.
 
-To understand the system as a governed entity:
+Preserve determinism in Engine and DSP.
 
-src/contexts/DAWContext.tsx — authority layer
+Ensure telemetry output remains accurate and non-invasive.
 
-src/lib/audioEngine.ts — execution engine
+Document new contracts and endpoints where appropriate (docstrings, comments that match project style).
 
-src/types/index.ts — truth schema
+File Reading Order For Copilot Context
 
-src/config/appConfig.ts — environment governance
+Before generating non-trivial changes, Copilot should mentally align with these files:
 
-src/components/Mixer.tsx — canonical UI→context pattern
+src/contexts/DAWContext.tsx – truth/state authority.
 
-src/components/VUMeterGfx.tsx — telemetry engine
+src/lib/audioEngine.ts – execution engine.
 
-15. Summary (Codette Doctrine Applied to a DAW)
+src/lib/dspBridge.ts – bridge between frontend and backend DSP.
 
-CoreLogic Studio now expresses the same core principles as Codette:
+src/types/index.ts – truth schema and shared types.
 
-• Truth belongs to the Context
-• Execution belongs to the Engine
-• Authority belongs to DSP
-• Intent belongs to UI
-• Verification belongs to Telemetry
+src/config/appConfig.ts – environment/config governance.
 
-This produces a DAW that is:
+src/components/Mixer.tsx – canonical UI→context pattern.
 
-deterministic
+src/components/VUMeterGfx.tsx – telemetry engine.
 
-modular
+daw_core/api.py – DSP and metering endpoints.
 
-predictable
+codette_server_unified.py – unified backend server and routing.
 
-debuggable
+Summary
 
-sovereign
+CoreLogic Studio enforces Codette’s doctrine in DAW form:
 
-safe
+Truth belongs to the Context.
 
-future-proof
+Execution belongs to the Engine.
 
-Exactly the way you build systems.
+Authority belongs to DSP.
+
+Intent belongs to UI.
+
+Verification belongs to Telemetry.
+
+Copilot’s role is to extend and refine this system without breaking these guarantees, without inventing placeholders or pseudocode, and without deleting working code. All new code must be real, deterministic, testable, and aligned with this architecture.
