@@ -83,9 +83,17 @@ try:
     logger.info("✅ DAW Core DSP effects imported successfully")
     
     # Now try importing the FastAPI app
-    from daw_core.api import app as daw_core_app
-    DAW_CORE_API_AVAILABLE = True
-    logger.info("✅ DAW Core API app imported successfully")
+    try:
+        from daw_core.api import app as daw_core_app
+        DAW_CORE_API_AVAILABLE = True
+        logger.info("✅ DAW Core API app imported successfully")
+        logger.info(f"   • DAW Core app type: {type(daw_core_app)}")
+        logger.info(f"   • DAW Core app routes: {len(daw_core_app.routes)}")
+    except ImportError as api_import_error:
+        logger.warning(f"⚠️ DAW Core API import failed: {api_import_error}")
+        logger.warning("   API app not available, but DSP classes are loaded")
+    except Exception as api_error:
+        logger.error(f"❌ Unexpected error importing DAW Core API: {api_error}")
     
 except ImportError as e:
     logger.warning(f"⚠️ DAW Core import failed: {e}")
@@ -909,7 +917,7 @@ async def query_openai_assistant(message: str, daw_context: Optional[Dict[str, A
                 "type": "function",
                 "function": {
                     "name": "calculate_delay_sync",
-                    "description": "Calculate precise tempo-synced delay times in milliseconds for rhythmic effects. Supports all standard note divisions including dotted and triplet values.",
+                    "description": "Calculate precise tempo-synchronized delay times in milliseconds for rhythmic effects. Supports all standard note divisions including dotted and triplet values.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -1674,6 +1682,14 @@ logger.info("✅ FastAPI app configured")
 # UNIFIED EFFECT PROCESSOR (Priority 2: Critical Integration)
 # ============================================================================
 
+# Pydantic model must be defined BEFORE the endpoint that uses it
+class EffectProcessRequest(BaseModel):
+    """Request model for unified effect processing"""
+    effect_type: str
+    parameters: Dict[str, float]
+    audio_data: List[float]
+    sample_rate: Optional[int] = 44100
+
 # Effect type mapping: frontend effect names → DAW Core endpoint paths
 EFFECT_TYPE_MAP = {
     # EQ Effects
@@ -1835,13 +1851,6 @@ async def route_effect_to_daw_core(
             status_code=500,
             detail=f"Effect processing error: {str(e)}"
         )
-
-
-class ProcessAudioRequest(BaseModel):
-    """Request model for audio processing"""
-    effect_type: str
-    parameters: Dict[str, float]
-    audio_data: List[float]
 
 
 @app.post("/api/effects/process")
@@ -2057,16 +2066,30 @@ except ImportError:
 
 if DAW_CORE_API_AVAILABLE and daw_core_app:
     try:
-        # Mount DAW Core API as sub-application under /daw prefix
-        # This makes all 19 DSP effects available at:
-        # - /daw/process/eq/highpass
-        # - /daw/process/eq/lowpass
-        # - /daw/process/dynamics/compressor
-        # - /daw/automation/curve
-        # - /daw/metering/level
-        # etc.
-        app.mount("/daw", daw_core_app)
-        logger.info("✅ DAW Core API mounted at /daw")
+        # Alternative approach: Copy routes directly from DAW Core app
+        # This avoids sub-application mounting issues
+        
+        # Get all routes from DAW Core app
+        for route in daw_core_app.routes:
+            # Only copy API routes (skip root and docs)
+            if hasattr(route, 'path') and not route.path.startswith('/docs') and route.path != '/':
+                # Add /daw prefix to route path
+                new_path = f"/daw{route.path}"
+                
+                # Copy the route with new path
+                if hasattr(route, 'methods'):
+                    # This is an API route
+                    for method in route.methods:
+                        if method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']:
+                            # Register route under unified app
+                            app.add_api_route(
+                                new_path,
+                                route.endpoint,
+                                methods=[method],
+                                name=f"daw_{route.name}" if hasattr(route, 'name') else None
+                            )
+        
+        logger.info("✅ DAW Core API routes copied successfully")
         logger.info("   • 19 DSP effects now accessible")
         logger.info("   • EQ: /daw/process/eq/*")
         logger.info("   • Dynamics: /daw/process/dynamics/*")
@@ -2076,8 +2099,97 @@ if DAW_CORE_API_AVAILABLE and daw_core_app:
         logger.info("   • Automation: /daw/automation/*")
         logger.info("   • Metering: /daw/metering/*")
         logger.info("   • Engine: /daw/engine/*")
+        
     except Exception as e:
-        logger.error(f"❌ Failed to mount DAW Core API: {e}")
+        logger.error(f"❌ Failed to copy DAW Core routes: {e}")
+        logger.error(traceback.format_exc())
+        
+        # Fallback: Create proxy endpoints manually
+        logger.info("⚠️ Attempting manual proxy endpoint creation...")
+        
+        # Import individual effect processing functions directly
+        try:
+            from daw_core.fx.eq_and_dynamics import EQ3Band, HighLowPass, Compressor
+            from daw_core.fx.dynamics_part2 import Limiter
+            from daw_core.fx.saturation import Saturation, Distortion
+            from daw_core.fx.delays import SimpleDelay
+            from daw_core.fx.reverb import Reverb
+            
+            # Create direct processing endpoints
+            @app.post("/daw/process/eq/highpass")
+            async def daw_highpass(audio_data: List[float], cutoff: float = 100, sample_rate: int = 44100):
+                """Direct highpass filter endpoint"""
+                try:
+                    import numpy as np
+                    audio = np.array(audio_data, dtype=np.float32)
+                    fx = HighLowPass(filter_type="highpass", cutoff=cutoff, sample_rate=sample_rate)
+                    output = fx.process(audio)
+                    return {
+                        "status": "success",
+                        "effect": "HighPass",
+                        "parameters": {"cutoff": cutoff},
+                        "output": output.tolist(),
+                        "length": len(output)
+                    }
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=str(e))
+            
+            @app.post("/daw/process/eq/lowpass")
+            async def daw_lowpass(audio_data: List[float], cutoff: float = 5000, sample_rate: int = 44100):
+                """Direct lowpass filter endpoint"""
+                try:
+                    import numpy as np
+                    audio = np.array(audio_data, dtype=np.float32)
+                    fx = HighLowPass(filter_type="lowpass", cutoff=cutoff, sample_rate=sample_rate)
+                    output = fx.process(audio)
+                    return {
+                        "status": "success",
+                        "effect": "LowPass",
+                        "parameters": {"cutoff": cutoff},
+                        "output": output.tolist(),
+                        "length": len(output)
+                    }
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=str(e))
+            
+            @app.post("/daw/process/dynamics/compressor")
+            async def daw_compressor(
+                audio_data: List[float],
+                threshold: float = -20,
+                ratio: float = 4,
+                attack: float = 0.005,
+                release: float = 0.1,
+                sample_rate: int = 44100
+            ):
+                """Direct compressor endpoint"""
+                try:
+                    import numpy as np
+                    audio = np.array(audio_data, dtype=np.float32)
+                    fx = Compressor(
+                        threshold=threshold,
+                        ratio=ratio,
+                        attack_time=attack,
+                        release_time=release,
+                        sample_rate=sample_rate
+                    )
+                    output = fx.process(audio)
+                    return {
+                        "status": "success",
+                        "effect": "Compressor",
+                        "parameters": {"threshold": threshold, "ratio": ratio, "attack": attack, "release": release},
+                        "output": output.tolist(),
+                        "length": len(output)
+                    }
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=str(e))
+            
+            logger.info("✅ Created direct proxy endpoints for core effects")
+            logger.info("   • Highpass, Lowpass, Compressor available")
+            logger.info("   • Other effects will use unified processor")
+            
+        except Exception as proxy_error:
+            logger.error(f"❌ Failed to create proxy endpoints: {proxy_error}")
+            logger.error(traceback.format_exc())
 else:
     logger.warning("⚠️ DAW Core API not available - DSP effects endpoints disabled")
 
@@ -2128,12 +2240,6 @@ class ProcessRequest(BaseModel):
     type: str
     payload: Dict[str, Any]
     timestamp: int
-
-class EffectProcessRequest(BaseModel):
-    effect_type: str
-    parameters: Dict[str, float]
-    audio_data: List[float]
-    sample_rate: Optional[int] = 44100
 
 class EmbeddingRequest(BaseModel):
     message: str
@@ -2405,10 +2511,6 @@ async def codette_suggest(request: SuggestionRequest):
 @app.post("/api/codette/analyze")
 async def codette_process(request: ProcessRequest):
     return {"id": request.id, "status": "success", "data": {"processed": True}, "processing_time": 0.05}
-
-# ============================================================================
-# FILE UPLOAD ENDPOINTS
-# ============================================================================
 
 @app.post("/codette/upload")
 @app.post("/api/codette/upload")
