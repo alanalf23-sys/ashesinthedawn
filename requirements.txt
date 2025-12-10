@@ -12,8 +12,9 @@ scikit-learn>=1.2
 # FastAPI backend
 fastapi>=0.95
 uvicorn[standard]>=0.21
-pydantic>=2.5.0
-pydantic-core==2.14.1
+# FIXED: Pydantic version constraint for Python 3.13 compatibility
+# Let pip resolve pydantic-core automatically with a flexible version spec
+pydantic>=2.6.0,<3.0.0
 python-multipart>=0.0.5
 
 # Audio I/O & real-time

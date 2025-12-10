@@ -1,43 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "nodenext",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
     "baseUrl": "./",
     "paths": {
       "@/*": ["src/*"]
-    },
-    "types": ["vite/client", "react", "node"]
+    }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/types/**/*.d.ts"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/temp/**",
-    "**/Temp/**",
-    "**/copilot-vs/**",
-    "**/CopilotBaseline/**",
-    "**/~*.*"
-  ],
-  "excludeFiles": [
-    "C:/Users/Jonathan/AppData/Local/Temp/**",
-    "C:/Users/*/AppData/Local/Temp/**"
-  ],
-  "watchOptions": {
-    "excludeFiles": [
-      "**/AppData/Local/Temp/**",
-      "C:/Users/Jonathan/AppData/Local/Temp/**",
-      "C:/Users/*/AppData/Local/Temp/**",
-      "**/CopilotBaseline/**",
-      "**/copilot-vs/**",
-      "**/~*.*"
-    ]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"],
+  "vite": {
+    "exclude": ["**/AppData/Local/**"]
   }
 }

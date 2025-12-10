@@ -15,6 +15,7 @@ import time
 import asyncio
 import traceback
 import warnings
+import shutil
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
@@ -36,9 +37,20 @@ try:
 except ImportError:
     pass  # dotenv not installed, fall back to environment variables
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+
+# Import file upload functionality
+from codette_file_upload import (
+    analyze_uploaded_file,
+    serialize_timeline_context,
+    generate_timeline_suggestions,
+    file_history,
+    UPLOAD_DIRECTORY,
+    MAX_FILE_SIZE,
+    ALLOWED_EXTENSIONS
+)
 
 # ============================================================================
 # LOGGING SETUP
@@ -130,6 +142,261 @@ base = {
 }
 
 # ============================================================================
+# HELPER FUNCTIONS (Required by OpenAI Assistant and endpoints)
+# ============================================================================
+
+def _is_thread_run_active(thread_id: str) -> bool:
+    """
+    Helper function to check if OpenAI thread has an active run.
+    Returns True if a non-terminal run exists for the given thread.
+    """
+    if not OPENAI_AVAILABLE or not openai_client or not thread_id:
+        return False
+
+    try:
+        # Try to list runs for this thread
+        runs_resp = None
+        try:
+            runs_resp = openai_client.beta.threads.runs.list(thread_id=thread_id, limit=10)
+        except Exception:
+            try:
+                runs_resp = openai_client.beta.threads.runs(thread_id=thread_id).list(limit=10)
+            except Exception:
+                try:
+                    runs_resp = openai_client.list_runs(thread_id=thread_id)
+                except Exception:
+                    runs_resp = None
+
+        if runs_resp is None:
+            return False
+
+        # Normalize to iterable
+        runs = []
+        if hasattr(runs_resp, 'data') and getattr(runs_resp, 'data') is not None:
+            runs = list(runs_resp.data)
+        elif isinstance(runs_resp, (list, tuple)):
+            runs = list(runs_resp)
+        else:
+            try:
+                runs = list(runs_resp)
+            except Exception:
+                runs = [runs_resp]
+
+        # Check if any run is in an active state
+        for r in runs:
+            try:
+                status = None
+                if isinstance(r, dict):
+                    status = r.get('status')
+                else:
+                    status = getattr(r, 'status', None)
+                
+                if status and status.lower() in ("queued", "in_progress", "running", "processing", "requires_action"):
+                    return True
+            except Exception:
+                continue
+
+        return False
+    except Exception:
+        # Be conservative: assume no active run if we cannot determine
+        return False
+
+
+async def ingest_chat_to_codette(user_id: str, user_message: str, assistant_response: str, source: str = "unknown"):
+    """
+    Ingest chat exchange into Codette's memory if engine supports learning.
+    This function is best-effort and will not raise if Codette lacks methods.
+    """
+    try:
+        if not codette_engine:
+            logger.debug("Ingest skipped: no codette engine available")
+            return False
+
+        # Prefer known ingestion API shapes
+        data = {
+            "user_id": user_id,
+            "user_message": user_message,
+            "assistant_response": assistant_response,
+            "source": source,
+            "timestamp": get_timestamp()
+        }
+
+        # Try dedicated method
+        if hasattr(codette_engine, 'learn_from_chat') and callable(getattr(codette_engine, 'learn_from_chat')):
+            try:
+                maybe = codette_engine.learn_from_chat(data)
+                if asyncio.iscoroutine(maybe):
+                    await maybe
+                logger.info("Ingested chat to codette via learn_from_chat")
+                return True
+            except Exception as e:
+                logger.debug(f"learn_from_chat failed: {e}")
+
+        # Try append to context memory
+        if hasattr(codette_engine, 'context_memory') and isinstance(getattr(codette_engine, 'context_memory'), list):
+            try:
+                codette_engine.context_memory.append({
+                    'input': user_message,
+                    'response': assistant_response,
+                    'source': source,
+                    'timestamp': get_timestamp()
+                })
+                logger.info("Appended chat to codette.context_memory")
+                return True
+            except Exception as e:
+                logger.debug(f"Appending to context_memory failed: {e}")
+
+        # Try generic memory attributes
+        for attr in ('memory', 'conversation_history', 'conversation', 'chat_history'):
+            try:
+                mem = getattr(codette_engine, attr, None)
+                if isinstance(mem, list):
+                    mem.append({
+                        'user': user_message,
+                        'assistant': assistant_response,
+                        'source': source,
+                        'timestamp': get_timestamp()
+                    })
+                    logger.info(f"Appended chat to codette.{attr}")
+                    return True
+            except Exception as e:
+                logger.debug(f"Failed to append to {attr}: {e}")
+
+        logger.debug("No supported ingestion method found on codette_engine")
+        return False
+    except Exception as e:
+        logger.warning(f"Failed to ingest chat to Codette: {e}")
+        return False
+
+
+async def production_checklist(stage: str) -> Dict[str, Any]:
+    """
+    Get production workflow checklist for specified stage.
+    Returns tasks organized by stage and category.
+    """
+    try:
+        # Use base data if available
+        if 'base' in globals() and isinstance(base, dict):
+            items = base.get(stage, base.get('mixing', []))
+        else:
+            # Fallback checklists
+            items = {
+                "recording": [
+                    {"id": "rec_signal_check", "task": "Confirm input levels and no clipping", "priority": "high", "category": "Recording", "completed": False},
+                    {"id": "rec_phase", "task": "Check phase alignment on multi-mic setups", "priority": "high", "category": "Recording", "completed": False},
+                ],
+                "arrangement": [
+                    {"id": "arr_structure", "task": "Verify song sections and transitions", "priority": "medium", "category": "Arrangement", "completed": False},
+                    {"id": "arr_balance", "task": "Balance instrument levels across sections", "priority": "medium", "category": "Arrangement", "completed": False},
+                ],
+                "mixing": [
+                    {"id": "mix_level_check", "task": "Verify master headroom and peaks", "priority": "high", "category": "Mixing", "completed": False},
+                    {"id": "mix_balance", "task": "Balance instrument levels and panning", "priority": "medium", "category": "Mixing", "completed": False},
+                    {"id": "mix_eq", "task": "Apply EQ to carve frequency space", "priority": "high", "category": "Mixing", "completed": False},
+                    {"id": "mix_comp", "task": "Add compression for dynamics control", "priority": "medium", "category": "Mixing", "completed": False},
+                ],
+                "mastering": [
+                    {"id": "master_reference", "task": "Check reference tracks and LUFS", "priority": "high", "category": "Mastering", "completed": False},
+                    {"id": "master_eq", "task": "Apply final EQ for tonal balance", "priority": "high", "category": "Mastering", "completed": False},
+                    {"id": "master_limit", "task": "Set limiter for target loudness", "priority": "high", "category": "Mastering", "completed": False},
+                ],
+            }.get(stage, [])
+
+        return {
+            "success": True,
+            "stage": stage,
+            "items": items,
+            "completionPercentage": 0,
+            "timestamp": get_timestamp()
+        }
+    except Exception as e:
+        logger.error(f"[Production Checklist] Error: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "stage": stage,
+            "items": [],
+            "completionPercentage": 0
+        }
+
+
+async def instrument_info(category: str, instrument: str) -> Dict[str, Any]:
+    """
+    Get instrument processing guide with frequency ranges, EQ recommendations, etc.
+    """
+    try:
+        # Sample instrument database
+        instruments_db = {
+            "vocals": {
+                "lead": {
+                    "typical_range_hz": [80, 12000],
+                    "target_levels": {"peaks_dbfs": -6, "avg_lufs": -18},
+                    "common_issues": ["Sibilance", "Muddiness", "Proximity effect"],
+                    "recommended_processing": {
+                        "eq": ["High-pass at 80Hz", "Cut at 200-300Hz for clarity", "Boost at 3-5kHz for presence"],
+                        "compression": ["4:1 ratio", "5-10ms attack", "40-100ms release"],
+                        "effects": ["De-esser", "Reverb", "Delay"]
+                    },
+                    "tips": ["Use pop filter", "Maintain consistent distance", "Watch for phase issues"]
+                }
+            },
+            "drums": {
+                "kick": {
+                    "typical_range_hz": [20, 250],
+                    "target_levels": {"peaks_dbfs": -3, "avg_lufs": -15},
+                    "common_issues": ["Phase cancellation", "Too much low-end", "Lack of punch"],
+                    "recommended_processing": {
+                        "eq": ["Boost at 60Hz for depth", "Boost at 3-5kHz for attack"],
+                        "compression": ["4:1 ratio", "Fast attack", "Medium release"],
+                        "effects": ["Saturation"]
+                    },
+                    "tips": ["Tune to key of song", "Layer samples if needed", "Sidechain bass"]
+                }
+            },
+            "guitars": {
+                "electric": {
+                    "typical_range_hz": [80, 8000],
+                    "target_levels": {"peaks_dbfs": -9, "avg_lufs": -20},
+                    "common_issues": ["Harshness", "Too much bass", "Lack of definition"],
+                    "recommended_processing": {
+                        "eq": ["High-pass at 80Hz", "Cut at 250Hz", "Boost at 2-4kHz"],
+                        "compression": ["3:1 ratio", "Medium attack", "Medium release"],
+                        "effects": ["Reverb", "Delay", "Chorus"]
+                    },
+                    "tips": ["Double-track for width", "Pan left-right", "Watch for phase"]
+                }
+            }
+        }
+
+        info = instruments_db.get(category, {}).get(instrument, {})
+        
+        if not info:
+            info = {
+                "typical_range_hz": [20, 20000],
+                "target_levels": {"peaks_dbfs": -6, "avg_lufs": -18},
+                "common_issues": ["Generic instrument"],
+                "recommended_processing": {"eq": [], "compression": [], "effects": []},
+                "tips": []
+            }
+
+        return {
+            "success": True,
+            "category": category,
+            "instrument": instrument,
+            "info": info,
+            "timestamp": get_timestamp()
+        }
+    except Exception as e:
+        logger.error(f"[Instrument Info] Error: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "category": category,
+            "instrument": instrument,
+            "info": {}
+        }
+
+# ============================================================================
 # CONSTANTS & GLOBALS
 # ============================================================================
 
@@ -198,6 +465,30 @@ except ImportError:
     np = None
     NUMPY_AVAILABLE = False
     print("[WARNING] NumPy not available - audio processing disabled")
+
+# Supabase availability check
+SUPABASE_AVAILABLE = False
+try:
+    from supabase import create_client
+    supabase_url = os.getenv("VITE_SUPABASE_URL", "")
+    supabase_key = os.getenv("VITE_SUPABASE_SERVICE_KEY", "")
+    if supabase_url and supabase_key:
+        SUPABASE_AVAILABLE = True
+        logger.info("✅ Supabase client initialized")
+except ImportError:
+    logger.info("ℹ️  Supabase library not installed")
+except Exception as e:
+    logger.warning(f"⚠️  Supabase initialization failed: {e}")
+
+# Training data availability
+TRAINING_AVAILABLE = False
+get_training_context = None
+try:
+    from training_data import get_training_context
+    TRAINING_AVAILABLE = True
+    logger.info("✅ Training data module loaded")
+except ImportError:
+    logger.info("ℹ️  Training data module not available")
 
 # Try to import OpenAI for fallback model
 OPENAI_AVAILABLE = False
@@ -887,25 +1178,64 @@ async def execute_mixing_suggestions(args: Dict[str, Any]) -> Dict[str, Any]:
 async def execute_genre_detection(args: Dict[str, Any]) -> Dict[str, Any]:
     """Execute genre detection based on BPM, tracks, and project context"""
     try:
-        request = GenreDetectRequest(
-            bpm=args.get("bpm", 120.0),
-            tracks=args.get("tracks", []),
-            project_name=args.get("project_name", "")
-        )
+        # Extract arguments
+        bpm = args.get("bpm", 120.0)
+        tracks = args.get("tracks", [])
+        project_name = args.get("project_name", "")
         
-        # Call existing genre detection logic
-        response = await detect_genre(request)
+        # Genre detection logic based on BPM ranges
+        genres = {
+            "Ambient": (40, 90),
+            "Hip-Hop/Rap": (80, 110),
+            "Pop": (90, 130),
+            "Funk/Soul": (100, 130),
+            "Electronic/House": (110, 130),
+            "Rock": (100, 150),
+            "Trance": (125, 150),
+            "Drum & Bass": (160, 180)
+        }
         
-        # Return JSON-serializable result
+        # Find best match based on BPM
+        best_genre = "Electronic"
+        best_confidence = 0.5
+        candidates = []
+        
+        for genre, (min_bpm, max_bpm) in genres.items():
+            if min_bpm <= bpm <= max_bpm:
+                confidence = 0.85
+            elif bpm < min_bpm:
+                confidence = max(0.1, 0.85 - (min_bpm - bpm) / 50)
+            else:
+                confidence = max(0.1, 0.85 - (bpm - max_bpm) / 50)
+            
+            candidates.append({
+                "genre": genre,
+                "genre_id": genre.lower().replace(" ", "_").replace("/", "_"),
+                "confidence": confidence,
+                "bpm_range": [min_bpm, max_bpm],
+                "characteristics": []
+            })
+            
+            if confidence > best_confidence:
+                best_confidence = confidence
+                best_genre = genre
+        
+        # Sort by confidence
+        candidates = sorted(candidates, key=lambda x: x["confidence"], reverse=True)
+        
         return {
-            "success": response.get("success", True),
-            "genre": response.get("genre", "Unknown"),
-            "genre_id": response.get("genre_id", "unknown"),
-            "confidence": response.get("confidence", 0.0),
-            "bpm_range": response.get("bpm_range", [80, 160]),
-            "characteristics": response.get("characteristics", []),
-            "candidates": response.get("candidates", [])[:3],  # Top 3
-            "input": response.get("input", {})
+            "success": True,
+            "genre": best_genre,
+            "genre_id": best_genre.lower().replace(" ", "_").replace("/", "_"),
+            "confidence": best_confidence,
+            "bpm_range": [max(40, bpm - 15), bpm + 15],
+            "characteristics": ["BPM-based"],
+            "candidates": candidates[:3],
+            "input": {
+                "bpm": bpm,
+                "track_count": len(tracks),
+                "project_name": project_name
+            }
         }
     except Exception as e:
         logger.error(f"[Genre Detection] Error: {e}")
@@ -1299,6 +1629,8 @@ class ChatRequest(BaseModel):
     message: str
     perspective: Optional[str] = "mix_engineering"
     daw_context: Optional[Dict[str, Any]] = None
+    timeline_context: Optional[Dict[str, Any]] = None
+    file_references: Optional[List[str]] = None
 
 class ChatResponse(BaseModel):
     response: str
@@ -1306,6 +1638,8 @@ class ChatResponse(BaseModel):
     confidence: Optional[float] = None
     timestamp: Optional[str] = None
     source: Optional[str] = None
+    file_analysis: Optional[Dict[str, Any]] = None
+    timeline_suggestions: Optional[List[str]] = None
 
 class MusicGuidanceRequest(BaseModel):
     guidance_type: str = "mixing"
@@ -1359,6 +1693,87 @@ class MixdownRenderRequest(BaseModel):
     format: Optional[str] = "wav"
     loop_start: Optional[float] = 0.0
     loop_end: Optional[float] = None
+
+# ============================================================================
+# PYDANTIC MODELS FOR FILE UPLOAD & TIMELINE (New Section)
+# ============================================================================
+
+class FileAnalysisResult(BaseModel):
+    """Result from file analysis"""
+    filename: str
+    size_bytes: int
+    mime_type: str
+    extension: str
+    created_at: str
+    duration_ms: Optional[float] = None
+    channels: Optional[int] = None
+    sample_rate: Optional[int] = None
+    analysis_type: Optional[str] = None
+    error: Optional[str] = None
+
+
+class FileUploadRequest(BaseModel):
+    """Request for file upload"""
+    user_id: str = "default"
+
+
+class FileUploadResponse(BaseModel):
+    """Response after file upload"""
+    success: bool
+    file_id: str
+    filename: str
+    analysis: Dict[str, Any]
+    timestamp: str
+    error: Optional[str] = None
+
+
+class TimelineTrack(BaseModel):
+    """DAW track in timeline"""
+    id: str
+    name: str
+    type: str
+    volume: Optional[float] = None
+    pan: Optional[float] = None
+    muted: Optional[bool] = False
+    soloed: Optional[bool] = False
+    armed: Optional[bool] = False
+    color: Optional[str] = None
+    inserts: Optional[List[str]] = []
+    sends: Optional[List[str]] = []
+
+
+class TimelineTransport(BaseModel):
+    """Transport state in timeline"""
+    playing: Optional[bool] = False
+    recording: Optional[bool] = False
+    timeSeconds: Optional[float] = 0.0
+    bpm: Optional[float] = 120.0
+    timeSignature: Optional[str] = "4/4"
+
+
+class TimelineContextRequest(BaseModel):
+    """Request for timeline analysis"""
+    tracks: Optional[List[TimelineTrack]] = []
+    regions: Optional[List[Dict[str, Any]]] = []
+    markers: Optional[List[Dict[str, Any]]] = []
+    transport: Optional[TimelineTransport] = None
+
+
+class TimelineContextResponse(BaseModel):
+    """Response from timeline analysis"""
+    success: bool
+    context: Dict[str, Any]
+    suggestions: List[str]
+    timestamp: str
+
+
+class UserFilesResponse(BaseModel):
+    """Response with user's files"""
+    success: bool
+    files: List[Dict[str, Any]]
+    count: int
+    timestamp: str
+
 
 # ============================================================================
 # HEALTH & STATUS
@@ -1483,7 +1898,7 @@ def generate_basic_fallback_response(message: str) -> str:
         if 'vocal' in prompt_lower:
             response += "1. Apply high-pass filter at 80-100Hz\n"
             response += "2. Use compression (4:1 ratio) for consistency\n"
-            response += "3. Add presence boost at 3-5kHz\n"
+            response += "3. Add presence boost at 3-5kHz for presence\n"
             response += "4. De-ess if sibilant (6-8kHz)"
         elif 'drum' in prompt_lower or 'kick' in prompt_lower or 'snare' in prompt_lower:
             response += "1. Gate for clean hits\n"
@@ -1524,578 +1939,152 @@ async def codette_process(request: ProcessRequest):
     return {"id": request.id, "status": "success", "data": {"processed": True}, "processing_time": 0.05}
 
 # ============================================================================
-# INTELLIGENT MIXING SUGGESTIONS ENDPOINT
+# FILE UPLOAD ENDPOINTS
 # ============================================================================
 
-class MixingSuggestionsRequest(BaseModel):
-    track_type: str
-    audio_data: Optional[List[float]] = None
-    sample_rate: Optional[int] = 44100
-    track_info: Dict[str, Any]
-    context: Dict[str, Any]
-
-@app.post("/codette/mixing-suggestions")
-@app.post("/api/codette/mixing-suggestions")
-async def get_mixing_suggestions(request: MixingSuggestionsRequest):
+@app.post("/codette/upload")
+@app.post("/api/codette/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    user_id: str = Form("default")
+) -> Dict[str, Any]:
     """
-    Generate intelligent mixing suggestions based on track type, audio data, and context
+    Upload and analyze file for Codette
     
-    This endpoint uses AI-powered audio analysis to provide:
-    - EQ recommendations based on frequency analysis
-    - Compression settings based on dynamics analysis
-    - Track-specific mixing guidance
-    - Context-aware suggestions based on genre and BPM
+    Supports: audio, MIDI, text, code files
+    Max size: 50MB
+    
+    Args:
+        file: Uploaded file
+        user_id: User identifier (default: "default")
+        
+    Returns:
+        File upload response with analysis
     """
-    if not INTELLIGENT_MIXING_AVAILABLE:
-        return {
-            "success": False,
-            "error": "Intelligent mixing module not available",
-            "timestamp": get_timestamp()
-        }
-    
     try:
-        result = await execute_mixing_suggestions({
-            "track_type": request.track_type,
-            "audio_data": request.audio_data,
-            "sample_rate": request.sample_rate,
-            "track_info": request.track_info,
-            "context": request.context
-        })
+        # Validate file size
+        contents = await file.read()
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large (max {MAX_FILE_SIZE/1024/1024:.0f}MB)"
+            )
+        
+        # Validate extension
+        file_ext = Path(file.filename or "").suffix.lower()
+        if file_ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File type {file_ext} not allowed"
+            )
+        
+        # Save file
+        file_path = UPLOAD_DIRECTORY / f"{user_id}_{int(time.time())}_{file.filename}"
+        file_path.write_bytes(contents)
+        
+        # Analyze file
+        analysis = await analyze_uploaded_file(file_path, file.content_type or "")
+        
+        # Add to history
+        file_info = {
+            "id": str(file_path),
+            "filename": file.filename,
+            "path": str(file_path),
+            "analysis": analysis,
+            "uploaded_at": get_timestamp()
+        }
+        file_history.add_file(user_id, file_info)
+        
+        logger.info(f"File uploaded: {file.filename} for user {user_id}")
         
         return {
             "success": True,
-            "data": result,
+            "file": file_info,
             "timestamp": get_timestamp()
         }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"[Mixing Suggestions] Error: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "timestamp": get_timestamp()
-        }
+        logger.error(f"File upload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# ============================================================================
-# TRAINING ENDPOINTS
-# ============================================================================
 
-@app.get("/api/training/context")
-async def training_context():
-    if TRAINING_AVAILABLE and get_training_context:
-        return {"success": True, "data": get_training_context(), "timestamp": get_timestamp()}
-    return {"success": False, "data": None, "message": "Training data not available"}
-
-@app.get("/api/training/health")
-async def training_health():
-    return {"success": True, "training_available": TRAINING_AVAILABLE, "timestamp": get_timestamp()}
-
-# ============================================================================
-# EMBEDDINGS ENDPOINTS
-# ============================================================================
-
-@app.post("/codette/embeddings/store")
-async def store_embedding(request: EmbeddingRequest):
-    return {"success": True, "message_id": f"msg_{int(time.time())}", "timestamp": get_timestamp()}
-
-@app.post("/codette/embeddings/search")
-async def search_embeddings(request: EmbeddingRequest):
-    return {"success": True, "similar_messages": [], "timestamp": get_timestamp()}
-
-@app.get("/codette/embeddings/stats")
-async def embedding_stats():
-    return {"total_embeddings": 0, "model": "text-embedding-3-small", "timestamp": get_timestamp()}
-
-@app.post("/api/upsert-embeddings")
-async def upsert_embeddings(request: UpsertRequest):
-    return {"success": True, "processed": len(request.rows), "updated": len(request.rows), "message": "Embeddings upserted"}
-
-# ============================================================================
-# CACHE ENDPOINTS
-# ============================================================================
-
-@app.get("/codette/cache/stats")
-async def cache_stats():
-    return {"total_entries": 0, "memory_usage_mb": 0, "hit_rate": 0, "miss_rate": 0, "eviction_rate": 0}
-
-@app.get("/codette/cache/metrics")
-async def cache_metrics():
-    return {"stats": {"total_entries": 0}, "top_keys": [], "backend": "memory", "response_times": {}}
-
-@app.get("/codette/cache/status")
-async def cache_status():
-    return {"backend": "memory", "connected": True}
-
-@app.post("/codette/cache/clear")
-async def cache_clear():
-    return {"success": True, "message": "Cache cleared"}
-
-# ============================================================================
-# ANALYTICS
-# ============================================================================
-
-@app.get("/codette/analytics/dashboard")
-async def analytics_dashboard():
-    return {"total_queries": 0, "avg_response_time": 0, "popular_topics": [], "timestamp": get_timestamp()}
-
-# ============================================================================
-# ANALYSIS ENDPOINTS
-# ============================================================================
-
-@app.get("/api/analysis/ear-training")
-async def ear_training(exercise_type: str = "interval", difficulty: str = "beginner"):
-    """Generate ear training exercises for music production"""
+@app.get("/codette/files/{user_id}")
+@app.get("/api/codette/files/{user_id}")
+async def get_user_files(user_id: str, limit: int = 10) -> Dict[str, Any]:
+    """
+    Get recent uploaded files for user
     
-    # Interval exercises
-    intervals = {
-        "beginner": [
-            {"name": "Perfect Unison", "semitones": 0, "example": "C to C"},
-            {"name": "Perfect Fifth", "semitones": 7, "example": "C to G"},
-            {"name": "Perfect Octave", "semitones": 12, "example": "C to C (octave)"},
-        ],
-        "intermediate": [
-            {"name": "Major Third", "semitones": 4, "example": "C to E"},
-            {"name": "Minor Third", "semitones": 3, "example": "C to Eb"},
-            {"name": "Perfect Fourth", "semitones": 5, "example": "C to F"},
-            {"name": "Major Sixth", "semitones": 9, "example": "C to A"},
-        ],
-        "advanced": [
-            {"name": "Minor Second", "semitones": 1, "example": "C to Db"},
-            {"name": "Major Second", "semitones": 2, "example": "C to D"},
-            {"name": "Tritone", "semitones": 6, "example": "C to F#"},
-            {"name": "Minor Seventh", "semitones": 10, "example": "C to Bb"},
-            {"name": "Major Seventh", "semitones": 11, "example": "C to B"},
-        ]
-    }
-    
-    # Chord exercises / production checklist-like guidance (reused content)
-    chords = {
-        "beginner": [
-            {"category": "Gain Staging", "task": "Set input gain to avoid clipping (peaks -12dB to -6dB)", "priority": "high"},
-            {"category": "Mic Technique", "task": "Check proximity effect and sibilance", "priority": "medium"},
-            {"category": "Phase", "task": "Verify phase on multi-mic sources", "priority": "high"},
-        ],
-        "intermediate": [
-            {"category": "Frequency Space", "task": "Ensure instruments don't mask each other in 200-500Hz", "priority": "high"},
-            {"category": "Rhythm", "task": "Tighten timing; quantize tastefully", "priority": "medium"},
-            {"category": "Transitions", "task": "Add fills, risers, impacts for sections", "priority": "low"},
-        ],
-        "mixing": [
-            {"category": "Levels", "task": "Balance faders, vocals forward, kick/bass foundation", "priority": "high"},
-            {"category": "EQ", "task": "High-pass non-bass, tame 200-400Hz mud, add 2-5k presence", "priority": "high"},
-            {"category": "Compression", "task": "Control dynamics; avoid pumping unless stylistic", "priority": "medium"},
-            {"category": "Space", "task": "Use short room + plate/hall; pre-delay for clarity", "priority": "medium"},
-            {"category": "Stereo", "task": "Pan for width; keep low-end mono", "priority": "medium"},
-            {"category": "Headroom", "task": "Leave -6dBFS peak on master, -14 to -10 LUFS mix", "priority": "high"},
-        ],
-        "mastering": [
-            {"category": "Prep", "task": "Receive mix with -6dB headroom, no limiter on master", "priority": "high"},
-            {"category": "Tonal Balance", "task": "Broad EQ for target curve; fix harshness/resonance", "priority": "high"},
-            {"category": "Dynamics", "task": "Gentle bus comp (1-2dB GR), multiband if needed", "priority": "medium"},
-            {"category": "Loudness", "task": "Limiter to target: streaming ~ -14 LUFS, EDM up to -8 LUFS", "priority": "high"},
-            {"category": "Translation", "task": "Check on speakers, headphones, phone, mono", "priority": "high"},
-            {"category": "Delivery", "task": "Export 24-bit WAV, embedded metadata, 44.1k/48k as required", "priority": "medium"},
-        ],
-    }
-
-    # Normalize inputs
-    ex_type = (exercise_type or "interval").lower()
-    diff = (difficulty or "beginner").lower()
-
-    # Select items based on requested exercise type
-    if ex_type == "interval":
-        items = intervals.get(diff, intervals.get("beginner", []))[:]
-    elif ex_type == "chord":
-        items = chords.get(diff, chords.get("beginning", []))[:]
-    else:
-        # Fallback: provide a mixed checklist-like set
-        items = chords.get(diff, chords.get("mixing", []))[:]
-
-    # Mark all as incomplete by default and add ids
-    for i, it in enumerate(items):
-        # Ensure it's a dictionary
-        if not isinstance(it, dict):
-            continue
-        it["completed"] = False
-        it_id_prefix = ex_type if ex_type in ("interval", "chord") else "exercise"
-        it["id"] = f"{it_id_prefix}-{i}"
-
-    response_payload = {
-        "success": True,
-        "stage": ex_type,
-        "items": items,
-        "completionPercentage": 0,
-        "timestamp": get_timestamp(),
-    }
-
-    return JSONResponse(content=response_payload, headers={
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-    })
-
-
-@app.get("/api/analysis/frequency-quiz")
-async def frequency_quiz(difficulty: str = "beginner"):
-    """Generate frequency identification quiz"""
-    import random
-    
-    frequency_bands = [
-        {"name": "Sub Bass", "range": "20-60 Hz", "characteristic": "Rumble, felt vibration"},
-        {"name": "Bass", "range": "60-250 Hz", "characteristic": "Warmth, punch"},
-        {"name": "Low Mids", "range": "250-500 Hz", "characteristic": "Body, potential mud"},
-        {"name": "Mids", "range": "500-2k Hz", "characteristic": "Clarity, presence"},
-        {"name": "Upper Mids", "range": "2k-4k Hz", "characteristic": "Attack, definition"},
-        {"name": "Presence", "range": "4k-6k Hz", "characteristic": "Edge, sibilance"},
-        {"name": "Brilliance", "range": "6k-12k Hz", "characteristic": "Sparkle, air"},
-        {"name": "Air", "range": "12k-20k Hz", "characteristic": "Shimmer, openness"},
-    ]
-    
-    if difficulty == "beginner":
-        quiz_bands = frequency_bands[:4]
-    elif difficulty == "intermediate":
-        quiz_bands = frequency_bands[:6]
-    else:
-        quiz_bands = frequency_bands
-    
-    return {
-        "success": True,
-        "difficulty": difficulty,
-        "quiz_items": quiz_bands,
-        "instructions": "Listen to the audio and identify which frequency band is being boosted",
-        "timestamp": get_timestamp()
-    }
-
-@app.post("/api/analysis/detect-genre")
-async def detect_genre(request: GenreDetectRequest):
-    """Detect music genre based on project characteristics (BPM, tracks, instruments)"""
-    
-    bpm = request.bpm or 120.0
-    tracks = request.tracks or []
-    project_name = request.project_name or ""
-    
-    # Genre database with BPM ranges and characteristics
-    genre_db = {
-        "electronic": {
-            "name": "Electronic/EDM",
-            "bpm_range": (120, 150),
-            "instruments": ["synth", "bass", "drums", "pad", "lead"],
-            "characteristics": ["synthesizers", "drum machines", "heavy bass", "build-ups", "drops"]
-        },
-        "house": {
-            "name": "House",
-            "bpm_range": (118, 130),
-            "instruments": ["synth", "bass", "drums", "vocals"],
-            "characteristics": ["four-on-the-floor", "synthesizers", "soulful vocals"]
-        },
-        "techno": {
-            "name": "Techno",
-            "bpm_range": (125, 150),
-            "instruments": ["synth", "drums", "bass"],
-            "characteristics": ["repetitive beats", "industrial sounds", "minimal melodies"]
-        },
-        "hip-hop": {
-            "name": "Hip-Hop/Rap",
-            "bpm_range": (80, 115),
-            "instruments": ["drums", "bass", "vocals", "sample", "808"],
-            "characteristics": ["vocal-dominant", "808 bass", "sample-based", "trap hi-hats"]
-        },
-        "rock": {
-            "name": "Rock",
-            "bpm_range": (100, 140),
-            "instruments": ["guitar", "bass", "drums", "vocals"],
-            "characteristics": ["guitars", "live drums", "bass", "distortion"]
-        },
-        "pop": {
-            "name": "Pop",
-            "bpm_range": (100, 130),
-            "instruments": ["vocals", "synth", "drums", "bass", "piano"],
-            "characteristics": ["catchy melodies", "verse-chorus structure", "polished production"]
-        },
-        "jazz": {
-            "name": "Jazz",
-            "bpm_range": (80, 180),
-            "instruments": ["piano", "bass", "drums", "horns", "saxophone"],
-            "characteristics": ["improvisation", "swing feel", "complex harmonies"]
-        },
-        "classical": {
-            "name": "Classical",
-            "bpm_range": (40, 180),
-            "instruments": ["strings", "piano", "orchestra", "violin", "cello"],
-            "characteristics": ["orchestral", "dynamic range", "acoustic instruments"]
-        },
-        "ambient": {
-            "name": "Ambient",
-            "bpm_range": (60, 100),
-            "instruments": ["synth", "pad", "texture", "drone"],
-            "characteristics": ["atmospheric", "textural", "slow evolution", "minimal rhythm"]
-        },
-        "metal": {
-            "name": "Metal",
-            "bpm_range": (100, 200),
-            "instruments": ["guitar", "bass", "drums", "vocals"],
-            "characteristics": ["heavy distortion", "double bass drums", "aggressive"]
-        },
-        "r&b": {
-            "name": "R&B/Soul",
-            "bpm_range": (60, 100),
-            "instruments": ["vocals", "bass", "drums", "keys", "synth"],
-            "characteristics": ["smooth vocals", "groove-based", "emotional"]
-        },
-        "country": {
-            "name": "Country",
-            "bpm_range": (90, 140),
-            "instruments": ["guitar", "vocals", "bass", "fiddle", "banjo"],
-            "characteristics": ["acoustic guitars", "storytelling", "twangy"]
-        },
-        "reggae": {
-            "name": "Reggae",
-            "bpm_range": (60, 90),
-            "instruments": ["guitar", "bass", "drums", "keys", "vocals"],
-            "characteristics": ["offbeat rhythm", "heavy bass", "laid-back feel"]
-        },
-        "drum_and_bass": {
-            "name": "Drum & Bass",
-            "bpm_range": (160, 180),
-            "instruments": ["drums", "bass", "synth", "pad"],
-            "characteristics": ["fast breakbeats", "heavy sub-bass", "rolling drums"]
-        }
-    }
-    
-    scores = {}
-    
-    # Calculate score for each genre
-    for genre_id, genre_info in genre_db.items():
-        score = 0.0
-        max_score = 100.0
+    Args:
+        user_id: User identifier
+        limit: Maximum files to return (default: 10)
         
-        # BPM score (40% weight)
-        bpm_min, bpm_max = genre_info["bpm_range"]
-        if bpm_min <= bpm <= bpm_max:
-            # Perfect match - closer to center = higher score
-            center = (bpm_min + bpm_max) / 2
-            distance = abs(bpm - center) / ((bpm_max - bpm_min) / 2)
-            score += 40 * (1 - distance * 0.5)  # Max 40, min 20 if in range
-        else:
-            # Outside range - penalize based on distance
-            if bpm < bpm_min:
-                distance = (bpm_min - bpm) / 20
-            else:
-                distance = (bpm - bpm_max) / 20
-            score += max(0, 20 - distance * 10)  # Some partial credit
-        
-        # Track/instrument matching (40% weight)
-        if tracks:
-            track_names = [t.get("name", "").lower() for t in tracks]
-            track_types = [t.get("type", "").lower() for t in tracks]
-            all_track_info = " ".join(track_names + track_types)
-            
-            matches = 0
-            for instrument in genre_info["instruments"]:
-                if instrument.lower() in all_track_info:
-                    matches += 1
-            
-            if genre_info["instruments"]:
-                instrument_score = (matches / len(genre_info["instruments"])) * 40
-                score += instrument_score
-        else:
-            # No tracks provided - give neutral score
-            score += 20
-        
-        # Project name hint (20% weight)
-        if project_name:
-            name_lower = project_name.lower()
-            if genre_info["name"].lower() in name_lower or genre_id in name_lower:
-                score += 20
-            else:
-                # Check for characteristic keywords
-                for char in genre_info["characteristics"]:
-                    if char.lower() in name_lower:
-                        score += 5
-                        break
-        else:
-            score += 10  # Neutral
-    
-    # Sort by score and get top matches
-    sorted_genres = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    
-    # Build response - handle empty scores case
-    if not sorted_genres:
-        # Fallback if no scores calculated
-        return {
-            "success": False,
-            "error": "Unable to detect genre",
-            "genre": "Unknown",
-            "confidence": 0.0,
-            "timestamp": get_timestamp()
-        }
-    
-    best_genre_id = sorted_genres[0][0]
-    best_score = sorted_genres[0][1]
-    best_genre = genre_db[best_genre_id]
-    
-    # Get top 3 candidates
-    candidates = []
-    for genre_id, score in sorted_genres[:3]:
-        genre = genre_db[genre_id]
-        candidates.append({
-            "genre": genre["name"],
-            "genre_id": genre_id,
-            "confidence": round(score / 100, 2),
-            "bpm_range": list(genre["bpm_range"]),
-            "characteristics": genre["characteristics"]
-        })
-    
-    return {
-        "success": True,
-        "genre": best_genre["name"],
-        "genre_id": best_genre_id,
-        "confidence": round(best_score / 100, 2),
-        "bpm_range": list(best_genre["bpm_range"]),
-        "characteristics": best_genre["characteristics"],
-        "candidates": candidates,
-        "input": {
-            "bpm": bpm,
-            "track_count": len(tracks),
-            "project_name": project_name
-        },
-        "timestamp": get_timestamp()
-    }
-
-# ============================================================================
-# MIX CREATION (Agent-driven) - Create mix from selected tracks
-# ============================================================================
-
-
-@app.post("/api/mixes/create_from_tracks")
-@app.post("/codette/mixes/create_from_tracks")
-async def create_mix_from_tracks(request: MixCreateRequest):
-    """Create new mix variants from provided track buffers.
-
-    This endpoint delegates to the real Codette engine if available. It
-    performs safe fallbacks when engine or project data are missing.
+    Returns:
+        List of user's uploaded files
     """
     try:
-        # Lazy import to avoid hard dependency on real engine at module load
-        try:
-            from codette_real_engine import get_real_codette_engine
-        except Exception:
-            get_real_codette_engine = None
-
-        if get_real_codette_engine:
-            engine = get_real_codette_engine()
-            # Engine method is async - call and return result
-            try:
-                result = await engine.create_mix_from_tracks(request.track_identifiers, project_path=request.project_path, options=request.options)
-                return {"success": True, "data": result, "timestamp": get_timestamp()}
-            except Exception as e:
-                logger.error(f"Mix creation failed: {e}")
-                return {"success": False, "error": str(e), "timestamp": get_timestamp()}
-
-        # Fallback: minimal offline behavior (simulate variants)
-        variants = [
-            {"id": "fallback_safe", "name": "Safe Blend", "description": "Fallback safe blend", "actions": []},
-            {"id": "fallback_creative", "name": "Creative Wash", "description": "Fallback creative variant", "actions": []}
-        ]
-
-        return {"success": True, "data": {"mix_id": f"mix_fallback_{int(time.time())}", "variants": variants, "source_tracks": request.track_identifiers}, "timestamp": get_timestamp()}
-
+        files = file_history.get_files(user_id, limit)
+        
+        return {
+            "success": True,
+            "files": files,
+            "count": len(files),
+            "timestamp": get_timestamp()
+        }
+        
     except Exception as e:
-        logger.error(f"Unexpected error in create_mix_from_tracks: {e}")
-        return {"success": False, "error": str(e), "timestamp": get_timestamp()}
+        logger.error(f"Error getting user files: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# ============================================================================
-# CLOUD SYNC (STUBS)
-# ============================================================================
 
-@app.post("/api/cloud-sync/save")
-async def cloud_sync_save(project_id: str, device_id: str):
-    return {"success": True, "project_id": project_id}
+@app.post("/codette/timeline-context")
+@app.post("/api/codette/timeline-context")
+async def analyze_timeline(timeline_data: TimelineContextRequest) -> Dict[str, Any]:
+    """
+    Analyze timeline/track context and provide suggestions
+    
+    Accepts:
+    - tracks: List of track objects
+    - regions: List of region objects
+    - markers: List of markers
+    - transport: Transport state
+    
+    Args:
+        timeline_data: Timeline context from DAW
+        
+    Returns:
+        Serialized timeline context with suggestions
+    """
+    try:
+        # Convert request to dict for processing
+        timeline_dict = timeline_data.model_dump(exclude_none=True)
+        
+        # Serialize timeline context
+        context = serialize_timeline_context(timeline_dict)
+        
+        # Generate suggestions
+        suggestions = generate_timeline_suggestions(context)
+        
+        logger.info(f"Timeline analyzed: {len(context.get('tracks', []))} tracks")
+        
+        return {
+            "success": True,
+            "context": context,
+            "suggestions": suggestions,
+            "timestamp": get_timestamp()
+        }
+        
+    except Exception as e:
+        logger.error(f"Timeline analysis error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/cloud-sync/load/{project_id}")
-async def cloud_sync_load(project_id: str, device_id: str = ""):
-    return {"project_id": project_id, "data": {}}
 
-@app.get("/api/cloud-sync/list")
-async def cloud_sync_list():
-    return []
+# Helper function to get timestamp (if not already defined)
+def get_timestamp() -> str:
+    """Get current timestamp in ISO format"""
+    return datetime.now(timezone.utc).isoformat()
 
-# ============================================================================
-# DEVICE ENDPOINTS (STUBS)
-# ============================================================================
-
-@app.post("/api/devices/register")
-async def register_device(device_name: str, device_type: str = "desktop", platform: str = "windows"):
-    return {"device_id": f"dev_{int(time.time())}"}
-
-@app.get("/api/devices/{user_id}")
-async def list_devices(user_id: str):
-    return []
-
-@app.post("/api/devices/sync-settings")
-async def sync_settings(user_id: str):
-    return {"success": True}
-
-# ============================================================================
-# COLLABORATION (STUBS)
-# ============================================================================
-
-@app.post("/api/collaboration/join")
-async def join_collaboration(project_id: str, user_id: str, user_name: str):
-    return {"session_id": f"sess_{int(time.time())}", "users": [user_name]}
-
-@app.post("/api/collaboration/operation")
-async def collaboration_operation():
-    return {"success": True, "version": 1}
-
-@app.get("/api/collaboration/session/{project_id}")
-async def get_collaboration_session(project_id: str):
-    return {"users": [], "operations": []}
-
-# ============================================================================
-# VST ENDPOINTS (STUBS)
-# ============================================================================
-
-@app.post("/api/vst/load")
-async def load_vst(plugin_path: str, plugin_name: str):
-    return {"id": f"vst_{int(time.time())}", "name": plugin_name, "path": plugin_path, "parameters": []}
-
-@app.get("/api/vst/list")
-async def list_vst():
-    return []
-
-@app.post("/api/vst/parameter")
-async def set_vst_parameter(plugin_id: str, parameter_id: str, value: float):
-    return {"success": True}
-
-# ============================================================================
-# AUDIO I/O (STUBS)
-# ============================================================================
-
-@app.get("/api/audio/devices")
-async def get_audio_devices():
-    return [{"id": "default", "name": "Default Output", "kind": "audiooutput"}]
-
-@app.post("/api/audio/measure-latency")
-async def measure_latency():
-    return {"latency_ms": 10, "stability": 0.95}
-
-@app.get("/api/audio/settings")
-async def get_audio_settings():
-    return {"sample_rate": 44100, "buffer_size": 512, "bit_depth": 24}
-
-# ============================================================================
-# WEBSOCKET
-# ============================================================================
-
-@app.get("/ws/status")
-async def websocket_status():
-    """Return WebSocket server status for REST polling fallback."""
-    return {
-        "connected_clients": len(active_websockets),
-        "last_broadcast_at": LAST_BROADCAST_AT,
-        "transport": transport_manager.get_state(),
-        "timestamp": get_timestamp(),
-    }
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -2107,10 +2096,25 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         # Send initial handshake & immediate status
         try:
-            await websocket.send_json({"type": "connected", "data": {"status": "connected", "timestamp": get_timestamp()}})
-            await websocket.send_json({"type": "server_status", "data": {"health": {"status": "healthy", "timestamp": get_timestamp()}, "transport": transport_manager.get_state(), "connections": len(active_websockets)}})
+            await websocket.send_json({
+                "type": "connected",
+                "data": {
+                    "status": "connected",
+                    "timestamp": get_timestamp()
+                }
+            })
+            await websocket.send_json({
+                "type": "server_status",
+                "data": {
+                    "health": {
+                        "status": "healthy",
+                        "timestamp": get_timestamp()
+                    },
+                    "transport": transport_manager.get_state(),
+                    "connections": len(active_websockets)
+                }
+            })
         except (WebSocketDisconnect, ConnectionResetError, RuntimeError):
-            # Client disconnected before handshake completed
             logger.info("WebSocket disconnected during handshake")
             raise WebSocketDisconnect()
 
@@ -2121,41 +2125,65 @@ async def websocket_endpoint(websocket: WebSocket):
                 message_type = data.get("type", "unknown")
 
                 if message_type == "ping":
-                    await websocket.send_json({"type": "pong", "data": {"timestamp": get_timestamp()}})
+                    await websocket.send_json({
+                        "type": "pong",
+                        "data": {"timestamp": get_timestamp()}
+                    })
                 elif message_type == "get_status":
                     manager = get_cocoon_manager()
-                    await websocket.send_json({"type": "status", "data": {"codette_available": codette_core is not None, "quantum_state": manager.quantum_state, "timestamp": get_timestamp()}})
+                    await websocket.send_json({
+                        "type": "status",
+                        "data": {
+                            "codette_available": codette_core is not None,
+                            "quantum_state": manager.quantum_state,
+                            "timestamp": get_timestamp()
+                        }
+                    })
                 elif message_type == "chat":
                     response = "I'm here to help!"
                     if codette_engine and hasattr(codette_engine, 'respond'):
                         try:
-                            response = codette_engine.respond(data.get("data", {}).get("message", ""))
+                            msg = data.get("data", {}).get("message", "")
+                            response = codette_engine.respond(msg)
                         except Exception:
                             pass
-                    await websocket.send_json({"type": "chat_response", "data": {"response": response, "timestamp": get_timestamp()}})
+                    await websocket.send_json({
+                        "type": "chat_response",
+                        "data": {
+                            "response": response,
+                            "timestamp": get_timestamp()
+                        }
+                    })
                 else:
-                    await websocket.send_json({"type": "echo", "data": {"received_type": message_type, "timestamp": get_timestamp()}})
+                    await websocket.send_json({
+                        "type": "echo",
+                        "data": {
+                            "received_type": message_type,
+                            "timestamp": get_timestamp()
+                        }
+                    })
             except WebSocketDisconnect:
                 break
             except (ConnectionResetError, RuntimeError) as e:
-                # Connection closed unexpectedly
                 logger.info(f"WebSocket connection closed: {type(e).__name__}")
                 break
             except json.JSONDecodeError:
                 try:
-                    await websocket.send_json({"type": "error", "data": {"message": "Invalid JSON"}})
-                except:
-                    # Can't send error, connection is dead
+                    await websocket.send_json({
+                        "type": "error",
+                        "data": {"message": "Invalid JSON"}
+                    })
+                except Exception:
                     break
     except WebSocketDisconnect:
         pass
     except Exception as e:
         logger.warning(f"WebSocket error: {type(e).__name__}: {e}")
     finally:
-        # Clean up connection
         if websocket in active_websockets:
             active_websockets.remove(websocket)
         logger.info(f"WebSocket disconnected. Total: {len(active_websockets)}")
+
 
 # ============================================================================
 # SERVER STARTUP

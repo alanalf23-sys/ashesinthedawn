@@ -131,6 +131,103 @@ class EQ3Band:
         
         return np.array([[b0/a0, b1/a0, b2/a0, 1, a1/a0, a2/a0]])
 
+    def get_parameters(self) -> Dict[str, Any]:
+        """Get all parameters for this effect."""
+        return {
+            "low_gain": {
+                "name": "Low Gain",
+                "type": "float",
+                "min": -24,
+                "max": 24,
+                "default": 0,
+                "current": self.low_gain,
+                "unit": "dB",
+                "description": "Low band gain adjustment (-24 to +24 dB)"
+            },
+            "low_freq": {
+                "name": "Low Frequency",
+                "type": "float",
+                "min": 20,
+                "max": 500,
+                "default": 100,
+                "current": self.low_freq,
+                "unit": "Hz",
+                "description": "Low band center frequency (20-500 Hz)"
+            },
+            "low_q": {
+                "name": "Low Q",
+                "type": "float",
+                "min": 0.1,
+                "max": 10.0,
+                "default": 0.707,
+                "current": self.low_q,
+                "description": "Low band Q factor (bandwidth)"
+            },
+            "mid_gain": {
+                "name": "Mid Gain",
+                "type": "float",
+                "min": -24,
+                "max": 24,
+                "default": 0,
+                "current": self.mid_gain,
+                "unit": "dB",
+                "description": "Mid band gain adjustment (-24 to +24 dB)"
+            },
+            "mid_freq": {
+                "name": "Mid Frequency",
+                "type": "float",
+                "min": 200,
+                "max": 5000,
+                "default": 1000,
+                "current": self.mid_freq,
+                "unit": "Hz",
+                "description": "Mid band center frequency (200-5000 Hz)"
+            },
+            "mid_q": {
+                "name": "Mid Q",
+                "type": "float",
+                "min": 0.1,
+                "max": 10.0,
+                "default": 0.707,
+                "current": self.mid_q,
+                "description": "Mid band Q factor (bandwidth)"
+            },
+            "high_gain": {
+                "name": "High Gain",
+                "type": "float",
+                "min": -24,
+                "max": 24,
+                "default": 0,
+                "current": self.high_gain,
+                "unit": "dB",
+                "description": "High band gain adjustment (-24 to +24 dB)"
+            },
+            "high_freq": {
+                "name": "High Frequency",
+                "type": "float",
+                "min": 4000,
+                "max": 20000,
+                "default": 10000,
+                "current": self.high_freq,
+                "unit": "Hz",
+                "description": "High band center frequency (4000-20000 Hz)"
+            },
+            "high_q": {
+                "name": "High Q",
+                "type": "float",
+                "min": 0.1,
+                "max": 10.0,
+                "default": 0.707,
+                "current": self.high_q,
+                "description": "High band Q factor (bandwidth)"
+            }
+        }
+
+    def get_parameter(self, param_name: str) -> Optional[Dict[str, Any]]:
+        """Get a specific parameter definition."""
+        params = self.get_parameters()
+        return params.get(param_name)
+
     def set_low_band(self, gain_db: float, freq_hz: float, q: float):
         """Update low band parameters."""
         self.low_gain = np.clip(gain_db, -24, 24)
