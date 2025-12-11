@@ -435,6 +435,116 @@ async def instrument_info(category: str, instrument: str) -> Dict[str, Any]:
             "info": {}
         }
 
+async def ear_training(exercise_type: str = "interval", difficulty: str = "beginner") -> Dict[str, Any]:
+    """
+    Generate ear training exercises for music production
+    
+    Args:
+        exercise_type: Type of exercise (interval, chord, rhythm)
+        difficulty: Difficulty level (beginner, intermediate, advanced)
+        
+    Returns:
+        Quiz items with exercise data
+    """
+    try:
+        # Interval exercises
+        intervals = {
+            "beginner": [
+                {"name": "Perfect Unison", "semitones": 0, "example": "C to C"},
+                {"name": "Perfect Fifth", "semitones": 7, "example": "C to G"},
+                {"name": "Perfect Octave", "semitones": 12, "example": "C to C (octave)"},
+            ],
+            "intermediate": [
+                {"name": "Major Third", "semitones": 4, "example": "C to E"},
+                {"name": "Minor Third", "semitones": 3, "example": "C to Eb"},
+                {"name": "Perfect Fourth", "semitones": 5, "example": "C to F"},
+                {"name": "Major Sixth", "semitones": 9, "example": "C to A"},
+            ],
+            "advanced": [
+                {"name": "Minor Second", "semitones": 1, "example": "C to Db"},
+                {"name": "Major Second", "semitones": 2, "example": "C to D"},
+                {"name": "Tritone", "semitones": 6, "example": "C to F#"},
+                {"name": "Minor Seventh", "semitones": 10, "example": "C to Bb"},
+                {"name": "Major Seventh", "semitones": 11, "example": "C to B"},
+            ]
+        }
+        
+        # Chord exercises
+        chords = {
+            "beginner": [
+                {"name": "Major Triad", "notes": ["C", "E", "G"], "quality": "major"},
+                {"name": "Minor Triad", "notes": ["C", "Eb", "G"], "quality": "minor"},
+            ],
+            "intermediate": [
+                {"name": "Dominant 7th", "notes": ["C", "E", "G", "Bb"], "quality": "dominant"},
+                {"name": "Minor 7th", "notes": ["C", "Eb", "G", "Bb"], "quality": "minor7"},
+            ],
+            "advanced": [
+                {"name": "Major 9th", "notes": ["C", "E", "G", "B", "D"], "quality": "major9"},
+                {"name": "Altered Dominant", "notes": ["C", "E", "Gb", "Bb"], "quality": "altered"},
+            ]
+        }
+        
+        # Rhythm exercises
+        rhythms = {
+            "beginner": [
+                {"name": "Quarter Notes", "pattern": "1-2-3-4", "subdivision": 4},
+                {"name": "Eighth Notes", "pattern": "1&2&3&4&", "subdivision": 8},
+            ],
+            "intermediate": [
+                {"name": "Syncopation", "pattern": "1-&-3-&-", "subdivision": 8},
+                {"name": "Triplets", "pattern": "1-trip-let-2-trip-let", "subdivision": 12},
+            ],
+            "advanced": [
+                {"name": "Polyrhythm 3:2", "pattern": "3 over 2", "subdivision": 6},
+                {"name": "Complex Syncopation", "pattern": "1-&a-3&-", "subdivision": 16},
+            ]
+        }
+        
+        # Select appropriate exercise set
+        if exercise_type == "interval":
+            items = intervals.get(difficulty, intervals["beginner"])
+        elif exercise_type == "chord":
+            items = chords.get(difficulty, chords["beginner"])
+        elif exercise_type == "rhythm":
+            items = rhythms.get(difficulty, rhythms["beginner"])
+        else:
+            items = intervals.get(difficulty, intervals["beginner"])
+        
+        # Add IDs and completed status
+        for i, item in enumerate(items):
+            item["id"] = f"{exercise_type}_{difficulty}_{i}"
+            item["completed"] = False
+        
+        # Generate instructions
+        instructions = {
+            "interval": "Listen to each interval and identify the distance between notes.",
+            "chord": "Listen to each chord and identify its quality.",
+            "rhythm": "Tap or clap each rhythm pattern."
+        }.get(exercise_type, "Listen and identify each musical element.")
+        
+        return {
+            "success": True,
+            "exercise_type": exercise_type,
+            "difficulty": difficulty,
+            "quiz_items": items,
+            "instructions": instructions,
+            "total_exercises": len(items),
+            "timestamp": get_timestamp()
+        }
+        
+    except Exception as e:
+        logger.error(f"[Ear Training] Error: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "exercise_type": exercise_type,
+            "difficulty": difficulty,
+            "quiz_items": [],
+            "instructions": "",
+            "total_exercises": 0
+        }
+
 # ============================================================================
 # CONSTANTS & GLOBALS
 # ============================================================================
@@ -2656,6 +2766,160 @@ def get_timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# ============================================================================
+# ADVANCED ANALYSIS ENDPOINTS (Required by CodetteAdvancedTools frontend)
+# ============================================================================
+@app.get("/api/analysis/delay-sync")
+async def api_delay_sync(bpm: float = 120.0):
+    """Calculate tempo-synced delay times for all note divisions"""
+    try:
+        # Calculate delay times for common note divisions
+        divisions = {
+            "Whole Note": round((60000 / bpm) * 4, 2),
+            "Half Note": round((60000 / bpm) * 2, 2),
+            "Quarter Note": round((60000 / bpm) * 1, 2),
+            "Eighth Note": round((60000 / bpm) * 0.5, 2),
+            "16th Note": round((60000 / bpm) * 0.25, 2),
+            "Dotted Quarter": round((60000 / bpm) * 1.5, 2),
+            "Dotted Eighth": round((60000 / bpm) * 0.75, 2),
+            "Triplet Quarter": round((60000 / bpm) * (2/3), 2),
+            "Triplet Eighth": round((60000 / bpm) * (1/3), 2),
+        }
+        
+        logger.info(f"[API] Delay sync calculated for BPM {bpm}")
+        return {
+            "success": True,
+            "bpm": bpm,
+            "divisions": divisions,
+            "timestamp": get_timestamp()
+        }
+    except Exception as e:
+        logger.error(f"[API] Delay sync error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analysis/ear-training")
+async def api_ear_training(exercise_type: str = "interval", difficulty: str = "beginner"):
+    """Get ear training exercises and data"""
+    try:
+        result = await ear_training(exercise_type, difficulty)
+        logger.info(f"[API] Ear training: {exercise_type}/{difficulty}")
+        return result
+    except Exception as e:
+        logger.error(f"[API] Ear training error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analysis/production-checklist")
+async def api_production_checklist(stage: str = "mixing"):
+    """Get production workflow checklist for stage"""
+    try:
+        result = await production_checklist(stage)
+        logger.info(f"[API] Production checklist: {stage}")
+        return result
+    except Exception as e:
+        logger.error(f"[API] Production checklist error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analysis/instrument-info")
+async def api_instrument_info(category: str = "vocals", instrument: str = "lead"):
+    """Get instrument processing information"""
+    try:
+        result = await instrument_info(category, instrument)
+        logger.info(f"[API] Instrument info: {category}/{instrument}")
+        return result
+    except Exception as e:
+        logger.error(f"[API] Instrument info error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analysis/instruments-list")
+async def api_instruments_list():
+    """Get list of all available instruments by category"""
+    try:
+        instruments_list = {
+            "vocals": ["lead", "harmony", "backing", "rap"],
+            "drums": ["kick", "snare", "hi-hat", "tom", "crash", "ride"],
+            "guitars": ["acoustic", "electric", "bass"],
+            "keys": ["piano", "synth", "organ", "rhodes"],
+            "strings": ["violin", "viola", "cello", "double-bass"],
+            "brass": ["trumpet", "trombone", "saxophone", "french-horn"],
+            "woodwinds": ["flute", "clarinet", "oboe", "bassoon"],
+            "percussion": ["conga", "bongo", "shaker", "tambourine"]
+        }
+        
+        logger.info("[API] Instruments list requested")
+        return {
+            "success": True,
+            "categories": instruments_list,
+            "total_instruments": sum(len(v) for v in instruments_list.values()),
+            "timestamp": get_timestamp()
+        }
+    except Exception as e:
+        logger.error(f"[API] Instruments list error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/analysis/detect-genre")
+async def api_detect_genre(request: Dict[str, Any]):
+    """Detect genre from project metadata"""
+    try:
+        bpm = request.get("bpm", 120)
+        tracks = request.get("tracks", [])
+        
+        # Simple genre detection based on BPM and track count
+        genre = "Electronic"
+        confidence = 0.5
+        
+        if bpm < 80:
+            genre = "Ambient"
+            confidence = 0.7
+        elif bpm < 100:
+            genre = "Hip-Hop"
+            confidence = 0.75
+        elif bpm < 120:
+            genre = "Pop"
+            confidence = 0.8
+        elif bpm < 140:
+            genre = "House"
+            confidence = 0.75
+        else:
+            genre = "Drum & Bass"
+            confidence = 0.7
+        
+        logger.info(f"[API] Genre detected: {genre} ({confidence * 100}%)")
+        return {
+            "success": True,
+            "detected_genre": genre,
+            "confidence": confidence,
+            "bpm_range": [max(1, bpm - 10), bpm + 10],
+            "candidates": [genre],
+            "timestamp": get_timestamp()
+        }
+    except Exception as e:
+        logger.error(f"[API] Genre detection error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# INSTRUCTIONS FOR MANUAL INTEGRATION
+# ============================================================================
+"""
+TO FIX THE 404 ERRORS:
+
+1. Open codette_server_unified.py in your favorite text editor
+2. Scroll to near the bottom (around line 2500-2600)
+3. Find the WebSocket route (@app.websocket("/ws"))
+4. **ABOVE** that WebSocket route, paste all the @app.get and @app.post endpoints from this file
+5. Save the file
+6. Restart the server: python codette_server_unified.py
+7. Test: curl http://localhost:8000/api/analysis/delay-sync?bpm=120
+
+The endpoints should then be available and the 404 errors will be resolved.
+"""
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time communication with graceful disconnect handling"""
@@ -2753,3 +3017,405 @@ async def websocket_endpoint(websocket: WebSocket):
         if websocket in active_websockets:
             active_websockets.remove(websocket)
         logger.info(f"WebSocket disconnected. Total: {len(active_websockets)}")
+# ============================================================================
+# METERING PROXY ENDPOINTS (Priority 4: Critical Integration)
+# ============================================================================
+
+# Import metering classes from DAW Core
+try:
+    from daw_core.metering import LevelMeter, SpectrumAnalyzer, VUMeter, Correlometer
+    METERING_AVAILABLE = True
+    logger.info("[OK] DAW Core metering classes imported successfully")
+except ImportError as e:
+    METERING_AVAILABLE = False
+    logger.warning(f"[!] DAW Core metering import failed: {e}")
+    logger.warning("   Metering endpoints will not be available")
+
+
+@app.post("/daw/metering/level")
+async def daw_metering_level(
+    audio_data: List[float],
+    sample_rate: int = 44100
+):
+    """
+    Level metering endpoint - Peak, RMS, LUFS, headroom
+    
+    Args:
+        audio_data: Audio samples (mono or stereo)
+        sample_rate: Sample rate in Hz (default 44100)
+        
+    Returns:
+        Peak, RMS, LUFS, and headroom measurements
+    """
+    if not NUMPY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="NumPy not available")
+    
+    if not METERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Metering module not available")
+    
+    try:
+        import numpy as np
+        
+        # Convert to numpy array
+        audio = np.array(audio_data, dtype=np.float32)
+        
+        # Create level meter
+        meter = LevelMeter(sample_rate=sample_rate)
+        
+        # Process audio
+        meter.process(audio)
+        
+        # Get measurements
+        peak = meter.get_peak_db()
+        rms = meter.get_rms_db()
+        held_peak = meter.get_held_peak_db()
+        
+        # Calculate headroom
+        headroom = 0.0 - peak  # dB to 0dBFS
+        
+        # Approximate LUFS (simplified calculation)
+        loudness_lufs = rms  # Approximation
+        
+        logger.info(f"[Metering] Level: Peak={peak:.1f}dB, RMS={rms:.1f}dB")
+        
+        return {
+            "status": "success",
+            "meter_type": "level",
+            "peak": float(peak),
+            "rms": float(rms),
+            "peak_db": float(peak),
+            "rms_db": float(rms),
+            "held_peak_db": float(held_peak),
+            "loudness_lufs": float(loudness_lufs),
+            "headroom": float(headroom),
+            "timestamp": get_timestamp()
+        }
+        
+    except Exception as e:
+        logger.error(f"[Metering] Level meter error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/daw/metering/spectrum")
+async def daw_metering_spectrum(
+    audio_data: List[float],
+    sample_rate: int = 44100,
+    fft_size: int = 2048
+):
+    """
+    Spectrum analysis endpoint - FFT-based frequency analysis
+    
+    Args:
+        audio_data: Audio samples (mono)
+        sample_rate: Sample rate in Hz (default 44100)
+        fft_size: FFT size in samples (default 2048)
+        
+    Returns:
+        Frequency bins and magnitude spectrum in dB
+    """
+    if not NUMPY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="NumPy not available")
+    
+    if not METERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Metering module not available")
+    
+    try:
+        import numpy as np
+        
+        # Convert to numpy array
+        audio = np.array(audio_data, dtype=np.float32)
+        
+        # Create spectrum analyzer
+        analyzer = SpectrumAnalyzer(fft_size=fft_size, sample_rate=sample_rate)
+        
+        # Process audio
+        analyzer.process(audio)
+        
+        # Get frequency bands for visualization (32 bands)
+        band_freqs, band_mags = analyzer.get_frequency_bands(num_bands=32)
+        
+        logger.info(f"[Metering] Spectrum: {len(band_freqs)} frequency bands")
+        
+        return {
+            "status": "success",
+            "meter_type": "spectrum",
+            "frequencies": band_freqs.tolist(),
+            "magnitudes": band_mags.tolist(),
+            "num_bins": len(band_freqs),
+            "fft_size": fft_size,
+            "sample_rate": sample_rate,
+            "timestamp": get_timestamp()
+        }
+        
+    except Exception as e:
+        logger.error(f"[Metering] Spectrum analyzer error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/daw/metering/vu")
+async def daw_metering_vu(
+    audio_data: List[float],
+    sample_rate: int = 44100
+):
+    """
+    VU metering endpoint - Classic VU meter simulation
+    
+    Args:
+        audio_data: Audio samples (mono or stereo)
+        sample_rate: Sample rate in Hz (default 44100)
+        
+    Returns:
+        VU reading in dB and normalized 0-1 scale
+    """
+    if not NUMPY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="NumPy not available")
+    
+    if not METERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Metering module not available")
+    
+    try:
+        import numpy as np
+        
+        # Convert to numpy array
+        audio = np.array(audio_data, dtype=np.float32)
+        
+        # Create VU meter
+        vu_meter = VUMeter(sample_rate=sample_rate)
+        
+        # Process audio
+        vu_meter.process(audio)
+        
+        # Get VU reading
+        vu_normalized = vu_meter.get_vu()  # 0-1 scale
+        vu_db = vu_meter.get_vu_db()       # dB scale (-40 to +6)
+        
+        logger.info(f"[Metering] VU: {vu_db:.1f}dB ({vu_normalized:.2f})")
+        
+        return {
+            "status": "success",
+            "meter_type": "vu",
+            "vu": float(vu_normalized),
+            "vu_db": float(vu_db),
+            "scaled": float(vu_normalized),
+            "timestamp": get_timestamp()
+        }
+        
+    except Exception as e:
+        logger.error(f"[Metering] VU meter error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/daw/metering/correlation")
+async def daw_metering_correlation(
+    audio_data: List[float],
+    sample_rate: int = 44100
+):
+    """
+    Stereo correlation endpoint - Phase correlation analysis
+    
+    Args:
+        audio_data: Stereo audio samples [[L,R], [L,R], ...]
+        sample_rate: Sample rate in Hz (default 44100)
+        
+    Returns:
+        Correlation coefficient (-1 to +1), mono/stereo indicators
+    """
+    if not NUMPY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="NumPy not available")
+    
+    if not METERING_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Metering module not available")
+    
+    try:
+        import numpy as np
+        
+        # Convert to numpy array
+        audio = np.array(audio_data, dtype=np.float32)
+        
+        # Ensure stereo format (N, 2)
+        if audio.ndim == 1:
+            # Mono signal - duplicate to stereo
+            audio = np.stack([audio, audio], axis=1)
+        
+        # Create correlometer
+        correlometer = Correlometer(sample_rate=sample_rate)
+        
+        # Process audio
+        correlometer.process(audio)
+        
+        # Get correlation
+        correlation = correlometer.get_correlation()
+        is_mono = correlometer.is_mono()
+        is_stereo = correlometer.is_stereo()
+        
+        logger.info(f"[Metering] Correlation: {correlation:.2f} (mono={is_mono}, stereo={is_stereo})")
+        
+        return {
+            "status": "success",
+            "meter_type": "correlation",
+            "correlation": float(correlation),
+            "mono": bool(is_mono),
+            "stereo": bool(is_stereo),
+            "timestamp": get_timestamp()
+        }
+        
+    except Exception as e:
+        logger.error(f"[Metering] Correlometer error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# ENGINE CONTROL PROXY ENDPOINTS (Priority 5: Critical Integration)
+# ============================================================================
+
+# Import engine configuration helper
+try:
+    from daw_core.engine import AudioEngine
+    ENGINE_AVAILABLE = True
+    logger.info("[OK] AudioEngine imported successfully")
+except ImportError as e:
+    ENGINE_AVAILABLE = False
+    logger.warning(f"[!] AudioEngine import failed: {e}")
+    logger.warning("   Engine control endpoints will return mock data")
+
+
+# Mock engine for fallback
+class MockEngine:
+    """Fallback engine when DAW Core is not available"""
+    def __init__(self):
+        self.sample_rate = 44100
+        self.buffer_size = 1024
+        self.is_running = False
+        self.nodes = []
+
+
+# Create global engine instance (real or mock)
+if ENGINE_AVAILABLE:
+    try:
+        audio_engine = AudioEngine(sample_rate=44100, buffer_size=1024)
+        logger.info("[OK] AudioEngine instance created")
+    except Exception as e:
+        logger.warning(f"[!] Failed to create AudioEngine: {e}")
+        audio_engine = MockEngine()
+else:
+    audio_engine = MockEngine()
+
+
+@app.post("/engine/start")
+async def engine_start():
+    """
+    Start audio engine
+    
+    Proxy endpoint for DAW Core engine control
+    """
+    try:
+        # Set engine running state
+        audio_engine.is_running = True
+        
+        logger.info("[Engine] Started audio engine")
+        
+        return {
+            "status": "success",
+            "engine_state": "running",
+            "timestamp": get_timestamp()
+        }
+        
+    except Exception as e:
+        logger.error(f"[Engine] Start error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/engine/stop")
+async def engine_stop():
+    """
+    Stop audio engine
+    
+    Proxy endpoint for DAW Core engine control
+    """
+    try:
+        # Set engine stopped state
+        audio_engine.is_running = False
+        
+        logger.info("[Engine] Stopped audio engine")
+        
+        return {
+            "status": "success",
+            "engine_state": "stopped",
+            "timestamp": get_timestamp()
+        }
+        
+    except Exception as e:
+        logger.error(f"[Engine] Stop error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/engine/config")
+async def engine_get_config():
+    """
+    Get engine configuration
+    
+    Returns current sample rate, buffer size, running state, and node count
+    """
+    try:
+        config = {
+            "sample_rate": audio_engine.sample_rate,
+            "buffer_size": audio_engine.buffer_size,
+            "is_running": audio_engine.is_running,
+            "num_nodes": len(audio_engine.nodes) if hasattr(audio_engine, 'nodes') else 0,
+            "timestamp": get_timestamp()
+        }
+        
+        logger.info(f"[Engine] Config requested: {config['sample_rate']}Hz, {config['buffer_size']} samples")
+        
+        return config
+        
+    except Exception as e:
+        logger.error(f"[Engine] Config get error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/engine/config")
+async def engine_set_config(sample_rate: int = 44100, buffer_size: int = 1024):
+    """
+    Configure audio engine
+    
+    Args:
+        sample_rate: Sample rate in Hz (default: 44100)
+        buffer_size: Buffer size in samples (default: 1024)
+        
+    Returns:
+        Updated engine configuration
+    """
+    try:
+        # Validate parameters
+        if sample_rate not in [44100, 48000, 88200, 96000]:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid sample rate: {sample_rate}. Must be 44100, 48000, 88200, or 96000"
+            )
+        
+        if buffer_size < 64 or buffer_size > 8192:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid buffer size: {buffer_size}. Must be between 64 and 8192"
+            )
+        
+        # Update engine configuration
+        audio_engine.sample_rate = sample_rate
+        audio_engine.buffer_size = buffer_size
+        
+        logger.info(f"[Engine] Config updated: {sample_rate}Hz, {buffer_size} samples")
+        
+        return {
+            "status": "success",
+            "sample_rate": audio_engine.sample_rate,
+            "buffer_size": audio_engine.buffer_size,
+            "timestamp": get_timestamp()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[Engine] Config set error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
