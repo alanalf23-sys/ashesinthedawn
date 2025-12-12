@@ -1,5 +1,46 @@
 ﻿# CoreLogic Studio - Startup Guide
 
+## 🔧 First-Time Setup
+
+**⚠️ IMPORTANT: Run this ONCE before your first startup!**
+
+### Automatic Setup (Recommended)
+```powershell
+.\setup-first-time.ps1
+```
+This will automatically:
+- Create/verify virtual environment
+- Upgrade pip
+- Install all Python dependencies
+- Install all Node.js dependencies
+
+### Manual Setup
+```powershell
+# 1. Activate virtual environment
+.\venv\Scripts\Activate.ps1
+
+# 2. Upgrade pip
+python -m pip install --upgrade pip
+
+# 3. Install all Python dependencies
+pip install -r requirements.txt
+
+# 4. Install Node.js dependencies
+npm install
+```
+
+**Expected output:**
+```
+✅ Virtual environment created
+✅ pip upgraded
+✅ Python dependencies installed
+✅ Node.js dependencies installed
+```
+
+**⏱️ Installation time:** 3-5 minutes (depending on internet speed)
+
+---
+
 ## 🚀 Quick Start
 
 ### Option 1: Automatic Startup (Recommended)
@@ -111,6 +152,18 @@ Hover over the Python DSP button to see:
 
 ## 🔧 Troubleshooting
 
+### ModuleNotFoundError (pydantic, fastapi, etc.)
+**This is the most common issue!**
+
+```powershell
+# Activate venv and install dependencies
+.\venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+**Root cause:** Dependencies not installed in virtual environment.
+**Solution:** Run the First-Time Setup section above.
+
 ### Python Server Won't Start
 ```powershell
 # Check if port 8000 is in use
@@ -119,7 +172,7 @@ netstat -ano | findstr :8000
 # If in use, kill the process
 Stop-Process -Id <PID> -Force
 
-# Reinstall dependencies
+# Reinstall dependencies if needed
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```

@@ -3,7 +3,32 @@
 Codette AI Unified Server - Complete Implementation
 """
 
-# FIRST: Set environment to suppress PyTensor warnings BEFORE any imports
+# FIRST: Load Codette-specific .env file BEFORE any other imports
+import sys
+from pathlib import Path
+
+# Add Codette directory to path first
+codette_path = Path(__file__).parent / "Codette"
+if codette_path.exists():
+    sys.path.insert(0, str(codette_path))
+
+# Load Codette/.env file
+try:
+    from env_loader import load_codette_env, print_env_status
+    load_codette_env()  # This loads Codette/.env
+    print("? Codette .env file loaded")
+except ImportError:
+    # Fallback to python-dotenv if env_loader not available
+    try:
+        from dotenv import load_dotenv
+        env_file = codette_path / '.env'
+        if env_file.exists():
+            load_dotenv(env_file)
+            print(f"? Loaded .env from: {env_file}")
+    except ImportError:
+        print("??  Neither env_loader nor python-dotenv available")
+
+# SECOND: Set environment to suppress PyTensor warnings BEFORE any imports
 import os
 os.environ["PYTENSOR_FLAGS"] = "device=cpu,floatX=float32,cxx="
 os.environ["ARVIZ_DATA"] = ""  # Suppress arviz data warnings

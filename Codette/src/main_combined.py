@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Codette Combined Application
-Integrates web backend and Gradio interface into a unified system
+Codette Combined Application - DAW Core Integration
+Integrates web backend and DAW Core DSP engine into a unified system
 """
 
 import asyncio
@@ -16,7 +16,6 @@ from typing import Dict, List, Any, Optional
 
 # ML/DL imports
 import torch
-import gradio as gr
 import numpy as np
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -57,6 +56,17 @@ from cognitive_auth import CognitiveAuthManager
 from aegis_integration import AegisBridge
 from aegis_integration.config import AEGIS_CONFIG
 
+# DAW Core imports
+from daw_core.api import app as daw_core_app
+from daw_core.engine import AudioEngine
+from daw_core.fx import (
+    EQ3Band, HighLowPass, Compressor, Limiter, Expander, Gate, NoiseGate,
+    Saturation, HardClip, Distortion, WaveShaper,
+    SimpleDelay, PingPongDelay, MultiTapDelay, StereoDelay,
+    Reverb, HallReverb, PlateReverb, RoomReverb,
+    Chorus
+)
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -65,13 +75,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class CodetteCombinedApplication:
-    """Combined Codette Application with Web Backend and Gradio Interface"""
+    """Combined Codette Application with Web Backend and DAW Core DSP Engine"""
     
     def __init__(self):
-        logger.info("Initializing Codette Combined Application...")
+        logger.info("Initializing Codette Combined Application (DAW Core Edition)...")
         self._initialize_core_systems()
         self._initialize_ml_components()
-        self._initialize_interface()
+        self._initialize_daw_engine()
         
     def _initialize_core_systems(self):
         """Initialize core Codette systems"""
@@ -162,142 +172,75 @@ class CodetteCombinedApplication:
             logger.error(f"ML component initialization failed: {e}")
             raise
             
-    def _initialize_interface(self):
-        """Initialize Gradio interface"""
-        self.interface = gr.Blocks(title="Codette", theme=gr.themes.Soft())
-        with self.interface:
-            gr.Markdown("""# 🤖 Codette
-            Your AI programming assistant with chat and search capabilities.""")
+    def _initialize_daw_engine(self):
+        """Initialize DAW Core audio engine and DSP effects"""
+        try:
+            # Initialize audio engine
+            self.audio_engine = AudioEngine(sample_rate=44100, buffer_size=512)
+            logger.info("DAW Core Audio Engine initialized")
+            logger.info(f"  Sample Rate: {self.audio_engine.sample_rate}Hz")
+            logger.info(f"  Buffer Size: {self.audio_engine.buffer_size} samples")
             
-            with gr.Tabs():
-                with gr.Tab("Chat"):
-                    self.chatbot = gr.Chatbot(
-                        [],
-                        elem_id="chatbot",
-                        bubble_full_width=False,
-                        avatar_images=("👤", "🤖"),
-                        height=500,
-                        show_label=False,
-                        container=True
-                    )
-                    
-                    with gr.Row():
-                        self.txt = gr.Textbox(
-                            show_label=False,
-                            placeholder="Type your message here...",
-                            container=False,
-                            scale=8,
-                            autofocus=True
-                        )
-                        self.submit_btn = gr.Button("Send", scale=1, variant="primary")
-                    
-                    with gr.Row():
-                        self.clear_btn = gr.Button("Clear Chat")
-                    
-                    # Set up chat event handlers
-                    self.txt.submit(
-                        self.process_message, 
-                        [self.txt, self.chatbot], 
-                        [self.txt, self.chatbot],
-                        api_name="chat_submit",
-                        queue=True
-                    )
-                    
-                    self.submit_btn.click(
-                        self.process_message, 
-                        [self.txt, self.chatbot], 
-                        [self.txt, self.chatbot],
-                        api_name="chat_button",
-                        queue=True
-                    )
-                    
-                    self.clear_btn.click(
-                        self.clear_history, 
-                        None, 
-                        [self.chatbot, self.txt], 
-                        queue=False,
-                        api_name="clear_chat"
-                    )
-                    
-                with gr.Tab("Search"):
-                    gr.Markdown("""### 🔍 Knowledge Search
-                    Search through Codette's knowledge base for information about AI, programming, and technology.""")
-                    
-                    with gr.Row():
-                        self.search_input = gr.Textbox(
-                            show_label=False,
-                            placeholder="Enter your search query...",
-                            container=False,
-                            scale=8
-                        )
-                        self.search_btn = gr.Button("Search", scale=1, variant="primary")
-                    
-                    self.search_output = gr.Markdown()
-                    
-                    # Set up search event handlers
-                    self.search_btn.click(self.sync_search, self.search_input, self.search_output)
-                    self.search_input.submit(self.sync_search, self.search_input, self.search_output)
-                    
-        logger.info("Gradio interface initialized")
-    
-    async def process_message(self, message: str, history: list) -> tuple:
-        """Process chat messages with improved context management"""
-        try:
-            # Clean input
-            message = message.strip()
-            if not message:
-                return "", history
-                
-            try:
-                # Process through Codette systems
-                response = await self.process_query(message)
-                
-                # Extract main response
-                if isinstance(response, dict):
-                    final_response = response.get("cqure_response", response.get("classic_response", ""))
-                else:
-                    final_response = str(response)
-                
-                # Clean and validate response
-                if final_response is None:
-                    raise ValueError("Generated response is None")
-                    
-                if len(final_response) > 1000:
-                    final_response = final_response[:997] + "..."
-                
-                # Update history
-                history.append((message, final_response))
-                return "", history
-                    
-            except Exception as e:
-                logger.error(f"Error generating response: {e}")
-                raise
-                
+            # Available DSP effects (19 total)
+            self.dsp_effects = {
+                "eq": {
+                    "3band": EQ3Band,
+                    "highpass": HighLowPass,
+                    "lowpass": HighLowPass,
+                },
+                "dynamics": {
+                    "compressor": Compressor,
+                    "limiter": Limiter,
+                    "expander": Expander,
+                    "gate": Gate,
+                    "noisegate": NoiseGate,
+                },
+                "saturation": {
+                    "saturation": Saturation,
+                    "hardclip": HardClip,
+                    "distortion": Distortion,
+                    "waveshaper": WaveShaper,
+                },
+                "delays": {
+                    "simple": SimpleDelay,
+                    "pingpong": PingPongDelay,
+                    "multitap": MultiTapDelay,
+                    "stereo": StereoDelay,
+                },
+                "reverb": {
+                    "reverb": Reverb,
+                    "hall": HallReverb,
+                    "plate": PlateReverb,
+                    "room": RoomReverb,
+                },
+                "modulation": {
+                    "chorus": Chorus,
+                }
+            }
+            
+            logger.info("DSP Effects Library loaded:")
+            logger.info("  EQ: 3-Band, High/Low Pass")
+            logger.info("  Dynamics: Compressor, Limiter, Expander, Gate, NoiseGate")
+            logger.info("  Saturation: Saturation, HardClip, Distortion, WaveShaper")
+            logger.info("  Delays: Simple, PingPong, MultiTap, Stereo")
+            logger.info("  Reverb: Generic, Hall, Plate, Room")
+            logger.info("  Modulation: Chorus")
+            logger.info("  Total: 19 professional effects")
+            
+            # Transport manager
+            self.transport_state = {
+                "playing": False,
+                "recording": False,
+                "time": 0.0,
+                "bpm": 120.0,
+                "time_signature": "4/4",
+            }
+            
+            logger.info("Transport manager initialized")
+            
         except Exception as e:
-            logger.error(f"Error in chat: {str(e)}\n{traceback.format_exc()}")
-            error_msg = (
-                "I apologize, but I encountered an error processing your request. "
-                "Please try again with a different query."
-            )
-            history.append((message, error_msg))
-            return "", history
-    
-    def clear_history(self):
-        """Clear the chat history and AI core memory"""
-        self.ai_core.response_memory = []
-        return [], []
-    
-    async def search_knowledge(self, query: str) -> str:
-        """Perform a search and return formatted results"""
-        try:
-            return await self.search_engine.get_knowledge(query)
-        except Exception as e:
-            logger.error(f"Search error: {e}")
-            return f"I encountered an error while searching: {str(e)}"
-    
-    def sync_search(self, query: str) -> str:
-        """Synchronous wrapper for search function"""
-        return asyncio.run(self.search_knowledge(query))
+            logger.error(f"DAW Engine initialization failed: {e}")
+            raise
     
     async def process_query(self, query: str, user_id: str = "web_user") -> Dict[str, Any]:
         """Process a query through all Codette systems"""
@@ -348,6 +291,44 @@ class CodetteCombinedApplication:
                 "timestamp": asyncio.get_event_loop().time()
             }
     
+    async def get_daw_status(self) -> Dict[str, Any]:
+        """Get current DAW engine status"""
+        return {
+            "audio_engine": {
+                "running": self.audio_engine.is_running,
+                "sample_rate": self.audio_engine.sample_rate,
+                "buffer_size": self.audio_engine.buffer_size,
+                "num_nodes": len(self.audio_engine.nodes),
+            },
+            "transport": self.transport_state,
+            "effects": {
+                category: list(effects.keys())
+                for category, effects in self.dsp_effects.items()
+            },
+            "timestamp": datetime.now().isoformat(),
+        }
+    
+    async def apply_effect(self, audio_data: np.ndarray, effect_type: str, effect_name: str, **params) -> np.ndarray:
+        """Apply DSP effect to audio data"""
+        try:
+            if effect_type not in self.dsp_effects:
+                raise ValueError(f"Unknown effect type: {effect_type}")
+            
+            if effect_name not in self.dsp_effects[effect_type]:
+                raise ValueError(f"Unknown effect name: {effect_name} in {effect_type}")
+            
+            effect_class = self.dsp_effects[effect_type][effect_name]
+            effect_instance = effect_class(**params)
+            
+            processed_audio = effect_instance.process(audio_data)
+            
+            logger.info(f"Applied {effect_type}/{effect_name} effect")
+            return processed_audio
+            
+        except Exception as e:
+            logger.error(f"Effect application failed: {e}")
+            raise
+    
     async def shutdown(self):
         """Cleanup function for graceful shutdown"""
         try:
@@ -368,6 +349,13 @@ class CodetteCombinedApplication:
                 logger.info("AI Core shutdown complete")
             except Exception as e:
                 logger.error(f"Error shutting down AI Core: {e}")
+            
+            # Shutdown DAW engine
+            try:
+                self.audio_engine.is_running = False
+                logger.info("DAW Engine stopped")
+            except Exception as e:
+                logger.error(f"Error stopping DAW Engine: {e}")
                 
             # Clear CUDA cache if GPU was used
             if torch.cuda.is_available():
@@ -394,13 +382,15 @@ class CodetteCombinedApplication:
             loop.set_exception_handler(handle_exception)
             asyncio.set_event_loop(loop)
             
-            # Launch Gradio interface
-            self.interface.queue().launch(
-                prevent_thread_lock=True,
-                share=False,
-                server_name="127.0.0.1",
-                show_error=True
-            )
+            # Log startup information
+            logger.info("=" * 70)
+            logger.info("Codette DAW Core Application - Ready")
+            logger.info("=" * 70)
+            logger.info(f"AI Core: Initialized")
+            logger.info(f"DAW Engine: {self.audio_engine.sample_rate}Hz @ {self.audio_engine.buffer_size} samples")
+            logger.info(f"DSP Effects: 19 available")
+            logger.info(f"Transport: Ready")
+            logger.info("=" * 70)
             
             try:
                 # Keep the main loop running
