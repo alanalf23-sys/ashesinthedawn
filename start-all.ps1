@@ -1,4 +1,4 @@
-﻿# CoreLogic Studio - Complete Startup Script
+﻿pip# CoreLogic Studio - Complete Startup Script
 # Starts Python DSP Server + React Frontend
 
 Write-Host "╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan

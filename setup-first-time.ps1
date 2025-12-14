@@ -37,14 +37,53 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "✅ Python dependencies installed" -ForegroundColor Green
 
-# Install Node.js dependencies
-Write-Host "`n📦 Installing Node.js dependencies..." -ForegroundColor Yellow
-npm install
+# Clean node_modules if exists (fixes corrupted dependencies)
+if (Test-Path "node_modules") {
+    Write-Host "`n🧹 Cleaning existing node_modules..." -ForegroundColor Yellow
+    Remove-Item -Recurse -Force node_modules
+    Write-Host "✅ Old dependencies removed" -ForegroundColor Green
+}
+
+# Clean package-lock.json if exists
+if (Test-Path "package-lock.json") {
+    Write-Host "🧹 Cleaning package-lock.json..." -ForegroundColor Yellow
+    Remove-Item -Force package-lock.json
+    Write-Host "✅ Lock file removed" -ForegroundColor Green
+}
+
+# Install Node.js dependencies with clean slate
+Write-Host "`n📦 Installing Node.js dependencies (fresh install)..." -ForegroundColor Yellow
+npm install --legacy-peer-deps
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Failed to install Node.js dependencies" -ForegroundColor Red
-    exit 1
+    Write-Host "ℹ️  Trying alternative install method..." -ForegroundColor Yellow
+    npm install --force
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Node.js dependency installation failed" -ForegroundColor Red
+        exit 1
+    }
 }
 Write-Host "✅ Node.js dependencies installed" -ForegroundColor Green
+
+# Verify critical dependencies
+Write-Host "`n🔍 Verifying critical dependencies..." -ForegroundColor Yellow
+$missingDeps = @()
+if (-not (Test-Path "node_modules\fraction.js")) {
+    $missingDeps += "fraction.js"
+}
+if (-not (Test-Path "node_modules\tailwindcss")) {
+    $missingDeps += "tailwindcss"
+}
+if (-not (Test-Path "node_modules\postcss")) {
+    $missingDeps += "postcss"
+}
+
+if ($missingDeps.Count -gt 0) {
+    Write-Host "⚠️  Missing dependencies detected: $($missingDeps -join ', ')" -ForegroundColor Yellow
+    Write-Host "Installing missing dependencies..." -ForegroundColor Yellow
+    npm install fraction.js tailwindcss postcss autoprefixer --save-dev
+    Write-Host "✅ Missing dependencies installed" -ForegroundColor Green
+}
 
 # Summary
 Write-Host "`n✅ SETUP COMPLETE!" -ForegroundColor Green
