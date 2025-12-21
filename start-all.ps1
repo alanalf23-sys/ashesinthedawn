@@ -1,4 +1,4 @@
-﻿pip# CoreLogic Studio - Complete Startup Script
+﻿# CoreLogic Studio - Complete Startup Script
 # Starts Python DSP Server + React Frontend
 
 Write-Host "╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
@@ -7,7 +7,7 @@ Write-Host "╚═════════════════════�
 Write-Host ""
 
 # Change to project directory
-$ProjectDir = "I:\ashesinthedawn"
+$ProjectDir = "D:\dawprodject\ashesinthedawn"
 Set-Location $ProjectDir
 
 # Check if virtual environment exists
