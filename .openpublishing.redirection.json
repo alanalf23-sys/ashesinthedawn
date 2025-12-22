@@ -1,0 +1,356 @@
+{
+    "redirections": [
+        {
+            "source_path": "Codette/docs/hf.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "env/Lib/site-packages/huggingface_hub/templates/datasetcard_template.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "env/Lib/site-packages/huggingface_hub/templates/modelcard_template.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-access.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-adduser.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-audit.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-bugs.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-cache.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-ci.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-completion.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-config.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-dedupe.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-deprecate.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-diff.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-dist-tag.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-docs.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-doctor.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-edit.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-exec.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-explain.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-explore.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-find-dupes.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-fund.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-help-search.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-help.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-init.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-install-ci-test.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-install-test.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-install.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-link.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-login.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-logout.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-ls.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-org.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-outdated.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-owner.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-pack.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-ping.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-pkg.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-prefix.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-profile.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-prune.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-publish.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-query.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-rebuild.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-repo.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-restart.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-root.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-run.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-sbom.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-search.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-shrinkwrap.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-star.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-stars.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-start.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-stop.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-team.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-test.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-token.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-undeprecate.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-uninstall.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-unpublish.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-unstar.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-update.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-version.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-view.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm-whoami.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npm.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/commands/npx.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/configuring-npm/folders.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/configuring-npm/install.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/configuring-npm/npm-shrinkwrap-json.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/configuring-npm/npmrc.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/configuring-npm/package-json.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/configuring-npm/package-lock-json.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/using-npm/config.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/using-npm/dependency-selectors.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/using-npm/developers.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/using-npm/logging.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/using-npm/orgs.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/using-npm/package-spec.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/using-npm/registry.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/using-npm/removal.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/using-npm/scope.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/using-npm/scripts.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "node_modules/npm/docs/content/using-npm/workspaces.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "venv/Lib/site-packages/huggingface_hub/templates/datasetcard_template.md",
+            "redirect_document_id": false
+        },
+        {
+            "source_path": "venv/Lib/site-packages/huggingface_hub/templates/modelcard_template.md",
+            "redirect_document_id": false
+        }
+    ]
+}

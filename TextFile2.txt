@@ -1,0 +1,1932 @@
+﻿Current Status
+You have a well-documented project with:
+✅ Working Scripts
+·	fix-dependencies.ps1 - Handles Node/npm dependency issues
+·	setup-first-time.ps1 - First-time environment setup
+·	start-all.ps1 - Starts both Python DSP server and React UI
+·	stop-all.ps1 - Graceful shutdown
+·	diagnostics.ps1 - System health checks
+✅ Comprehensive Documentation
+·	Architecture rules in .github/copilot-instructions.md
+·	Multiple quick-start guides
+·	Build error troubleshooting
+·	Command references
+What You're Looking At
+The fix-dependencies.ps1 file is a dependency repair script that handles the common fraction.js PostCSS/Tailwind build error by:
+1.	Cleaning node_modules and caches
+2.	Reinstalling with --legacy-peer-deps fallback
+3.	Verifying critical dependencies
+4.	Auto-fixing missing packages
+How Can I Help?
+I can assist you with:
+1.	Architecture Questions - Understanding the Codette layer separation (Intent→Truth→Execution→Authority)
+2.	Code Changes - Following the strict contracts between UI/Context/Engine/DSP layers
+3.	Build/Setup Issues - Troubleshooting environment or dependency problems
+4.	Feature Implementation - Adding new functionality while preserving determinism
+5.	Documentation - Creating or improving docs
+
+1 Send Alan .env file
+2  need working working meters both visual and functionality
+3 2025-12-20 16:01:04,002 - __main__ - INFO - [OK] DAW Core DSP effects imported successfully
+2025-12-20 16:01:04,859 - __main__ - INFO - [OK] DAW Core API app imported successfully
+2025-12-20 16:01:04,860 - __main__ - INFO -    * DAW Core app type: <class 'fastapi.applications.FastAPI'>
+2025-12-20 16:01:04,860 - __main__ - INFO -    * DAW Core app routes: 30
+2025-12-20 16:01:11,379 - __main__ - INFO - [i]  Training data module not available
+2025-12-20 16:01:11,380 - __main__ - INFO - [i]  OpenAI fallback disabled: No API key provided
+2025-12-20 16:01:11,380 - __main__ - INFO - [OK] DSP effects library loaded
+2025-12-20 16:01:11,398 - __main__ - INFO - [OK] Intelligent Mixing Suggestions loaded
+2025-12-20 16:01:11,403 - __main__ - INFO - [OK] Added Codette path: D:\dawprodject\ashesinthedawn\Codette
+2025-12-20 16:01:16,413 - __main__ - INFO - [OK] Codette capabilities module loaded
+2025-12-20 16:01:44,224 - pytensor.configdefaults - WARNING - g++ not available, if using conda: `conda install gxx`
+2025-12-20 16:01:54,862 - arviz.preview - INFO - arviz_base not installed
+2025-12-20 16:01:54,864 - arviz.preview - INFO - arviz_stats not installed
+2025-12-20 16:01:54,865 - arviz.preview - INFO - arviz_plots not installed
+2025-12-20 16:01:58,311 - root - INFO - [OK] Codette training data loaded successfully
+2025-12-20 16:01:58,312 - __main__ - INFO - [OK] Codette ENHANCED module (codette_enhanced.py) loaded - 9 perspectives
+2025-12-20 16:03:07,412 - codette_hybrid - INFO - AICore loaded (Codette.src.components.ai_core)
+2025-12-20 16:03:07,423 - codette_hybrid - INFO - CognitiveProcessor loaded
+2025-12-20 16:03:07,434 - codette_hybrid - INFO - DefenseSystem loaded
+2025-12-20 16:03:08,833 - codette_hybrid - INFO - HealthMonitor loaded
+2025-12-20 16:03:09,895 - codette_hybrid - INFO - FractalIdentity loaded (Codette.src.components)
+2025-12-20 16:03:09,973 - codette_hybrid - INFO - Sentiment analyzer available
+2025-12-20 16:03:09,999 - codette_advanced - INFO - Codette base loaded (codette_enhanced)
+2025-12-20 16:03:10,000 - codette_hybrid - INFO - Codette Advanced loaded (direct import)
+2025-12-20 16:03:10,000 - codette_hybrid - INFO - PyTorch available for ML optimization
+2025-12-20 16:03:10,000 - codette_hybrid - INFO - Transformers available for LLM integration
+2025-12-20 16:03:10,000 - __main__ - INFO - [OK] Codette Hybrid module loaded
+2025-12-20 16:03:10,001 - CodetteCapabilities - INFO - Perspective Reasoning Engine initialized with 11 perspectives
+2025-12-20 16:03:10,001 - CodetteCapabilities - INFO - Cocoon Memory System initialized at ./cocoons
+2025-12-20 16:03:10,001 - CodetteCapabilities - INFO - [QUANTUM] Quantum Consciousness System initialized
+2025-12-20 16:03:10,001 - CodetteCapabilities - INFO -   * Quantum mathematics: ACTIVE
+2025-12-20 16:03:10,001 - CodetteCapabilities - INFO -   * All 8 equations: INTEGRATED
+2025-12-20 16:03:10,002 - __main__ - INFO - [OK] Quantum Consciousness System initialized
+2025-12-20 16:03:10,059 - root - INFO - [OK] Codette using comprehensive training data
+2025-12-20 16:03:10,060 - root - INFO - SYSTEM: Codette initialized
+2025-12-20 16:03:10,061 - __main__ - INFO - [OK] Codette ENHANCED initialized successfully
+2025-12-20 16:03:10,075 - root - INFO - [OK] Codette using comprehensive training data
+2025-12-20 16:03:10,075 - root - INFO - SYSTEM: Codette initialized
+2025-12-20 16:03:10,091 - codette_advanced - INFO - Codette Advanced initialized with full capabilities
+2025-12-20 16:03:17,695 - codette_hybrid - INFO - ML model initialized with quantization
+2025-12-20 16:03:17,695 - codette_hybrid - INFO - Codette Hybrid initialized (ML: True)
+2025-12-20 16:03:17,696 - __main__ - INFO - [OK] Codette Hybrid System initialized (ML mode)
+2025-12-20 16:03:17,697 - __main__ - INFO -    * Defense modifiers: Active
+2025-12-20 16:03:17,698 - __main__ - INFO -    * Vector search: Active
+2025-12-20 16:03:17,699 - __main__ - INFO -    * Prompt engineering: Active
+2025-12-20 16:03:17,700 - __main__ - INFO -    * Creative sentence generation: Active
+2025-12-20 16:03:17,700 - __main__ - INFO -    * ML features: Enabled
+2025-12-20 16:03:17,701 - __main__ - INFO - [OK] Codette engine set from codette_hybrid (type: CodetteHybrid)
+2025-12-20 16:03:17,702 - __main__ - INFO - [OK] FastAPI app configured
+2025-12-20 16:03:17,724 - __main__ - INFO - [OK] DAW Core API routes copied successfully
+2025-12-20 16:03:17,724 - __main__ - INFO -    * 19 DSP effects now accessible
+2025-12-20 16:03:17,725 - __main__ - INFO -    * EQ: /daw/process/eq/*
+2025-12-20 16:03:17,729 - __main__ - INFO -    * Dynamics: /daw/process/dynamics/*
+2025-12-20 16:03:17,730 - __main__ - INFO -    * Saturation: /daw/process/saturation/*
+2025-12-20 16:03:17,734 - __main__ - INFO -    * Delays: /daw/process/delay/*
+2025-12-20 16:03:17,735 - __main__ - INFO -    * Reverb: /daw/process/reverb/*
+2025-12-20 16:03:17,735 - __main__ - INFO -    * Automation: /daw/automation/*
+2025-12-20 16:03:17,736 - __main__ - INFO -    * Metering: /daw/metering/*
+2025-12-20 16:03:17,737 - __main__ - INFO -    * Engine: /daw/engine/* 
+This is what alan has
+Transport Window Fixes 
+.text-xs {
+1.	    font-size: 0.75rem;
+2.	    line-height: 1rem;
+}
+<style>
+.px-3 {
+1.	    padding-left: 0.75rem;
+2.	    padding-right: 0.75rem;
+}
+<style>
+.bg-gray-800 {
+1.	    --tw-bg-opacity: 1;
+2.	    background-color: rgb(31 41 55 / var(--tw-bg-opacity, 1));
+}
+<style>
+.border-gray-700 {
+1.	    --tw-border-opacity: 1;
+2.	    border-color: rgb(55 65 81 / var(--tw-border-opacity, 1));
+}
+<style>
+.border-b {
+1.	    border-bottom-width: 1px;
+}
+<style>
+.gap-3 {
+1.	    gap: 0.75rem;
+}
+<style>
+.items-center {
+1.	    align-items: center;
+}
+<style>
+.h-12 {
+1.	    height: 3rem;
+}
+<style>
+.flex {
+1.	    display: flex;
+}
+<style>
+*, ::before, ::after {
+1.	    box-sizing: border-box;
+2.	    border-width: 0;
+3.	    border-style: solid;
+4.	    border-color: #e5e7eb;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+user agent stylesheet
+div {
+1.	    display: block;
+2.	    unicode-bidi: isolate;
+}
+<style>
+.border-gray-700 {
+1.	    --tw-border-opacity: 1;
+2.	    border-color: rgb(55 65 81 / var(--tw-border-opacity, 1));
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+.bg-gray-950 {
+1.	    --tw-bg-opacity: 1;
+2.	    background-color: rgb(3 7 18 / var(--tw-bg-opacity, 1));
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+body {
+1.	    margin: 0;
+2.	    line-height: inherit;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+style attribute {
+1.	    --color-bg-primary: #2a2a2a;
+2.	    --color-bg-secondary: #3b3b3b;
+3.	    --color-bg-tertiary: #4a4a4a;
+4.	    --color-bg-alt: #1f1f1f;
+5.	    --color-bg-hover: #4a4a4a;
+6.	    --color-bg-selected: #565656;
+7.	    --color-text-primary: #f5f5f5;
+8.	    --color-text-secondary: #e0e0e0;
+9.	    --color-text-tertiary: #b0b0b0;
+10.	    --color-text-accent: #ffaa00;
+11.	    --color-border-primary: #555555;
+12.	    --color-border-secondary: #3f3f3f;
+13.	    --color-border-divider: #3f3f3f;
+14.	    --color-ui-mute: #ffaa00;
+15.	    --color-ui-solo: #ffaa00;
+16.	    --color-ui-record: #ff3333;
+17.	    --color-ui-play: #00ff00;
+18.	    --color-ui-stop: #aaaaaa;
+19.	    --color-ui-armed: #ffaa00;
+20.	    --color-ui-success: #00ff00;
+21.	    --color-ui-warning: #ffaa00;
+22.	    --color-ui-error: #ff3333;
+23.	    --color-meter-background: #151515;
+24.	    --color-meter-filled: #00ff00;
+25.	    --color-meter-peak: #ffff00;
+26.	    --color-meter-clipping: #ff0000;
+27.	    --color-meter-rms: #00ccff;
+28.	    --color-fader-background: #1f1f1f;
+29.	    --color-fader-thumb: #666666;
+30.	    --color-fader-hover: #888888;
+31.	    --color-fader-zeroLine: #00ccff;
+32.	    --color-waveform-background: #2a2a2a;
+33.	    --color-waveform-foreground: #ffaa00;
+34.	    --color-waveform-peak: #ffff00;
+35.	    --color-waveform-rms: #ffaa00;
+36.	    --color-waveform-selection: #ffaa0044;
+37.	    --color-track-background: #3b3b3b;
+38.	    --color-track-backgroundSelected: #4a4a4a;
+39.	    --color-track-nameBackground: #1f1f1f;
+40.	    --color-track-border: #555555;
+41.	    --color-automation-line: #00ccff;
+42.	    --color-automation-point: #00ccff;
+43.	    --color-automation-envelope: #ffaa00;
+44.	    --font-family-ui: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+45.	    --font-family-mono: "Consolas", "Monaco", "Courier New", monospace;
+46.	    --font-size-xs: 10px;
+47.	    --font-size-sm: 11px;
+48.	    --font-size-base: 12px;
+49.	    --font-size-lg: 13px;
+50.	    --font-size-xl: 14px;
+Show all properties (17 more)
+}
+<style>
+html, :host {
+1.	    line-height: 1.5;
+2.	    -webkit-text-size-adjust: 100%;
+3.	    -moz-tab-size: 4;
+4.	    -o-tab-size: 4;
+5.	    tab-size: 4;
+6.	    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+7.	    font-feature-settings: normal;
+8.	    font-variation-settings: normal;
+9.	    -webkit-tap-highlight-color: transparent;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+::before, ::after {
+1.	    --tw-content: '';
+}
+<style>
+*, ::before, ::after {
+1.	    box-sizing: border-box;
+2.	    border-width: 0;
+3.	    border-style: solid;
+4.	    border-color: #e5e7eb;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+::before, ::after {
+1.	    --tw-content: '';
+}
+<style>
+*, ::before, ::after {
+1.	    box-sizing: border-box;
+2.	    border-width: 0;
+3.	    border-style: solid;
+4.	    border-color: #e5e7eb;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+::backdrop {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+
+This we want gone 4   .from-gray-800 {
+1.	    --tw-gradient-from: #1f2937 var(--tw-gradient-from-position);
+2.	    --tw-gradient-to: rgb(31 41 55 / 0) var(--tw-gradient-to-position);
+3.	    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+<style>
+.bg-gradient-to-r {
+1.	    background-image: linear-gradient(to right, var(--tw-gradient-stops));
+}
+<style>
+.border-gray-700 {
+1.	    --tw-border-opacity: 1;
+2.	    border-color: rgb(55 65 81 / var(--tw-border-opacity, 1));
+}
+<style>
+.border-b-2 {
+1.	    border-bottom-width: 2px;
+}
+<style>
+.overflow-x-auto {
+1.	    overflow-x: auto;
+}
+<style>
+.gap-2 {
+1.	    gap: 0.5rem;
+}
+<style>
+.justify-between {
+1.	    justify-content: space-between;
+}
+<style>
+.items-center {
+1.	    align-items: center;
+}
+<style>
+.flex-shrink-0 {
+1.	    flex-shrink: 0;
+}
+<style>
+.h-10 {
+1.	    height: 2.5rem;
+}
+<style>
+.flex {
+1.	    display: flex;
+}
+<style>
+*, ::before, ::after {
+1.	    box-sizing: border-box;
+2.	    border-width: 0;
+3.	    border-style: solid;
+4.	    border-color: #e5e7eb;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;   
+This mixer window 5 element.style {
+}
+<style>
+.text-gray-500 {
+1.	    --tw-text-opacity: 1;
+2.	    color: rgb(107 114 128 / var(--tw-text-opacity, 1));
+}
+<style>
+.text-sm {
+1.	    font-size: 0.875rem;
+2.	    line-height: 1.25rem;
+}
+<style>
+.justify-center {
+1.	    justify-content: center;
+}
+<style>
+.items-center {
+1.	    align-items: center;
+}
+<style>
+.w-full {
+1.	    width: 100%;
+}
+<style>
+.flex {
+1.	    display: flex;
+}
+<style>
+*, ::before, ::after {
+1.	    box-sizing: border-box;
+2.	    border-width: 0;
+3.	    border-style: solid;
+4.	    border-color: #e5e7eb;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+user agent stylesheet
+div {
+1.	    display: block;
+2.	    unicode-bidi: isolate;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+style attribute {
+1.	    overflow: auto hidden;
+2.	    scroll-behavior: smooth;
+3.	    scrollbar-width: thin;
+4.	    scrollbar-color: rgb(75, 85, 99) rgb(17, 24, 39);
+}
+<style>
+.bg-gray-950 {
+1.	    --tw-bg-opacity: 1;
+2.	    background-color: rgb(3 7 18 / var(--tw-bg-opacity, 1));
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+.bg-gray-950 {
+1.	    --tw-bg-opacity: 1;
+2.	    background-color: rgb(3 7 18 / var(--tw-bg-opacity, 1));
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+.bg-gray-900 {
+1.	    --tw-bg-opacity: 1;
+2.	    background-color: rgb(17 24 39 / var(--tw-bg-opacity, 1));
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+.bg-gray-900 {
+1.	    --tw-bg-opacity: 1;
+2.	    background-color: rgb(17 24 39 / var(--tw-bg-opacity, 1));
+}
+<style>
+.border-gray-700 {
+1.	    --tw-border-opacity: 1;
+2.	    border-color: rgb(55 65 81 / var(--tw-border-opacity, 1));
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+.bg-gray-950 {
+1.	    --tw-bg-opacity: 1;
+2.	    background-color: rgb(3 7 18 / var(--tw-bg-opacity, 1));
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+.bg-gray-950 {
+1.	    --tw-bg-opacity: 1;
+2.	    background-color: rgb(3 7 18 / var(--tw-bg-opacity, 1));
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+body {
+1.	    margin: 0;
+2.	    line-height: inherit;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+style attribute {
+1.	    --color-bg-primary: #2a2a2a;
+2.	    --color-bg-secondary: #3b3b3b;
+3.	    --color-bg-tertiary: #4a4a4a;
+4.	    --color-bg-alt: #1f1f1f;
+5.	    --color-bg-hover: #4a4a4a;
+6.	    --color-bg-selected: #565656;
+7.	    --color-text-primary: #f5f5f5;
+8.	    --color-text-secondary: #e0e0e0;
+9.	    --color-text-tertiary: #b0b0b0;
+10.	    --color-text-accent: #ffaa00;
+11.	    --color-border-primary: #555555;
+12.	    --color-border-secondary: #3f3f3f;
+13.	    --color-border-divider: #3f3f3f;
+14.	    --color-ui-mute: #ffaa00;
+15.	    --color-ui-solo: #ffaa00;
+16.	    --color-ui-record: #ff3333;
+17.	    --color-ui-play: #00ff00;
+18.	    --color-ui-stop: #aaaaaa;
+19.	    --color-ui-armed: #ffaa00;
+20.	    --color-ui-success: #00ff00;
+21.	    --color-ui-warning: #ffaa00;
+22.	    --color-ui-error: #ff3333;
+23.	    --color-meter-background: #151515;
+24.	    --color-meter-filled: #00ff00;
+25.	    --color-meter-peak: #ffff00;
+26.	    --color-meter-clipping: #ff0000;
+27.	    --color-meter-rms: #00ccff;
+28.	    --color-fader-background: #1f1f1f;
+29.	    --color-fader-thumb: #666666;
+30.	    --color-fader-hover: #888888;
+31.	    --color-fader-zeroLine: #00ccff;
+32.	    --color-waveform-background: #2a2a2a;
+33.	    --color-waveform-foreground: #ffaa00;
+34.	    --color-waveform-peak: #ffff00;
+35.	    --color-waveform-rms: #ffaa00;
+36.	    --color-waveform-selection: #ffaa0044;
+37.	    --color-track-background: #3b3b3b;
+38.	    --color-track-backgroundSelected: #4a4a4a;
+39.	    --color-track-nameBackground: #1f1f1f;
+40.	    --color-track-border: #555555;
+41.	    --color-automation-line: #00ccff;
+42.	    --color-automation-point: #00ccff;
+43.	    --color-automation-envelope: #ffaa00;
+44.	    --font-family-ui: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+45.	    --font-family-mono: "Consolas", "Monaco", "Courier New", monospace;
+46.	    --font-size-xs: 10px;
+47.	    --font-size-sm: 11px;
+48.	    --font-size-base: 12px;
+49.	    --font-size-lg: 13px;
+50.	    --font-size-xl: 14px;
+Show all properties (17 more)
+}
+<style>
+html, :host {
+1.	    line-height: 1.5;
+2.	    -webkit-text-size-adjust: 100%;
+3.	    -moz-tab-size: 4;
+4.	    -o-tab-size: 4;
+5.	    tab-size: 4;
+6.	    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+7.	    font-feature-settings: normal;
+8.	    font-variation-settings: normal;
+9.	    -webkit-tap-highlight-color: transparent;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+::before, ::after {
+1.	    --tw-content: '';
+}
+<style>
+*, ::before, ::after {
+1.	    box-sizing: border-box;
+2.	    border-width: 0;
+3.	    border-style: solid;
+4.	    border-color: #e5e7eb;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+::before, ::after {
+1.	    --tw-content: '';
+}
+<style>
+*, ::before, ::after {
+1.	    box-sizing: border-box;
+2.	    border-width: 0;
+3.	    border-style: solid;
+4.	    border-color: #e5e7eb;
+}
+<style>
+*, ::before, ::after {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+<style>
+::backdrop {
+1.	    --tw-border-spacing-x: 0;
+2.	    --tw-border-spacing-y: 0;
+3.	    --tw-translate-x: 0;
+4.	    --tw-translate-y: 0;
+5.	    --tw-rotate: 0;
+6.	    --tw-skew-x: 0;
+7.	    --tw-skew-y: 0;
+8.	    --tw-scale-x: 1;
+9.	    --tw-scale-y: 1;
+10.	    --tw-pan-x: ;
+11.	    --tw-pan-y: ;
+12.	    --tw-pinch-zoom: ;
+13.	    --tw-scroll-snap-strictness: proximity;
+14.	    --tw-gradient-from-position: ;
+15.	    --tw-gradient-via-position: ;
+16.	    --tw-gradient-to-position: ;
+17.	    --tw-ordinal: ;
+18.	    --tw-slashed-zero: ;
+19.	    --tw-numeric-figure: ;
+20.	    --tw-numeric-spacing: ;
+21.	    --tw-numeric-fraction: ;
+22.	    --tw-ring-inset: ;
+23.	    --tw-ring-offset-width: 0px;
+24.	    --tw-ring-offset-color: #fff;
+25.	    --tw-ring-color: rgb(59 130 246 / 0.5);
+26.	    --tw-ring-offset-shadow: 0 0 #0000;
+27.	    --tw-ring-shadow: 0 0 #0000;
+28.	    --tw-shadow: 0 0 #0000;
+29.	    --tw-shadow-colored: 0 0 #0000;
+30.	    --tw-blur: ;
+31.	    --tw-brightness: ;
+32.	    --tw-contrast: ;
+33.	    --tw-grayscale: ;
+34.	    --tw-hue-rotate: ;
+35.	    --tw-invert: ;
+36.	    --tw-saturate: ;
+37.	    --tw-sepia: ;
+38.	    --tw-drop-shadow: ;
+39.	    --tw-backdrop-blur: ;
+40.	    --tw-backdrop-brightness: ;
+41.	    --tw-backdrop-contrast: ;
+42.	    --tw-backdrop-grayscale: ;
+43.	    --tw-backdrop-hue-rotate: ;
+44.	    --tw-backdrop-invert: ;
+45.	    --tw-backdrop-opacity: ;
+46.	    --tw-backdrop-saturate: ;
+47.	    --tw-backdrop-sepia: ;
+48.	    --tw-contain-size: ;
+49.	    --tw-contain-layout: ;
+50.	    --tw-contain-paint: ;
+Show all properties (1 more)
+}
+:  
+
+: TCP=Transport Control Panel
+:  Add a smart  scable and dockable medie explorer
+:  Add a pop out FX Browser
+: See Pg 11 for mixer windoiw terms
