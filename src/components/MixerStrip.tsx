@@ -29,22 +29,22 @@ export default function MixerStrip({
   };
 
   return (
-    <div className="flex flex-col items-center bg-gray-800 hover:bg-gray-750 rounded-lg shadow-lg hover:shadow-lg hover:shadow-blue-500/20 p-3 w-20 transition-all duration-200 group cursor-pointer hover:scale-105 transform">
+    <div className="flex flex-col items-center bg-slate-900 hover:bg-slate-800 rounded-md shadow-sm hover:shadow-md hover:shadow-cyan-500/20 p-3 w-20 transition-all duration-200 group cursor-pointer hover:scale-105 transform">
       {/* Label */}
-      <p className="text-xs font-semibold text-gray-400 group-hover:text-blue-400 mb-2 text-center truncate w-full transition-colors duration-200 animate-fade-in">
+      <p className="text-xs font-semibold text-slate-400 group-hover:text-cyan-400 mb-2 text-center truncate w-full transition-colors duration-200 animate-fade-in">
         {name}
       </p>
 
       {/* Meter bar */}
-      <div className="relative w-2 h-40 bg-gray-950 rounded overflow-hidden mb-2 border border-gray-700 group-hover:border-blue-600 shadow-inner group-hover:shadow-inner group-hover:shadow-blue-500/30 transition-all duration-200">
+      <div className="relative w-2 h-40 bg-slate-950 rounded overflow-hidden mb-2 border border-slate-700 group-hover:border-cyan-600 shadow-inner group-hover:shadow-inner group-hover:shadow-cyan-500/30 transition-all duration-200">
         <div
-          className="absolute bottom-0 w-full bg-blue-600 group-hover:bg-blue-500 transition-all duration-100 ease-linear animate-level-update"
+          className="absolute bottom-0 w-full bg-cyan-600 group-hover:bg-cyan-500 transition-all duration-100 ease-linear animate-level-update"
           style={{
             height: `${displayLevel * 100}%`,
             boxShadow: `0 0 ${Math.min(
               displayLevel * 20,
               15
-            )}px rgba(37, 99, 235, ${0.6 + (displayLevel > 0.7 ? 0.2 : 0)})`,
+            )}px rgba(6, 182, 212, ${0.6 + (displayLevel > 0.7 ? 0.2 : 0)})`,
           }}
         />
       </div>
@@ -60,7 +60,7 @@ export default function MixerStrip({
         step="0.01"
         value={displayLevel}
         onChange={handleLevelChange}
-        className="w-full accent-blue-600 cursor-pointer transition-all duration-200 group-hover:accent-blue-500 animate-fader-drag"
+        className="w-full accent-cyan-600 cursor-pointer transition-all duration-200 group-hover:accent-cyan-500 animate-fader-drag"
         title={`${name}: ${(displayLevel * 100).toFixed(0)}%`}
       />
     </div>

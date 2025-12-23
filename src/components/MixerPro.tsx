@@ -141,7 +141,7 @@ const FloatingFaderWindow = memo(({
       {/* Title Bar */}
       <div
         onMouseDown={handleMouseDown}
-        className="bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-2 rounded-t-md cursor-move flex items-center justify-between"
+        className="bg-cyan-700 px-3 py-2 rounded-t-md cursor-move flex items-center justify-between"
       >
         <span className="text-xs font-bold text-white flex items-center gap-2">
           <GripVertical className="w-3 h-3" />
@@ -267,7 +267,7 @@ const ResizableMixerStrip = memo(({
       {/* Track Header */}
       <div
         onClick={() => selectTrack(trackId)}
-        className="px-2 py-2 bg-gradient-to-r from-gray-700 to-gray-800 cursor-pointer flex flex-col gap-1 flex-shrink-0"
+        className="px-2 py-2 bg-slate-800 cursor-pointer flex flex-col gap-1 flex-shrink-0"
       >
         <div className="text-xs font-bold text-gray-100 truncate">{track.name}</div>
         <div className="text-xs text-gray-500">{track.type}</div>
@@ -314,7 +314,7 @@ const ResizableMixerStrip = memo(({
         <div className="px-2 py-2 bg-gray-900/50 border-t border-gray-700 h-12 flex items-center justify-center">
           <div className="w-full h-2 bg-gray-700 rounded overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-green-500 to-yellow-500 transition-all"
+              className="h-full bg-cyan-500 transition-all"
               style={{ width: `${Math.min(100, Math.max(0, (track.volume + 60) * 1.67))}%` }}
             />
           </div>
@@ -350,7 +350,7 @@ const ResizableMixerStrip = memo(({
       {/* Resize Handle */}
       <div
         onMouseDown={handleMouseDown}
-        className="absolute right-0 top-0 bottom-0 w-1.5 bg-gradient-to-r from-transparent to-blue-500 cursor-col-resize opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute right-0 top-0 bottom-0 w-1.5 bg-cyan-500/40 hover:bg-cyan-500/80 cursor-col-resize opacity-0 group-hover:opacity-100 transition-opacity"
         title="Drag to resize strip width"
       />
 
@@ -417,11 +417,11 @@ const MasterTrack = memo(({
   return (
     <div
       ref={masterRef}
-      className="relative bg-gradient-to-b from-gray-900 to-black border-2 border-purple-600 rounded-lg flex flex-col overflow-hidden group shadow-xl shadow-purple-600/20"
+      className="relative bg-slate-950 border-2 border-purple-600 rounded-md flex flex-col overflow-hidden group shadow-md shadow-purple-600/20"
       style={{ width: `${width}px`, height: `${height}px` }}
     >
       {/* Track Header */}
-      <div className="px-3 py-3 bg-gradient-to-r from-purple-700 to-purple-800 flex flex-col gap-1 flex-shrink-0">
+      <div className="px-3 py-3 bg-purple-800 flex flex-col gap-1 flex-shrink-0">
         <div className="text-sm font-bold text-white">MASTER</div>
         <div className="text-xs text-purple-200">Master Output</div>
       </div>
@@ -455,7 +455,7 @@ const MasterTrack = memo(({
               className="flex-1 bg-purple-900 rounded-sm overflow-hidden"
             >
               <div
-                className="h-full bg-gradient-to-t from-red-500 via-yellow-500 to-green-500 transition-all"
+                className="h-full bg-cyan-500 transition-all"
                 style={{
                   height: `${Math.max(0, (masterVolume + 60) * 1.67) - i * 16.7}%`,
                 }}
@@ -468,7 +468,7 @@ const MasterTrack = memo(({
       {/* Resize Handle */}
       <div
         onMouseDown={handleMouseDown}
-        className="absolute right-0 top-0 bottom-0 w-1.5 bg-gradient-to-r from-transparent to-purple-500 cursor-col-resize opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute right-0 top-0 bottom-0 w-1.5 bg-purple-500/40 hover:bg-purple-500/80 cursor-col-resize opacity-0 group-hover:opacity-100 transition-opacity"
       />
     </div>
   );
@@ -558,7 +558,7 @@ export default function MixerPro() {
   return (
     <div className="h-full w-full flex flex-col bg-gray-900 overflow-hidden">
       {/* Header */}
-      <div className="h-12 bg-gradient-to-r from-gray-800 via-gray-750 to-gray-800 border-b border-gray-700 flex items-center justify-between px-3 gap-3 flex-shrink-0">
+      <div className="h-12 bg-slate-900 border-b border-slate-700 flex items-center justify-between px-3 gap-3 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Sliders className="w-4 h-4 text-blue-400" />
           <span className="text-sm font-semibold text-gray-100">Mixer Pro</span>

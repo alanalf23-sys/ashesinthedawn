@@ -7,6 +7,8 @@ import TrackList from './components/TrackList';
 import Timeline from './components/Timeline';
 import Mixer from './components/Mixer';
 import Sidebar from './components/Sidebar';
+import MediaExplorer from './components/MediaExplorer';
+import FXBrowser from './components/FXBrowser';
 import CodettePanel from './components/CodettePanel';
 import AudioSettingsModal from './components/modals/AudioSettingsModal';
 import { initializeActions } from './lib/actions/initializeActions';
@@ -29,7 +31,7 @@ if (typeof window !== 'undefined') {
 function AppContent() {
   const [mixerHeight, setMixerHeight] = React.useState(200);
   const [isResizingMixer, setIsResizingMixer] = React.useState(false);
-  const [rightSidebarTab, setRightSidebarTab] = React.useState('files' as 'files' | 'control');
+  const [rightSidebarTab, setRightSidebarTab] = React.useState('files' as 'files' | 'media' | 'fx' | 'control');
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = React.useState(false);
   const { toasts, addToast, removeToast } = useToast();
   const { openAudioSettingsModal } = useDAW();
@@ -64,7 +66,7 @@ function AppContent() {
         closeCommandPalette: () => setIsCommandPaletteOpen(false),
         showToast: (message: string, type: 'success' | 'error' | 'info' = 'info', duration = 3000) => addToast(message, type, duration),
         openAudioSettings: () => openAudioSettingsModal(),
-        toggleRightSidebar: (tab: 'files' | 'control') => setRightSidebarTab(tab),
+        toggleRightSidebar: (tab: 'files' | 'media' | 'fx' | 'control') => setRightSidebarTab(tab),
         startOnboarding: () => {
           // clear completed flag and remount onboarding
           try { localStorage.removeItem('onboarding-tour-completed'); } catch (e) { /* ignore */ }
@@ -109,7 +111,7 @@ function AppContent() {
   }, [isResizingMixer]);
 
   // helper to toggle right sidebar
-  const toggleRightSidebar = React.useCallback((tab: 'files' | 'control') => {
+  const toggleRightSidebar = React.useCallback((tab: 'files' | 'media' | 'fx' | 'control') => {
     setRightSidebarTab(tab);
   }, []);
 
@@ -165,13 +167,13 @@ function AppContent() {
             </div>
           </div>
 
-          {/* Right sidebar - File browser and Codette Control */}
+          {/* Right sidebar - File browser, Media Explorer, FX Browser, and Codette Control */}
           <div className="w-64 bg-gray-900 border-l border-gray-700 flex flex-col overflow-hidden">
             {/* Tab Navigation */}
             <div className="flex gap-0 border-b border-gray-700 bg-gray-800 flex-shrink-0">
               <button
                 onClick={() => setRightSidebarTab('files')}
-                className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+                className={`flex-1 px-2 py-2 text-xs font-medium transition-colors ${
                   rightSidebarTab === 'files'
                     ? 'bg-gray-700 text-cyan-400 border-b-2 border-cyan-400'
                     : 'text-gray-400 hover:text-gray-300'
@@ -180,8 +182,28 @@ function AppContent() {
                 Files
               </button>
               <button
+                onClick={() => setRightSidebarTab('media')}
+                className={`flex-1 px-2 py-2 text-xs font-medium transition-colors ${
+                  rightSidebarTab === 'media'
+                    ? 'bg-gray-700 text-cyan-400 border-b-2 border-cyan-400'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                Media
+              </button>
+              <button
+                onClick={() => setRightSidebarTab('fx')}
+                className={`flex-1 px-2 py-2 text-xs font-medium transition-colors ${
+                  rightSidebarTab === 'fx'
+                    ? 'bg-gray-700 text-cyan-400 border-b-2 border-cyan-400'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                FX
+              </button>
+              <button
                 onClick={() => setRightSidebarTab('control')}
-                className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+                className={`flex-1 px-2 py-2 text-xs font-medium transition-colors ${
                   rightSidebarTab === 'control'
                     ? 'bg-gray-700 text-cyan-400 border-b-2 border-cyan-400'
                     : 'text-gray-400 hover:text-gray-300'
@@ -194,6 +216,16 @@ function AppContent() {
             {/* Tab Content */}
             <div className="flex-1 overflow-auto pb-20">
               {rightSidebarTab === 'files' && <Sidebar />}
+              {rightSidebarTab === 'media' && (
+                <div className="h-full p-2">
+                  <MediaExplorer className="h-full" isDocked={true} />
+                </div>
+              )}
+              {rightSidebarTab === 'fx' && (
+                <div className="h-full p-2">
+                  <FXBrowser className="h-full" isPopout={false} />
+                </div>
+              )}
               {rightSidebarTab === 'control' && (
                 <div className="p-3 space-y-3">
                   <VUMeterPanel className="w-full" />

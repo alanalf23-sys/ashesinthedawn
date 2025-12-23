@@ -422,7 +422,7 @@ const MixerComponent = () => {
                         style={{ userSelect: "none" }}
                       >
                         <div
-                          className="rounded bg-gradient-to-b from-yellow-500 to-yellow-700 cursor-grab active:cursor-grabbing hover:shadow-lg transition-shadow"
+                          className="rounded bg-amber-600 cursor-grab active:cursor-grabbing hover:shadow-md hover:shadow-amber-500/30 transition-shadow"
                           style={{
                             width: "12px",
                             height: `${masterFader * 100}%`,

@@ -112,7 +112,7 @@ export default function MixerOptionsTile({
       >
         {/* Header */}
         <div
-          className="bg-gradient-to-r from-blue-700 to-blue-600 p-2 flex items-center justify-between cursor-move rounded-t text-white text-xs font-semibold"
+          className="bg-cyan-700 p-2 flex items-center justify-between cursor-move rounded-t text-white text-xs font-semibold"
           onMouseDown={handleMouseDown}
         >
           <span>Mixer Options</span>

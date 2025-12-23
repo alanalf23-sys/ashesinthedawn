@@ -554,7 +554,7 @@ export default function MixerTile({
       {/* Title Bar - Draggable */}
       <div
         onMouseDown={handleMouseDownTitle}
-        className="h-6 bg-gradient-to-r from-gray-800 via-gray-750 to-gray-800 border-b border-gray-600 rounded-t-1 flex items-center justify-between px-3 flex-shrink-0 cursor-move hover:bg-gradient-to-r hover:from-gray-700 hover:via-gray-700 hover:to-gray-700 transition-all"
+        className="h-6 bg-slate-900 border-b border-slate-700 rounded-t-md flex items-center justify-between px-3 flex-shrink-0 cursor-move hover:bg-slate-800 transition-all"
       >
         <span className="text-xs font-semibold text-gray-100 truncate flex-1">
           {track.name}
@@ -792,7 +792,7 @@ export default function MixerTile({
       >
         <div
           onMouseDown={handleMouseDownResize}
-          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize bg-gradient-to-tl from-blue-500/40 to-transparent hover:from-blue-500/80 transition-all"
+          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize bg-cyan-500/30 hover:bg-cyan-500/60 transition-all"
           style={{ zIndex: 50 }}
         />
       </Tooltip>

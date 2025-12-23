@@ -22,7 +22,7 @@ export default function MixerView({
   };
 
   return (
-    <div className="flex gap-3 p-4 bg-gray-900 hover:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl hover:shadow-blue-500/10 border border-gray-700 hover:border-blue-600/50 overflow-x-auto transition-all duration-300">
+    <div className="flex gap-3 p-4 bg-slate-950 hover:bg-slate-900 rounded-md shadow-sm hover:shadow-md hover:shadow-cyan-500/10 border border-slate-800 hover:border-cyan-600/50 overflow-x-auto transition-all duration-300">
       {tracks.map((trackName) => (
         <MixerStrip
           key={trackName}
