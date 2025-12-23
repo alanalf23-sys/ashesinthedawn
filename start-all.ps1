@@ -7,7 +7,7 @@ Write-Host "╚═════════════════════�
 Write-Host ""
 
 # Change to project directory
-$ProjectDir = "I:\ashesinthedawn"
+$ProjectDir = "D:\dawprodject\ashesinthedawn"
 Set-Location $ProjectDir
 
 # Check if virtual environment exists
