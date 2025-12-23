@@ -18,6 +18,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { useDAW } from '../contexts/DAWContext';
+import { usePopoutWindow } from '../hooks/usePopoutWindow';
 
 interface FXPlugin {
   id: string;
@@ -92,6 +93,7 @@ export function FXBrowser({
   onClose,
 }: FXBrowserProps) {
   const { tracks } = useDAW();
+  const { openPopout } = usePopoutWindow('FXBrowser', { width: 700, height: 900 });
   
   // UI state
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -237,12 +239,12 @@ export function FXBrowser({
         
         <div className="flex-1" />
         
-        {/* Pop-out/Pop-in button */}
-        {!isPopout && onPopout && (
+        {/* Pop-out button */}
+        {!isPopout && (
           <button
-            onClick={onPopout}
+            onClick={openPopout}
             className="p-1 hover:bg-slate-800 rounded transition-colors"
-            title="Pop out to window"
+            title="Pop out to separate window"
           >
             <Maximize2 className="w-4 h-4 text-slate-400" />
           </button>
@@ -252,9 +254,9 @@ export function FXBrowser({
           <button
             onClick={onClose}
             className="p-1 hover:bg-slate-800 rounded transition-colors"
-            title="Close"
+            title="Close popout window"
           >
-            <X className="w-4 h-4 text-slate-400" />
+            <Minimize2 className="w-4 h-4 text-slate-400" />
           </button>
         )}
       </div>

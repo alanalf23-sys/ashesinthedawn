@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react';
+import styles from './VUMeterGfx.module.css';
 
 // =============================================================================
 // TYPES & INTERFACES
@@ -725,18 +726,12 @@ export function VUMeterGfx({
   }, [width, height]);
 
   return (
-    <div className={`vu-meter-gfx ${className}`}>
+    <div className={`${styles.vuMeterGfx} ${className}`}>
       <canvas
         ref={canvasRef}
         width={width}
         height={height}
-        style={{
-          width: '100%',
-          height: 'auto',
-          aspectRatio: '425 / 520',
-          borderRadius: '8px',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-        }}
+        className={styles.vuMeterCanvas}
       />
     </div>
   );

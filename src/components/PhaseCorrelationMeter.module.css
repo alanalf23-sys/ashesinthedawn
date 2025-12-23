@@ -1,0 +1,53 @@
+/**
+ * Phase Correlation Meter Styles
+ * Stereo phase relationship visualization
+ */
+
+.phaseMeter {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px;
+  background-color: transparent;
+}
+
+.phaseCanvas {
+  border-radius: 50%;
+  border: 2px solid #334155;
+  background-color: #0f172a;
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+  image-rendering: crisp-edges;
+}
+
+.phaseMeter:hover .phaseCanvas {
+  border-color: #475569;
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s ease-in-out;
+}
+
+/* Size-specific styles */
+.phaseMeterSmall .phaseCanvas {
+  width: 80px;
+  height: 80px;
+}
+
+.phaseMeterMedium .phaseCanvas {
+  width: 120px;
+  height: 120px;
+}
+
+.phaseMeterLarge .phaseCanvas {
+  width: 180px;
+  height: 180px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .phaseCanvas {
+    border-width: 1.5px;
+  }
+}
