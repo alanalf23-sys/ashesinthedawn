@@ -7,12 +7,12 @@
  *   <VUMeterPanel responseMs={50} release={5} showLUFS={true} />
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { VUMeterGfx } from './VUMeterGfx';
 import { useVUMeterData } from '../hooks/useVUMeterData';
 import { useDAW } from '../contexts/DAWContext';
 import { getMeteringEngine } from '../lib/meteringEngine';
-import { Settings2, Activity, Volume2 } from 'lucide-react';
+import { Settings, Activity, Volume2 } from 'lucide-react';
 
 interface VUMeterPanelProps {
   /** Track ID for track-specific metering (optional, defaults to selected track or master) */
@@ -60,7 +60,7 @@ export function VUMeterPanel({
   const [responseMs, setResponseMs] = useState(initialResponseMs);
   const [release, setRelease] = useState(initialRelease);
   const [showSettings, setShowSettings] = useState(false);
-  const [loudnessMetrics, setLoudnessMetrics] = useState<LoudnessMetrics | null>(null);
+  const [loudnessMetrics, setLoudnessMetrics] = useState(null as LoudnessMetrics | null);
 
   // Subscribe to metering engine updates if LUFS display is enabled
   useEffect(() => {
@@ -79,7 +79,6 @@ export function VUMeterPanel({
 
     return unsubscribe;
   }, [showLUFS]);
-  const [loudnessMetrics, setLoudnessMetrics] = useState<LoudnessMetrics | null>(null);
 
   return (
     <div className={`bg-gray-900 rounded-lg border border-gray-700 p-4 ${className}`}>
@@ -100,7 +99,7 @@ export function VUMeterPanel({
             className="p-1 hover:bg-gray-700 rounded transition-colors"
             title="Settings"
           >
-            <Settings2 className="w-4 h-4 text-gray-400" />
+            <Settings className="w-4 h-4 text-gray-400" />
           </button>
         )}
       </div>
